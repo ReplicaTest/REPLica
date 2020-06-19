@@ -1,0 +1,7 @@
+package replica
+
+sourcedir = "src"
+
+modules = Replica
+main = Main
+executable = Replica
