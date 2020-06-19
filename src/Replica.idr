@@ -8,6 +8,8 @@ import System.Directory
 import System.File
 import System.Info
 
+import Replica.Options
+
 public export
 Path : Type
 Path = String
@@ -23,12 +25,17 @@ data TestError
   = CantLocateDir String
   | CantReadOutput FileError
   | CantReadExpected FileError
+  | CommandFailed Int
 
 export
 displayResult : Either TestError TestResult -> IO ()
-displayResult (Left x) = putStrLn $ "ERROR :Test cannot be performed"
+displayResult (Left (CantLocateDir x)) = putStrLn $ "ERROR: Cannot find test directory"
+displayResult (Left (CantReadOutput x)) = putStrLn $ "ERROR: Cannot read test output"
+displayResult (Left (CantReadExpected x)) = putStrLn $ "ERROR: Cannot read expected output"
+displayResult (Left (CommandFailed x)) = putStrLn $ "ERROR: Cannot run command - Exit code: " ++ show x
 displayResult (Right Success) = putStrLn "ok"
 displayResult (Right (Failure expected given)) = do
+  putStrLn "FAILURE"
   putStrLn "Expected:"
   putStrLn expected
   putStrLn "Given:"
@@ -49,10 +56,12 @@ normalize str =
       then pack $ filter (\ch => ch /= '/' && ch /= '\\') (unpack str)
       else str
 
-testExecution : Path -> IO (Either TestError TestResult)
-testExecution testPath = do
-  system $ "sh ./run idris2 | tr -d '\\r' > output"
-  Right out <- readFile "output"
+testExecution : Options -> Path -> IO (Either TestError TestResult)
+testExecution opts testPath = do
+  removeFile opts.outputFile
+  0 <- system $ opts.exec ++ " " ++ opts.params ++ (maybe "" (" < " ++) opts.input) ++ " > " ++ opts.outputFile
+    | n => pure $ Left $ CommandFailed 0
+  Right out <- readFile opts.outputFile
     | Left err => pure $ Left $ CantReadOutput err
   Right exp <- readFile "expected"
     | Left err => pure $ Left $ CantReadExpected err -- todo interactive generation
@@ -64,12 +73,12 @@ testExecution testPath = do
       pure $ Right $ Failure exp out
 
 export
-runTest : Path -> IO (Either TestError TestResult)
-runTest testPath  = do
+runTest : Options -> Path -> IO (Either TestError TestResult)
+runTest opts testPath  = do
   Just cdir <- currentDir
     | Nothing => pure $ Left $ CantLocateDir "Can't resolve currentDir"
   True <- changeDir testPath
     | False => pure $ Left $ CantLocateDir $ "Can't locate " ++ show testPath
-  result <- testExecution testPath
+  result <- testExecution opts testPath
   changeDir cdir
   pure $ result

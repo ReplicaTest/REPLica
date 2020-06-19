@@ -4,4 +4,4 @@ sourcedir = "src"
 
 modules = Replica
 main = Main
-executable = Replica
+executable = replica
