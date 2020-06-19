@@ -1,0 +1,6 @@
+test: FAILURE
+Expected:
+
+Given:
+Prelude.Nat : Type
+

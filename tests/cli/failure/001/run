@@ -1,0 +1,1 @@
+../../../../build/exec/replica test idris2 --params "--client \":t Nat\""
