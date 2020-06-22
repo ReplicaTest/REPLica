@@ -70,7 +70,7 @@ output = "output" -- the name of the output file that will store the result of t
 
 This example will lead to the execution of the following command:
 
-`idris2 --repl mypackage.ipkg < myInpu.txtt > output`
+`idris2 --repl mypackage.ipkg < myInput.txt > output`
 
 And then compare it to the `expected` file of this directory.
 
