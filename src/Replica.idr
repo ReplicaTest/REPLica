@@ -27,6 +27,7 @@ data TestError
   | CantReadOutput FileError
   | CantParseTest (ParsingError BuildError)
   | CantReadExpected FileError
+  | CantWriteNewGolden
   | CommandFailed Int
 
 expectedVsGiven : Maybe String -> String -> IO ()
@@ -45,6 +46,7 @@ displayResult (Left (CantLocateDir x)) = putStrLn $ "ERROR: Cannot find test dir
 displayResult (Left (CantReadOutput x)) = putStrLn $ "ERROR: Cannot read test output"
 displayResult (Left (CantReadExpected x)) = putStrLn $ "ERROR: Cannot read expected output"
 displayResult (Left (CantParseTest x)) = putStrLn $ "ERROR: Parsing failed: " ++ displayParsingError (const "something is missing") x
+displayResult (Left CantWriteNewGolden) = putStrLn $ "ERROR: Cannot write file 'expected'"
 displayResult (Left (CommandFailed x)) = putStrLn $ "ERROR: Cannot run command - Exit code: " ++ show x
 displayResult (Right Success) = putStrLn "ok"
 displayResult (Right (NewGolden str)) = putStrLn "new golden value" *> putStrLn str
@@ -80,12 +82,14 @@ handleFailure : Maybe String -> String -> IO (Either TestError TestResult)
 handleFailure exp out = do
   expectedVsGiven exp out
   putStrLn $ "Do you want to " ++ maybe "set" (const "replace") exp ++ " the golden value? [N/y]"
-  answer <- getLine
   if !readAnswer
      then do
-       writeFile "expected" out
+       Right _ <- writeFile "expected" out
+         | Left err => pure $ Left $ CantWriteNewGolden
+       putStrLn "New golden value saved"
        pure $ Right $ NewGolden out
-     else
+     else do
+       putStrLn "Resuming..."
        pure $ Right $ Failure exp out
   where
     covering

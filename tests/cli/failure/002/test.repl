@@ -1,0 +1,5 @@
+test cli.failure.002
+
+exec = "../../../../build/exec/replica"
+
+params = test
