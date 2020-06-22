@@ -14,7 +14,7 @@ usage = "Usage: replica <test path> [<test path>*]"
 optionsToRunargs : Options -> List RunEnv
 optionsToRunargs (MkOptions interactive tests) = MkRunEnv interactive <$> tests
 
-
+covering
 main : IO ()
 main = do
   (_ :: args) <- getArgs
