@@ -1,6 +1,6 @@
 # REPLica
 
-**WIP: Under development: file format and command line usage may change often**
+**WIP: file format and command line usage may change often.**
 
 Test things command line commands.
 
