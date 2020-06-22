@@ -38,14 +38,28 @@ A test directory should contain:
 - a `test.repl`, which describes the command the test;
 - a `expected` file, with the expected output of the command.
 
-# test.repl
+## test.repl
 
-Here is an example:
+### Minimal example
 
 ```
 test testName -- mandatory preamble (though, testnName is not used at the moment)
 
-exec = idris2 -- the nmae of the command to run (madatory)
+exec = pwd -- the name of the command to run
+```
+
+This example will lead to the execution of the following command:
+
+`pwd > output`
+
+And then compare it to the `expected` file of this directory.
+
+###More complete example
+
+```
+test antherTest
+
+exec = idris2
 
 params = "--repl mypackage.ipkg" -- optional parameters to send to the command line
 
@@ -56,7 +70,7 @@ output = "output" -- the name of the output file that will store the result of t
 
 This example will lead to the execution of the following command:
 
-`idris 2 --repl mypackage.ipkg < myInpu.txtt > output`
+`idris2 --repl mypackage.ipkg < myInpu.txtt > output`
 
 And then compare it to the `expected` file of this directory.
 
