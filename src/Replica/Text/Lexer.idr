@@ -1,4 +1,4 @@
-module Replica.TestConfig.Lexer
+module Replica.Text.Lexer
 
 import public Text.Lexer
 import public Text.Parser
@@ -23,12 +23,8 @@ data Token
 lineComment : Lexer
 lineComment = Text.Lexer.lineComment (exact "--")
 
-%hide Text.Lexer.lineComment
-
 blockComment : Lexer
 blockComment = Text.Lexer.blockComment (exact "{-") (exact "-}")
-
-%hide Text.Lexer.blockComment
 
 spacesOrNewlines : Lexer
 spacesOrNewlines = some (space <|> newline)

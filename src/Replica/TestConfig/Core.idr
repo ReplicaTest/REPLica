@@ -3,10 +3,7 @@ module Replica.TestConfig.Core
 import public Data.List
 import Data.Strings
 
-public export
-Path : Type
-Path = DPair (List String) NonEmpty
-
+import public Replica.Path
 
 public export
 record TestConfigM (m : Type -> Type) where

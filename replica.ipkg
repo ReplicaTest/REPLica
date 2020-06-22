@@ -5,10 +5,13 @@ sourcedir = "src"
 depends = contrib
 
 modules = Replica
+        , Replica.Options
+        , Replica.Path
+        , Replica.RunEnv
         , Replica.TestConfig
         , Replica.TestConfig.Core
-        , Replica.TestConfig.Lexer
         , Replica.TestConfig.Parser
+        , Replica.Text.Lexer
 
 main = Main
 
