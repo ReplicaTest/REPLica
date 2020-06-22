@@ -1,5 +1,7 @@
 test cli.success.001
 
+description = "Basic suceesful Test"
+
 exec = "../../../../build/exec/replica"
 
 params = "test"

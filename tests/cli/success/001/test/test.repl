@@ -1,5 +1,5 @@
 test test
 
-exec = idris2
+description = "A minimal passing example"
 
-params = "--client \"\""
+exec = true
