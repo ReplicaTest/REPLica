@@ -2,14 +2,15 @@
 
 **WIP: file format and command line usage may (often) change.**
 
-Test things command line commands.
+Golden tests for Commnd Line interfaces.
 
 ## Purpose
 
 Replica aims at managing tests suites composed of command line itnerfaces calls.
 
-It compares the output of the command line to a "golden number": a stored value of the expected
+It compares the output of the command line to a "golden value": a stored value of the expected
 outcome of the command line call.
+If you want a more detailled introduction to golden testing, here is a [nice introduction][golden].
 
 The idea comes from the way tests are implemented in [idris2][idris tests].
 
@@ -86,3 +87,4 @@ REPLica is tested with REPLica, you can have a look at the [test directory](test
 - Cleaner file format
 
 [idris tests]: https://github.com/idris-lang/Idris2/tree/master/tests
+[golden]: https://ro-che.info/articles/2017-12-04-golden-tests
