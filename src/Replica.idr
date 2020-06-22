@@ -9,6 +9,7 @@ import System.File
 import System.Info
 
 import Replica.TestConfig
+import Replica.RunEnv
 
 public export
 data TestResult
@@ -81,12 +82,12 @@ asPath : DPair (List String) NonEmpty -> String
 asPath (MkDPair path snd) = foldr1 (\x,y => x <+> "/" <+> y) path
 
 export
-runTest : String -> IO (Either TestError TestResult)
-runTest testPath  = do
+runTest : RunEnv -> IO (Either TestError TestResult)
+runTest env = do
   Just cdir <- currentDir
     | Nothing => pure $ Left $ CantLocateDir "Can't resolve currentDir"
-  True <- changeDir testPath
-    | False => pure $ Left $ CantLocateDir $ "Can't locate " ++ show testPath
+  True <- changeDir env.path
+    | False => pure $ Left $ CantLocateDir $ "Can't locate " ++ show env.path
   Right opts <- parseTestConfig "test.repl"
     | Left err => pure $ Left $ CantParseTest err
   result <- testExecution opts

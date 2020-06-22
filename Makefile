@@ -1,6 +1,9 @@
 build:
 	idris2 --build replica.ipkg
 
+install:
+	idris2 --install replica.ipkg
+
 clean:
 	$(RM) -r build
 

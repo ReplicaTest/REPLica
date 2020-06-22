@@ -7,31 +7,25 @@ record Options where
 
   constructor MkOptions
 
-  exec : String
-  params : String
-  input : Maybe String
-  outputFile : String
+  interactive : Bool
+  tests : List String
 
 
 defaultOutputFile : String
 defaultOutputFile = "output"
 
-mkOpt : String -> Options
-mkOpt exec = MkOptions exec "" Nothing defaultOutputFile
+mkOpt : Options
+mkOpt = MkOptions False []
 
-parseParams :  Alternative f => Options -> List String -> f Options
-parseParams opts ("--params" :: params :: xs)
-  = parseParams (record {params = params} opts) xs
-parseParams opts ("--input" :: input :: xs)
-  = parseParams (record {input = pure input} opts) xs
-parseParams opts ("--outputFile" :: outputFile :: xs)
-  = parseParams (record {outputFile = outputFile} opts) xs
+parseParams :  Options -> List String -> Options
+parseParams opts ("--interactive" :: xs)
+  = parseParams (record {interactive = True} opts) xs
 parseParams opts (x :: xs)
-  = empty
+  = parseParams (record {tests $= (++ [x])} opts) xs
 parseParams opts []
-  = pure opts
+  = opts
 
 export
-options : List String -> Maybe Options
-options (e::params) = parseParams (mkOpt e) params
-options _ = Nothing
+options : List String -> Options
+options params = parseParams mkOpt params
+
