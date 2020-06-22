@@ -1,5 +1,3 @@
 test test
 
-exec = idris2
-
-params = "--client \":t Nat\""
+exec = true

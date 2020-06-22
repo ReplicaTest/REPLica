@@ -1,6 +1,6 @@
 test: FAILURE
 Expected:
+Should write something
 
 Given:
-Prelude.Nat : Type
 

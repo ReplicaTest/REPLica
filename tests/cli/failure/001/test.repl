@@ -1,5 +1,7 @@
 test cli.failure.001
 
+descriptian = "Fail for with a wrong output"
+
 exec = "../../../../build/exec/replica"
 
 params = "test"
