@@ -80,11 +80,9 @@ REPLica is tested with REPLica, you can have a look at the [test directory](test
 
 ## Roadmap
 
-- Automatic generation of golden numbers
-- Custom tests descrriptors
+- Custom tests descriptors
 - Test suite management (through a tag system)
 - Command mapping (options to change the name of the command to test)
-- Interactive mode when test failed
 - Cleaner file format
 
 [idris tests]: https://github.com/idris-lang/Idris2/tree/master/tests
