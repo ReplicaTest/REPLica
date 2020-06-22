@@ -2,6 +2,14 @@ package replica
 
 sourcedir = "src"
 
+depends = contrib
+
 modules = Replica
+        , Replica.TestConfig
+        , Replica.TestConfig.Core
+        , Replica.TestConfig.Lexer
+        , Replica.TestConfig.Parser
+
 main = Main
+
 executable = replica

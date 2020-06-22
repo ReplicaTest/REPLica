@@ -8,11 +8,7 @@ import System.Directory
 import System.File
 import System.Info
 
-import Replica.Options
-
-public export
-Path : Type
-Path = String
+import Replica.TestConfig
 
 public export
 data TestResult
@@ -24,6 +20,7 @@ public export
 data TestError
   = CantLocateDir String
   | CantReadOutput FileError
+  | CantParseTest (ParsingError BuildError)
   | CantReadExpected FileError
   | CommandFailed Int
 
@@ -32,6 +29,7 @@ displayResult : Either TestError TestResult -> IO ()
 displayResult (Left (CantLocateDir x)) = putStrLn $ "ERROR: Cannot find test directory"
 displayResult (Left (CantReadOutput x)) = putStrLn $ "ERROR: Cannot read test output"
 displayResult (Left (CantReadExpected x)) = putStrLn $ "ERROR: Cannot read expected output"
+displayResult (Left (CantParseTest x)) = putStrLn $ "ERROR: Parsing failed: " ++ displayParsingError (const "something is missing") x
 displayResult (Left (CommandFailed x)) = putStrLn $ "ERROR: Cannot run command - Exit code: " ++ show x
 displayResult (Right Success) = putStrLn "ok"
 displayResult (Right (Failure expected given)) = do
@@ -41,8 +39,11 @@ displayResult (Right (Failure expected given)) = do
   putStrLn "Given:"
   putStrLn given
 
+displayPath : Path -> String
+displayPath (MkDPair path snd) = foldr1 (\x, y => x <+> "." <+> y) path
+
 export
-displayTestResult : Path -> Either TestError TestResult -> IO ()
+displayTestResult : String -> Either TestError TestResult -> IO ()
 displayTestResult testPath result = do
   putStr $ testPath ++ ": "
   displayResult result
@@ -56,10 +57,14 @@ normalize str =
       then pack $ filter (\ch => ch /= '/' && ch /= '\\') (unpack str)
       else str
 
-testExecution : Options -> Path -> IO (Either TestError TestResult)
-testExecution opts testPath = do
+commandLine : TestConfig -> String
+commandLine (MkTestConfig exec path params inputFile outputFile)
+ = exec ++ " " ++ params ++ (maybe "" (" < " ++) inputFile) ++ " > " ++ outputFile
+
+testExecution : TestConfig -> IO (Either TestError TestResult)
+testExecution opts = do
   removeFile opts.outputFile
-  0 <- system $ opts.exec ++ " " ++ opts.params ++ (maybe "" (" < " ++) opts.input) ++ " > " ++ opts.outputFile
+  0 <- system $ commandLine opts
     | n => pure $ Left $ CommandFailed 0
   Right out <- readFile opts.outputFile
     | Left err => pure $ Left $ CantReadOutput err
@@ -72,13 +77,18 @@ testExecution opts testPath = do
     else
       pure $ Right $ Failure exp out
 
+asPath : DPair (List String) NonEmpty -> String
+asPath (MkDPair path snd) = foldr1 (\x,y => x <+> "/" <+> y) path
+
 export
-runTest : Options -> Path -> IO (Either TestError TestResult)
-runTest opts testPath  = do
+runTest : String -> IO (Either TestError TestResult)
+runTest testPath  = do
   Just cdir <- currentDir
     | Nothing => pure $ Left $ CantLocateDir "Can't resolve currentDir"
   True <- changeDir testPath
     | False => pure $ Left $ CantLocateDir $ "Can't locate " ++ show testPath
-  result <- testExecution opts testPath
+  Right opts <- parseTestConfig "test.repl"
+    | Left err => pure $ Left $ CantParseTest err
+  result <- testExecution opts
   changeDir cdir
   pure $ result
