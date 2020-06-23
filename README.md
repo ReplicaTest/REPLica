@@ -6,7 +6,7 @@ Golden tests for Commnd Line interfaces.
 
 ## Purpose
 
-Replica aims at managing tests suites composed of command line itnerfaces calls.
+Replica aims at managing tests suites composed of command line interfaces calls.
 
 It compares the output of the command line to a "golden value": a stored value of the expected
 outcome of the command line call.
