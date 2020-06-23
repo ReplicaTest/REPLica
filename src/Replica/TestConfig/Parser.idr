@@ -1,16 +1,18 @@
 module Replica.TestConfig.Parser
 
 import Data.Strings
-
-import public Text.Parser
-
 import System.File
-
 
 import Replica.TestConfig.Core
 import Replica.Text.Lexer
+
+
+import public Text.Parser
+
 import public Replica.Text.Parser
 import public Replica.Validation
+
+%default total
 
 export
 test : Rule Path
@@ -48,7 +50,7 @@ foldBuilder = concatMap (uncurry toBuilder) . fst
     toBuilder x y = pure $ emptyBuilder
 
 
-export
+covering export
 parseTestConfig : (filename : String) -> IO (Either (ParsingError (List BuildError)) TestConfig)
 parseTestConfig filename = do
   Right str <- readFile filename

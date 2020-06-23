@@ -1,13 +1,14 @@
 module Replica.Suite.Core
 
+import public Replica.Path
+
 %default total
 
 public export
 record SuiteM (f : Type -> Type) where
   constructor MkSuite
 
-  name : f String
-  tests : f (List String)
+  tests : f (List Path)
 
 public export
 Suite : Type
@@ -17,9 +18,22 @@ public export
 SuiteBuilder : Type
 SuiteBuilder = SuiteM List
 
-emptySuite : SuiteBuilder
-emptySuite = MkSuite empty empty
+public export
+emptyBuilder : SuiteBuilder
+emptyBuilder = MkSuite empty
 
 public export
 implementation Semigroup SuiteBuilder where
-  (<+>) x y = MkSuite (x.name <+> y.name) (x.tests <+> y.tests)
+  (<+>) x y = MkSuite (x.tests <+> y.tests)
+
+public export
+implementation Monoid SuiteBuilder where
+  neutral = emptyBuilder
+
+public export
+data BuildError = InvalidTestPath String
+
+
+public export
+build : SuiteBuilder -> Suite
+build (MkSuite tests) = MkSuite $ concat tests

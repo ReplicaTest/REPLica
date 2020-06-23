@@ -1,13 +1,13 @@
 module Replica.Text.Parser
 
-import public Text.Parser
-
-import public Replica.Path
-
 import System.File
 
 
-import Replica.Text.Lexer
+import public Text.Parser
+
+import public Replica.Path
+import public Replica.Text.Lexer
+
 
 public export
 Rule : Type -> Type
