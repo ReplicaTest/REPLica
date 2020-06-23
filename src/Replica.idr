@@ -172,11 +172,14 @@ runDir : RunEnv String -> IO (List (Either TestError TestResult))
 runDir x = inDir x $ do
   (Right testOrSuite) <- parseTestFile
     | Left err => pure [Left err]
-  either (\t => map pure . runTest . setValue t) (\s => runSuite . setValue s) testOrSuite x
+  either
+    (\t => map pure . runTest . setValue t)
+    (\s => runSuite . setValue s)
+    testOrSuite x
 
   where
 
     covering
     runSuite : RunEnv Suite -> IO (List (Either TestError TestResult))
-    runSuite env = map concat $ for env.value.tests \filename => do
-      runDir (setValue (asPath filename) env)
+    runSuite env = map concat $ for env.value.tests \filename =>
+      runDir $ setValue (asPath filename) env
