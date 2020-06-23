@@ -36,6 +36,13 @@ equals = terminal "Expected equals"
              _ => Nothing
 
 export
+listSep : Rule ()
+listSep = terminal "Expected listSep"
+  \x => case tok x of
+             ListSep => Just ()
+             _ => Nothing
+
+export
 stringLit : Rule String
 stringLit = terminal "Expected String literal"
   \x => case tok x of
@@ -62,17 +69,31 @@ identPath : Rule Path
 identPath = sepBy1' separator ident
 
 export
+listOf : Rule a -> Rule (DPair (List a) NonEmpty)
+listOf r = (\x, xs => (x :: fst xs ** IsNonEmpty)) <$> r <*> (listSep *> sepBy1' listSep r)
+
+export
 path : Rule Path
 path = identPath <|> fail "A Path is expected"
 
 public export
-Value : Type
-Value = Either Path String
+data Value
+  = SPath Path
+  | SString String
+  | LPath (DPair (List Path) NonEmpty)
+  | LString (DPair (List String) NonEmpty)
 
+value : Rule Value
+value = choice $ the (List _)
+  [ map LPath (listOf path)
+  , map LString (listOf string)
+  , map SPath path
+  , map SString string
+  ]
 
 export
 keyValue : Rule (String, Value)
-keyValue =  MkPair <$> ident <*> (equals *> (map Left path <|> map Right string))
+keyValue =  MkPair <$> ident <*> (equals *> value)
 
 public export
 data ParsingError err

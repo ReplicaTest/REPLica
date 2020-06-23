@@ -25,7 +25,7 @@ public export
 data TestError
   = CantLocateDir String
   | CantReadOutput FileError
-  | CantParseTest (ParsingError BuildError)
+  | CantParseTest (ParsingError (List BuildError))
   | CantReadExpected FileError
   | CantWriteNewGolden
   | CommandFailed Int

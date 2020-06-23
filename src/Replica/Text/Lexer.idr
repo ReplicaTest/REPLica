@@ -15,6 +15,7 @@ data Token
   | Comment String
   | Space
   | Separator String
+  | ListSep
   | Path String
   | StringLit String
 
@@ -47,11 +48,15 @@ word = some wordChar
 separator : Lexer
 separator = oneOf "/."
 
+listSep : Lexer
+listSep = is ','
+
 rawTokens : TokenMap Token
 rawTokens =
   [ (equals, const Equals)
   , (word, Word)
   , (separator, Separator)
+  , (listSep, const ListSep)
   , (spacesOrNewlines, const Space)
   , (comment, Comment)
   , (stringLit, \s => StringLit (pack . removeEscaped . unpack $ stripQuotes s))
