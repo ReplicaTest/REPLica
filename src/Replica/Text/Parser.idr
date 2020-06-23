@@ -7,6 +7,7 @@ import public Text.Parser
 
 import public Replica.Path
 import public Replica.Text.Lexer
+import public Replica.Validation
 
 
 public export
@@ -113,3 +114,30 @@ displayParsingError _ (ParserFailed (Error msg xs))
 displayParsingError f (TargetError x)
   = "Cannot build expected value: " ++ f x
 
+export
+mapError : (a -> b) -> Either a c -> Either b c
+mapError f (Left x) = Left (f x)
+mapError f (Right x) = Right x
+
+export
+entries : Rule (List (String, Value))
+entries = some keyValue
+
+covering export
+parseWith : Rule (List (String, Value)) ->
+             (List (String, Value) -> Validation err target) ->
+             (filename : String) ->
+             IO (Either (ParsingError (List err)) target)
+parseWith params build filename = do
+  Right str <- readFile filename
+    | Left err => pure $ Left $ FileNotFound err
+  pure $ runParser str
+
+  where
+
+    runParser : String -> Either (ParsingError (List err)) target
+    runParser  str = do
+      tokens <- mapError LexerFailed $ lex str
+      (cfg, []) <- mapError ParserFailed $ parse params tokens
+        | (_, err) => Left $ ParserFailed $ Error "Cannot parse tokens"  err
+      mapError TargetError $ toEither $ build cfg

@@ -15,18 +15,16 @@ import public Replica.Validation
 %default total
 
 export
-test : Rule Path
-test = (key "test" *> path) <|>fail "No test preamble"
+testPreamble : Rule Path
+testPreamble = (key "test" *> path) <|>fail "No test preamble"
 
-export
-testConfig : Rule $ DPair (List (String, Value)) NonEmpty
-testConfig = do
-  x <- map (MkPair "test" . SPath) test
-  xs <- many keyValue
-  pure ((x :: xs) ** IsNonEmpty)
+params : Rule $ List (String, Value)
+params = do
+  x <- map (MkPair "test" . SPath) testPreamble
+  map (x ::) entries
 
-foldBuilder : DPair (List (String, Value)) NonEmpty -> Validation BuildError BuildTestConfig
-foldBuilder = concatMap (uncurry toBuilder) . fst
+foldBuilder : List (String, Value) -> Validation BuildError BuildTestConfig
+foldBuilder = concatMap (uncurry toBuilder)
   where
     pathToString : Path -> String
     pathToString (MkDPair path snd) = foldr1 (\x, y => x ++ "/" ++ y) path
@@ -49,24 +47,16 @@ foldBuilder = concatMap (uncurry toBuilder) . fst
     toBuilder "outputFile" y = pure $ record {outputFile = valueToStrings y} emptyBuilder
     toBuilder x y = pure $ emptyBuilder
 
+export
+toTestConfig : List (String, Value) -> Validation BuildError TestConfig
+toTestConfig xs = case foldBuilder xs of
+  ErrorM x => ErrorM x
+  Valid x  => build x
+
+export
+testConfig : Rule $ Validation BuildError TestConfig
+testConfig = map toTestConfig params
 
 covering export
 parseTestConfig : (filename : String) -> IO (Either (ParsingError (List BuildError)) TestConfig)
-parseTestConfig filename = do
-  Right str <- readFile filename
-    | Left err => pure $ Left $ FileNotFound err
-  pure $ runParser str
-
-  where
-
-    mapError : (a -> b) -> Either a c -> Either b c
-    mapError f (Left x) = Left (f x)
-    mapError f (Right x) = Right x
-
-    runParser : String -> Either (ParsingError (List BuildError)) TestConfig
-    runParser  str = do
-      tokens <- mapError LexerFailed $ lex str
-      (cfg, []) <- mapError ParserFailed $ parse testConfig tokens
-        | (_, err) => Left $ ParserFailed $ Error "Cannot parse tokens"  err
-      builder <- mapError TargetError $ toEither $ foldBuilder cfg
-      mapError TargetError $ toEither $ build builder
+parseTestConfig = parseWith params toTestConfig

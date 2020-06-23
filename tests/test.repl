@@ -1,0 +1,3 @@
+suite
+
+tests = cli.success.001, cli.failure.001

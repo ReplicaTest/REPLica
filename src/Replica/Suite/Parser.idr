@@ -14,8 +14,9 @@ suitePreamble : Rule ()
 suitePreamble = key "suite"
 
 
-suite : Rule $ Validation BuildError SuiteBuilder
-suite = map foldBuilder (suitePreamble *> some keyValue)
+foldBuilder : List (String, Value) -> Validation BuildError SuiteBuilder
+foldBuilder = concatMap (uncurry builderPart)
+
   where
     addTests : Value -> ValidationM List BuildError (SuiteM List)
     addTests (SPath x) = pure $ record {tests = pure [x]} emptyBuilder
@@ -25,29 +26,22 @@ suite = map foldBuilder (suitePreamble *> some keyValue)
 
     builderPart : String -> Value -> Validation BuildError SuiteBuilder
     builderPart "test" y = addTests y
-    builderPart "tests" y = ?builderPart_rhs
+    builderPart "tests" y = addTests y
     builderPart _ _ = pure emptyBuilder
 
-    foldBuilder : List (String, Value) -> Validation BuildError SuiteBuilder
-    foldBuilder = concatMap (uncurry builderPart)
+export
+toSuite : List (String, Value) -> Validation BuildError Suite
+toSuite xs = case foldBuilder xs of
+  ErrorM x => ErrorM x
+  Valid x  => pure $ build x
 
+params : Rule $ List (String, Value)
+params = suitePreamble *> some keyValue
+
+export
+suite : Rule $ Validation BuildError Suite
+suite = map toSuite params
 
 covering export
 parseSuite : (filename : String) -> IO (Either (ParsingError (List BuildError)) Suite)
-parseSuite filename = do
-  Right str <- readFile filename
-    | Left err => pure $ Left $ FileNotFound err
-  pure $ runParser str
-
-  where
-
-    mapError : (a -> b) -> Either a c -> Either b c
-    mapError f (Left x) = Left (f x)
-    mapError f (Right x) = Right x
-
-    runParser : String -> Either (ParsingError (List BuildError)) Suite
-    runParser  str = do
-      tokens <- mapError LexerFailed $ lex str
-      (cfg, []) <- mapError ParserFailed $ parse suite tokens
-        | (_, err) => Left $ ParserFailed $ Error "Cannot parse tokens"  err
-      mapError TargetError $ toEither $ map build cfg
+parseSuite = parseWith params toSuite

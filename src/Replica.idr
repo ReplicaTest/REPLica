@@ -8,8 +8,14 @@ import System.Directory
 import System.File
 import System.Info
 
-import Replica.TestConfig
 import Replica.RunEnv
+import Replica.Suite
+import Replica.Text.Lexer
+import Replica.Text.Parser
+import Replica.TestConfig.Parser
+import Replica.Suite.Parser
+import Replica.TestConfig
+import Replica.Validation
 
 %default total
 
@@ -25,7 +31,9 @@ public export
 data TestError
   = CantLocateDir String
   | CantReadOutput FileError
-  | CantParseTest (ParsingError (List BuildError))
+  | CantParseTest (ParsingError (List TestConfig.Core.BuildError))
+  | CantParseSuite (ParsingError (List Suite.Core.BuildError))
+  | CantParse (ParsingError Void)
   | CantReadExpected FileError
   | CantWriteNewGolden
   | CommandFailed Int
@@ -46,6 +54,8 @@ displayResult (Left (CantLocateDir x)) = putStrLn $ "ERROR: Cannot find test dir
 displayResult (Left (CantReadOutput x)) = putStrLn $ "ERROR: Cannot read test output"
 displayResult (Left (CantReadExpected x)) = putStrLn $ "ERROR: Cannot read expected output"
 displayResult (Left (CantParseTest x)) = putStrLn $ "ERROR: Parsing failed: " ++ displayParsingError (const "something is missing") x
+displayResult (Left (CantParseSuite x)) = putStrLn $ "ERROR: Parsing failed: " ++ displayParsingError (const "something is missing") x
+displayResult (Left (CantParse x)) = putStrLn $ "ERROR: Parsing failed: " ++ displayParsingError (const "something is missing") x
 displayResult (Left CantWriteNewGolden) = putStrLn $ "ERROR: Cannot write file 'expected'"
 displayResult (Left (CommandFailed x)) = putStrLn $ "ERROR: Cannot run command - Exit code: " ++ show x
 displayResult (Right Success) = putStrLn "ok"
@@ -104,37 +114,94 @@ handleFailure exp out = do
            "Y" => pure True
            _ => putStrLn "I didn't understand your answer. [N/y]" *> readAnswer
 
+covering export
+inDir : RunEnv String -> IO (List (Either TestError a)) -> IO (List (Either TestError a))
+inDir env action = do
+  Just origin <- currentDir
+    | Nothing => pure [Left $ CantLocateDir "Can't resolve currentDir"]
+  True <- changeDir env.value
+    | False => pure [Left $ CantLocateDir $ "Can't locate " ++ show env.value]
+  res <- action
+  True <- changeDir origin
+    | False => pure [Left $ CantLocateDir $ "Can't goback to " ++ show origin]
+  pure res
+
 covering
-testExecution : (interactive : Bool) -> TestConfig -> IO (Either TestError TestResult)
-testExecution interactive opts = do
-  removeFile opts.outputFile
-  0 <- system $ commandLine opts
+runTest : RunEnv TestConfig -> IO (Either TestError TestResult)
+runTest test = do
+  removeFile test.value.outputFile
+  0 <- system $ commandLine test.value
     | n => pure $ Left $ CommandFailed 0
-  Right out <- readFile opts.outputFile
+  Right out <- readFile test.value.outputFile
     | Left err => pure $ Left $ CantReadOutput err
   Right exp <- readFile "expected"
-    | Left err => if interactive
+    | Left err => if test.interactive
                   then handleFailure Nothing out
                   else pure $ Left $ CantReadExpected err
   let result = normalize exp == normalize out
   if result
     then pure $ Right Success
-    else if interactive
+    else if test.interactive
            then handleFailure (Just exp) out
            else pure $ Right $ Failure (Just exp) out
 
 asPath : DPair (List String) NonEmpty -> String
 asPath (MkDPair path snd) = foldr1 (\x,y => x <+> "/" <+> y) path
 
+
+covering
+parseTestFile : IO (Either TestError (Either TestConfig Suite))
+parseTestFile = do
+  Right content <- readFile "test.repl"
+    | Left err => pure $ Left $ CantParse $ FileNotFound err
+  pure $ processContent content
+  where
+
+    processContent : String -> Either TestError (Either TestConfig Suite)
+    processContent content = do
+      tokens <- mapError (CantParse . LexerFailed) $ lex content
+      (parseRes, []) <- mapError (CantParse . ParserFailed) $ parse
+          (   map (mapError (CantParseTest . TargetError) . toEither . map Left) testConfig
+          <|> map (mapError (CantParseSuite . TargetError) . toEither . map Right) suite
+          ) tokens
+        | (_, err) => Left $ CantParse $ ParserFailed $ Error "Cannot parse tokens"  err
+      parseRes
+
 covering export
-runTest : RunEnv -> IO (Either TestError TestResult)
-runTest env = do
+runDir : RunEnv String -> IO (List (Either TestError TestResult))
+runDir x = inDir x $ do
+  (Right testOrSuite) <- parseTestFile
+    | Left err => pure [Left err]
+  either (\t => map pure . runTest . setValue t) (\s => runSuite . setValue s) testOrSuite x
+
+  where
+
+    covering
+    runSuite : RunEnv Suite -> IO (List (Either TestError TestResult))
+    runSuite env = map concat $ for env.value.tests \filename => do
+      runDir (setValue (asPath filename) env)
+
+
+
+{-
+covering export
+checkDir : RunEnv String -> IO (Either TestError (Either TestConfig Suite))
+checkDir env = do
   Just cdir <- currentDir
-    | Nothing => pure $ Left $ CantLocateDir "Can't resolve currentDir"
-  True <- changeDir env.path
-    | False => pure $ Left $ CantLocateDir $ "Can't locate " ++ show env.path
+    | Nothing => pure $ Error $ CantLocateDir "Can't resolve currentDir"
+  True <- changeDir env.value
+    | False => pure $ Error $ CantLocateDir $ "Can't locate " ++ show env.value
+  Right resolved <- parser "test.repl"
+    | Left err => pure $ Error $ CantParseTest err
+
+
+  where
+
+    parser : ?tnd
+
   Right cfg <- parseTestConfig "test.repl"
-    | Left err => pure $ Left $ CantParseTest err
-  result <- testExecution env.interactive cfg
+    | Left err => pure $ Error $ CantParseTest err
+  result <- testExecution $ map (const cfg) env
   changeDir cdir
   pure $ result
+  -}
