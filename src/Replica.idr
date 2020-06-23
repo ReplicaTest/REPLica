@@ -180,28 +180,3 @@ runDir x = inDir x $ do
     runSuite : RunEnv Suite -> IO (List (Either TestError TestResult))
     runSuite env = map concat $ for env.value.tests \filename => do
       runDir (setValue (asPath filename) env)
-
-
-
-{-
-covering export
-checkDir : RunEnv String -> IO (Either TestError (Either TestConfig Suite))
-checkDir env = do
-  Just cdir <- currentDir
-    | Nothing => pure $ Error $ CantLocateDir "Can't resolve currentDir"
-  True <- changeDir env.value
-    | False => pure $ Error $ CantLocateDir $ "Can't locate " ++ show env.value
-  Right resolved <- parser "test.repl"
-    | Left err => pure $ Error $ CantParseTest err
-
-
-  where
-
-    parser : ?tnd
-
-  Right cfg <- parseTestConfig "test.repl"
-    | Left err => pure $ Error $ CantParseTest err
-  result <- testExecution $ map (const cfg) env
-  changeDir cdir
-  pure $ result
-  -}

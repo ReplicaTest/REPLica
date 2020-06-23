@@ -1,3 +1,5 @@
 suite
 
-tests = cli.success.001, cli.failure.001
+tests = cli.success.001
+      , cli.failure.001
+      , cli.failure.002
