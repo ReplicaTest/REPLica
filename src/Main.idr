@@ -23,4 +23,4 @@ main = do
   let opts = options args
   for_ (optionsToRunargs opts) \env => do
     result <- runDir env
-    traverse_ (displayTestResult env.value) result
+    traverse_ (displayResult env.value) result

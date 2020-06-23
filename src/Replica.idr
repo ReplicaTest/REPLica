@@ -21,11 +21,17 @@ import Replica.Validation
 
 
 public export
-data TestResult
+data TestStatus
   = Success
   | Failure (Maybe String) String
   | NewGolden String
 
+public export
+record TestResult where
+  constructor MkTestResult
+
+  test : TestConfig
+  status : TestStatus
 
 public export
 data TestError
@@ -48,19 +54,11 @@ expectedVsGiven exp out = do
   putStrLn "Given:"
   putStrLn out
 
-covering export
-displayResult : Either TestError TestResult -> IO ()
-displayResult (Left (CantLocateDir x)) = putStrLn $ "ERROR: Cannot find test directory"
-displayResult (Left (CantReadOutput x)) = putStrLn $ "ERROR: Cannot read test output"
-displayResult (Left (CantReadExpected x)) = putStrLn $ "ERROR: Cannot read expected output"
-displayResult (Left (CantParseTest x)) = putStrLn $ "ERROR: Parsing failed: " ++ displayParsingError (const "something is missing") x
-displayResult (Left (CantParseSuite x)) = putStrLn $ "ERROR: Parsing failed: " ++ displayParsingError (const "something is missing") x
-displayResult (Left (CantParse x)) = putStrLn $ "ERROR: Parsing failed: " ++ displayParsingError (const "something is missing") x
-displayResult (Left CantWriteNewGolden) = putStrLn $ "ERROR: Cannot write file 'expected'"
-displayResult (Left (CommandFailed x)) = putStrLn $ "ERROR: Cannot run command - Exit code: " ++ show x
-displayResult (Right Success) = putStrLn "ok"
-displayResult (Right (NewGolden str)) = putStrLn "new golden value" *> putStrLn str
-displayResult (Right (Failure expected given)) = do
+covering
+displayStatus : TestStatus -> IO ()
+displayStatus Success = putStrLn "ok"
+displayStatus (NewGolden str) = putStrLn "new golden value" *> putStrLn str
+displayStatus (Failure expected given) = do
   putStrLn "FAILURE"
   expectedVsGiven expected given
 
@@ -68,10 +66,21 @@ displayPath : Path -> String
 displayPath (MkDPair path snd) = foldr1 (\x, y => x <+> "." <+> y) path
 
 covering export
-displayTestResult : String -> Either TestError TestResult -> IO ()
-displayTestResult testPath result = do
-  putStr $ testPath ++ ": "
-  displayResult result
+displayResult : String -> Either TestError TestResult -> IO ()
+displayResult str (Left err) = do
+  putStr $ str ++ ": "
+  putStrLn $ case err of
+    CantLocateDir x => "ERROR: Cannot find test directory"
+    CantReadOutput x => "ERROR: Cannot read test output"
+    CantReadExpected x => "ERROR: Cannot read expected output"
+    CantParseTest x => "ERROR: Parsing failed: " ++ displayParsingError (const "something is missing") x
+    CantParseSuite x => "ERROR: Parsing failed: " ++ displayParsingError (const "something is missing") x
+    CantParse x => "ERROR: Parsing failed: " ++ displayParsingError (const "something is missing") x
+    CantWriteNewGolden => "ERROR: Cannot write file 'expected'"
+    CommandFailed x => "ERROR: Cannot run command - Exit code: " ++ show x
+displayResult _ (Right ts) = do
+  putStr $ displayPath ts.test.path ++ ": "
+  displayStatus ts.status
 
 -- on Windows, we just ignore backslashes and slashes when comparing,
 -- similarity up to that is good enough. Leave errors that depend
@@ -88,7 +97,7 @@ commandLine (MkTestConfig exec path params inputFile outputFile)
  = exec ++ " " ++ params ++ (maybe "" (" < " ++) inputFile) ++ " > " ++ outputFile
 
 covering
-handleFailure : Maybe String -> String -> IO (Either TestError TestResult)
+handleFailure : Maybe String -> String -> IO (Either TestError TestStatus)
 handleFailure exp out = do
   expectedVsGiven exp out
   putStrLn $ "Do you want to " ++ maybe "set" (const "replace") exp ++ " the golden value? [N/y]"
@@ -128,22 +137,22 @@ inDir env action = do
 
 covering
 runTest : RunEnv TestConfig -> IO (Either TestError TestResult)
-runTest test = do
-  removeFile test.value.outputFile
-  0 <- system $ commandLine test.value
+runTest env = do
+  removeFile env.value.outputFile
+  0 <- system $ commandLine env.value
     | n => pure $ Left $ CommandFailed 0
-  Right out <- readFile test.value.outputFile
+  Right out <- readFile env.value.outputFile
     | Left err => pure $ Left $ CantReadOutput err
   Right exp <- readFile "expected"
-    | Left err => if test.interactive
-                  then handleFailure Nothing out
+    | Left err => if env.interactive
+                  then map (map $ MkTestResult env.value)  $ handleFailure Nothing out
                   else pure $ Left $ CantReadExpected err
   let result = normalize exp == normalize out
   if result
-    then pure $ Right Success
-    else if test.interactive
-           then handleFailure (Just exp) out
-           else pure $ Right $ Failure (Just exp) out
+    then pure $ Right $ MkTestResult env.value Success
+    else if env.interactive
+           then map (map $ MkTestResult env.value) $ handleFailure (Just exp) out
+           else pure $ Right $ MkTestResult env.value $ Failure (Just exp) out
 
 asPath : DPair (List String) NonEmpty -> String
 asPath (MkDPair path snd) = foldr1 (\x,y => x <+> "/" <+> y) path
