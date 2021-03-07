@@ -138,7 +138,7 @@ inDir env action = do
 covering
 runTest : RunEnv TestConfig -> IO (Either TestError TestResult)
 runTest env = do
-  removeFile env.value.outputFile
+  ignoredResult <- removeFile env.value.outputFile
   0 <- system $ commandLine env.value
     | n => pure $ Left $ CommandFailed 0
   Right out <- readFile env.value.outputFile

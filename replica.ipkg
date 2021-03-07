@@ -1,5 +1,7 @@
 package replica
 
+version = 0.1.0
+
 sourcedir = "src"
 
 depends = contrib
