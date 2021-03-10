@@ -61,10 +61,10 @@ expectedVsGiven exp out = do
 
 covering
 displayStatus : TestStatus -> IO ()
-displayStatus Success = putStrLn "ok"
+displayStatus Success = putStrLn "✅"
 displayStatus (NewGolden str) = putStrLn "new golden value" *> putStrLn str
 displayStatus (Failure expected given) = do
-  putStrLn "FAILURE"
+  putStrLn "❌"
   expectedVsGiven expected given
 
 displayPath : Path -> String
