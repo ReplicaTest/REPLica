@@ -1,3 +1,5 @@
+.PHONY: build
+
 build:
 	idris2 --build replica.ipkg
 

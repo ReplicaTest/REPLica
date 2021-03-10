@@ -26,6 +26,11 @@ data TestStatus
   | Failure (Maybe String) String
   | NewGolden String
 
+export
+isFailure : TestStatus -> Bool
+isFailure (Failure _ _) = True
+isFailure _             = False
+
 public export
 record TestResult where
   constructor MkTestResult
@@ -139,8 +144,7 @@ covering
 runTest : RunEnv TestConfig -> IO (Either TestError TestResult)
 runTest env = do
   ignoredResult <- removeFile env.value.outputFile
-  0 <- system $ commandLine env.value
-    | n => pure $ Left $ CommandFailed 0
+  n <- system $ commandLine env.value
   Right out <- readFile env.value.outputFile
     | Left err => pure $ Left $ CantReadOutput err
   Right exp <- readFile "expected"

@@ -4,6 +4,9 @@ import Replica
 import Replica.Options
 import Replica.RunEnv
 
+import Data.List
+import Data.Either
+
 import System
 
 %default total
@@ -24,3 +27,9 @@ main = do
   for_ (optionsToRunargs opts) \env => do
     result <- runDir env
     traverse_ (displayResult env.value) result
+    case partitionEithers result of
+         ((x::xs), _) => exitWith $ ExitFailure 255
+         ([], xs) => case filter isFailure $ map status xs of
+                          [] => exitSuccess {a = Unit}
+                          _  => exitFailure
+
