@@ -1,6 +1,10 @@
+Final report:
 test: ❌
 Expected:
 Should write something
 
 Given:
+
+---------------------------------------
+✅: 0 ❌: 1 (invalid tests: 0)
 
