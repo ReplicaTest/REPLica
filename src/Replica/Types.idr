@@ -2,7 +2,6 @@ module Replica.Types
 
 import Control.App as App
 import Control.App.Console as App
-import Control.App.FileIO as App
 
 import Data.Maybe
 import Data.List
@@ -282,16 +281,36 @@ namespace App
   defaultOutput : Test -> String
   defaultOutput t = "\{show t.name}.output"
 
+  data FSError
+    = MissingFile String
+    | CantAccess String
+    | CantWriteFile String
+    | CantReadFile String
+    | CantCreate String
+    | UnmanagedError String
+    | FileExists String
 
-  interface Has [Exception IOError] e => DirectoryIO e where
+  toFSError : FileError -> String -> FSError
+  toFSError (GenericFileError i) = UnmanagedError
+  toFSError FileReadError = CantReadFile
+  toFSError FileWriteError = CantWriteFile
+  toFSError FileNotFound = MissingFile
+  toFSError PermissionDenied = CantAccess
+  toFSError FileExists = FileExists
+
+  interface Exception FSError e => FileSystem e where
     covering
-    createDir : String -> App e ()
+    createDir : (dirname : String) -> App e ()
     covering
     getCurrentDir : App e String
     covering
-    changeDir : String -> App e ()
+    changeDir : (dirname : String) -> App e ()
     covering
-    removeDir : String -> App e ()
+    removeDir : (dirname : String) -> App e ()
+    covering
+    writeFile : (filename : String) -> (content : String) -> App e ()
+    covering
+    readFile : (filename : String) -> App e String
 
   data SystemError = Err Int
 
@@ -299,44 +318,38 @@ namespace App
     covering
     system : String -> App e ()
 
-  toFileEx : FileError -> FileEx
-  toFileEx (GenericFileError i) = GenericFileEx i
-  toFileEx FileReadError = FileReadError
-  toFileEx FileWriteError = FileWriteError
-  toFileEx FileNotFound = FileNotFound
-  toFileEx PermissionDenied = PermissionDenied
-  toFileEx FileExists = FileExists
-
-  covering
-  dirOp :
-    IO (Either FileError a) ->
-    Has [PrimIO, Exception IOError] e => App e a
-  dirOp op = do
-    Right x <- primIO op
-      | Left err => throw (FileErr $ toFileEx err)
-    pure x
-
   Has [PrimIO, Exception SystemError] e => SystemIO e where
     system exec = do
       0 <- primIO $ system exec
         | n => throw (Err n)
       pure ()
 
-  Has [PrimIO, Exception IOError] e => DirectoryIO e where
-    createDir d = dirOp $ createDir d
+  Has [PrimIO, Exception FSError] e => FileSystem e where
+    createDir d = do
+      Right x <- primIO $ createDir d
+        | Left err => throw (toFSError err d)
+      pure x
     getCurrentDir = do
       Just dir <- primIO currentDir
-        | Nothing => throw (FileErr $ GenericFileEx (-1))
+        | Nothing => throw (UnmanagedError "current dir")
       pure dir
     changeDir d = do
       res <- primIO $ changeDir d
       if res
          then pure ()
-         else throw (FileErr $ toFileEx FileNotFound)
+         else throw (CantAccess d)
     removeDir d = primIO $ removeDir d
+    writeFile f content = do
+      Right x <- primIO $ writeFile f content
+        | Left err => throw (toFSError err f)
+      pure x
+    readFile f = do
+      Right x <- primIO $ readFile f
+        | Left err => throw (toFSError err f)
+      pure x
 
-  inDir : DirectoryIO (IOError :: es) =>
-    String -> App es a -> App (IOError :: es) a
+  inDir : FileSystem (FSError :: es) =>
+    String -> App es a -> App (FSError :: es) a
   inDir dir exec = do
     cwd <- getCurrentDir
     changeDir dir
@@ -369,9 +382,8 @@ namespace App
     putStrLn given
 
 
-  covering
   askForNewGolden :
-    FileIO (IOError :: e) =>
+    FileSystem (FSError :: e) =>
     Has [ State CurrentTest Test
         , Exception TestError
         , Console
@@ -382,9 +394,9 @@ namespace App
     putStrLn $ "Do you want to " ++ maybe "set" (const "replace") old ++ " the golden value? [N/y]"
     if !readAnswer
        then do
-         handle (?writeFile (defaultExpected t) given)
+         handle (writeFile (defaultExpected t) given)
            (const $ pure Success)
-           (\err : IOError => throw $ FileSystemError "Cannot write golden value")
+           (\err : FSError => throw $ FileSystemError "Cannot write golden value")
        else pure $ maybe (Fail [NoGolden])
                          (Fail . pure . flip WrongOutput given)
                          old
@@ -395,13 +407,12 @@ namespace App
         pure $ toLower answer `elem` ["y", "yes"]
 
 
-
   data OutputError
     = ExpectedIsMissing
     | DifferentOutput String String
 
   checkOutput :
-    FileIO (IOError :: e) =>
+    FileSystem (FSError :: e) =>
     Has [ State CurrentTest Test
         , State RunContext RunAction
         , Exception TestError
@@ -439,7 +450,7 @@ namespace App
 
   covering
   getExpected :
-    FileIO (IOError :: e) =>
+    FileSystem (FSError :: e) =>
     Has [ State CurrentTest Test
         , State RunContext RunAction
         , Exception TestError
@@ -449,14 +460,14 @@ namespace App
     t <- get CurrentTest
     handle (readFile $ defaultExpected t)
       (pure . Just)
-      (\err : IOError => case err of
-          FileErr FileNotFound => pure Nothing
+      (\err : FSError => case err of
+          MissingFile _ => pure Nothing
           err => throw $ FileSystemError "Cannot read expectation")
 
   covering
   testCore :
     SystemIO (SystemError :: e) =>
-    FileIO (IOError :: e) =>
+    FileSystem (FSError :: e) =>
     Has [ State CurrentTest Test
         , State RunContext RunAction
         , Exception TestError
@@ -468,16 +479,15 @@ namespace App
       (const $ pure 0)
       (\(Err n) => pure n)
     output <- handle (readFile $ defaultOutput t) pure
-      (\e : IOError => throw $
+      (\e : FSError => throw $
             FileSystemError "Can't read output file \{defaultOutput t}")
     expected <- getExpected output
     checkOutput t.expectedStatus exitStatus expected output
 
-
   covering
   performTest :
     SystemIO (SystemError :: e) =>
-    FileIO (IOError :: e) =>
+    FileSystem (FSError :: e) =>
     Has [ State CurrentTest Test
         , State RunContext RunAction
         , Exception TestError
@@ -493,8 +503,7 @@ namespace App
   covering
   runTest :
     SystemIO (SystemError :: e) =>
-    FileIO (IOError :: e) =>
-    DirectoryIO (IOError :: e) =>
+    FileSystem (FSError :: e) =>
     Has [ State RunContext RunAction
         , State CurrentTest Test
         , Exception TestError
@@ -508,8 +517,42 @@ namespace App
         "Can't create working directory \{show ctx.workingDir}")
     handle (inDir ctx.workingDir performTest)
       pure
-      (\err : IOError => throw $ FileSystemError
+      (\err : FSError => throw $ FileSystemError
         "Error: cannot enter or exit test working directory \{show ctx.workingDir}")
+
+  data ReplicaError
+    = CanAccessTestFile String
+    | InvalidJSON (List String)
+
+  covering
+  getReplica :
+    FileSystem (FSError :: e) =>
+    Has [ State RunContext RunAction
+        , Exception ReplicaError ] e => App e Replica
+  getReplica = do
+    ctx <- get RunContext
+    content <- handle (readFile ctx.file)
+                      pure
+                      (\err : FSError => throw $ CanAccessTestFile ctx.file)
+    let Just json = parse content
+          | Nothing => throw $ InvalidJSON []
+    let Valid repl = jsonToReplica json
+          | Error xs => throw $ InvalidJSON xs
+    pure repl
+
+  runReplica :
+    SystemIO (SystemError :: e) =>
+    FileSystem (FSError :: e) =>
+    Has [ State RunContext RunAction
+        , Exception ReplicaError
+        , Console
+        ] e => App e ()
+  runReplica = do
+    repl <- getReplica
+    res <- ?runAllTests repl.tests
+    traverse_ (either ?eh ?rh) (the (List $ Either TestError TestResult) res)
+    where
+      runAllTests : List Test -> App e (List (Either TestError TestResult))
 
   covering
   main : IO ()
@@ -527,7 +570,4 @@ namespace App
                         (x :: xs) => do
                            putStrLn "Unknown action \{show x}"
                            exitWith $ ExitFailure 254
-    testResult <- run $ new ctx $ new (the Test ?hxxc) $ handle runTest
-      pure
-      (\err : TestError => ?oek)
-    ?nthaoak
+    run $ new ctx $ handle runReplica pure (\err : ReplicaError => ?oek)
