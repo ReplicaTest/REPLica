@@ -11,16 +11,16 @@ install:
 
 clean:
 	$(RM) -r build
+	$(RM) ${testsName}.json
 
 showtests:
 	dhall-to-json --file ${testsName}.dhall
 
-generate:
+${testsName}.json:
 	dhall-to-json --file ${testsName}.dhall --output ${testsName}.json
-	build/exec/replica run --interactive ${testsName}.json
-	rm ${testsName}.json
 
-test:
-	dhall-to-json --file ${testsName}.dhall --output ${testsName}.json
+generate: ${testsName}.json
+	build/exec/replica run --interactive ${testsName}.json
+
+test: ${testsName}.json build
 	build/exec/replica run ${testsName}.json
-	rm ${testsName}.json

@@ -74,18 +74,18 @@ parseRunOptions xs@(x::tail) a = do
   assert_total $ parseRunOptions xs' $ f a
 
 validateRunAction : RunAction' List -> Validation (List String) RunAction
-validateRunAction (MkRunAction wd i f)
-  = [|MkRunAction
-    (oneWithDefault "workingDir" workingDir.defaultValue wd)
-    (oneWithDefault "interactive" interactive.defaultValue i)
-    (one "filename" f)
+validateRunAction r
+  = [| MkRunAction
+    (oneWithDefault "workingDir" workingDir.defaultValue r.workingDir)
+    (oneWithDefault "interactive" interactive.defaultValue r.interactive)
+    (one "filename" r.file)
     |]
 
 export
-parseAction : List String -> Maybe (Validation (List String) RunAction)
-parseAction ("run" :: xs)
-  = Just $ case parseRunOptions xs neutral of
+parseRun : List String -> Validation (List String) RunAction
+parseRun ("run" :: xs)
+  = case parseRunOptions xs neutral of
                 Valid x => validateRunAction x
                 Error e => Error e
-parseAction _ = Nothing
+parseRun _ = empty
 

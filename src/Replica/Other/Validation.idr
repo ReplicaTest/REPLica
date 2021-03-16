@@ -20,3 +20,10 @@ export
   (Error e)  <*> (Valid x)  = Error e
   (Error e1) <*> (Error e2) = Error $ e1 <+> e2
 
+export
+(Monoid err) => Alternative (Validation err) where
+  empty = Error neutral
+  (<|>) (Valid x) y = Valid x
+  (<|>) (Error e) (Valid y) = Valid y
+  (<|>) (Error e) (Error r) = Error $ e <+> r
+

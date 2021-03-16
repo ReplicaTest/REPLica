@@ -12,6 +12,7 @@ import Language.JSON
 import System.Path
 
 import Replica.App.FileSystem
+import Replica.App.Replica
 import Replica.App.System
 import Replica.Command.Run
 import Replica.Core.Parse
@@ -20,6 +21,14 @@ import Replica.Other.String
 import Replica.Other.Validation
 
 %default total
+
+data RunContext : Type where
+
+replicaDir : Has [State RunContext RunAction, FileSystem] e => App e String
+replicaDir = do
+  d <- getCurrentDir
+  ctx <- get RunContext
+  pure $ d </> ctx.workingDir
 
 runAll :
   SystemIO (SystemError :: e) =>
@@ -31,34 +40,6 @@ runAll  liftError (x :: xs) =
   handle (system x)
     (const $ runAll liftError xs)
     (\err : SystemError => throw $ liftError x)
-
-data RunContext : Type where
-data CurrentTest : Type where
-data ReplicaDir : Type where
-
-replicaDir : Has [State RunContext RunAction, FileSystem] e => App e String
-replicaDir = do
-  d <- getCurrentDir
-  ctx <- get RunContext
-  pure $ d </> ctx.workingDir
-
-getOutputFile : Has
-  [ State CurrentTest Test
-  , State ReplicaDir String
-  , FileSystem] e => App e String
-getOutputFile = do
-  d <- get ReplicaDir
-  t <- get CurrentTest
-  pure $ d </> defaultOutput t
-
-getExpectedFile : Has
-  [ State CurrentTest Test
-  , State ReplicaDir String
-  , FileSystem] e => App e String
-getExpectedFile = do
-  d <- get ReplicaDir
-  t <- get CurrentTest
-  pure $ d </> defaultExpected t
 
 expectedVsGiven : Console e => Maybe String -> String -> App e ()
 expectedVsGiven old given = do
@@ -205,30 +186,10 @@ runTest = do
     (\err : FSError => throw $ FileSystemError
       "Error: cannot enter or exit test working directory \{show ctx.workingDir}")
 
-public export
-data ReplicaError
-  = InaccessTestFile String
-  | InvalidJSON (List String)
-
 export
 Show ReplicaError where
   show (InaccessTestFile x) = "Can't access file \{x}"
   show (InvalidJSON xs) = unlines $ "Can't parse JSON:" ::xs
-
-getReplica :
-  FileSystem (FSError :: e) =>
-  Has [ State RunContext RunAction
-      , Exception ReplicaError ] e => App e Replica
-getReplica = do
-  ctx <- get RunContext
-  content <- handle (readFile ctx.file)
-                    pure
-                    (\err : FSError => throw $ InaccessTestFile ctx.file)
-  let Just json = parse content
-        | Nothing => throw $ InvalidJSON []
-  let Valid repl = jsonToReplica json
-        | Error xs => throw $ InvalidJSON xs
-  pure repl
 
 testOutput :
   Has [ State RunContext RunAction
@@ -259,7 +220,7 @@ report x = do
 
 export
 runReplica : SystemIO (SystemError :: TestError :: e) =>
-   SystemIO (SystemError :: e) =>
+  SystemIO (SystemError :: e) =>
   FileSystem (FSError :: TestError :: e) =>
   FileSystem (FSError :: e) =>
   Console (TestError :: e) =>
@@ -274,7 +235,7 @@ runReplica = do
   handle (system "mkdir -p \{show rdir}")
     pure
     (\err : SystemError => throw $ InaccessTestFile "\{show rdir}")
-  repl <- getReplica
+  repl <- getReplica RunContext file
   res <- traverse (processTest rdir) repl.tests
   putStrLn $ separator 60
   putStrLn "Test results:"

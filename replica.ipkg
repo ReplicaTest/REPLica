@@ -9,11 +9,14 @@ depends = contrib
 modules = Replica
 
         , Replica.App
+        , Replica.App.Info
         , Replica.App.FileSystem
+        , Replica.App.Replica
         , Replica.App.Run
         , Replica.App.System
 
         , Replica.Command
+        , Replica.Command.Info
         , Replica.Command.Run
 
         , Replica.Core

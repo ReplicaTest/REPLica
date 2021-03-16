@@ -32,7 +32,10 @@ let failureTest = \(cmd : Text) ->
   EmptyTest::{command = cmd, succeed = Some False}
 
 let inDir = \(dir : Text) -> \(test : Test) ->
-  test // {workingDir = dir}
+  test // {workingDir = Some dir}
+
+let describe = \(description : Text) -> \(test : Test) ->
+  test // {description = Some description}
 
 in { Test
    , Replica
@@ -40,4 +43,5 @@ in { Test
    , successTest
    , failureTest
    , inDir
+   , describe
    }
