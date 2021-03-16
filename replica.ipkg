@@ -1,6 +1,6 @@
 package replica
 
-version = 0.1.0
+version = 0.2.0
 
 sourcedir = "src"
 
@@ -8,23 +8,24 @@ depends = contrib
 
 modules = Replica
 
-        , Replica.Options
-        , Replica.Path
-        , Replica.RunEnv
+        , Replica.App
+        , Replica.App.FileSystem
+        , Replica.App.Run
+        , Replica.App.System
 
-        , Replica.TestConfig
-        , Replica.TestConfig.Core
-        , Replica.TestConfig.Parser
+        , Replica.Command
+        , Replica.Command.Run
 
-        , Replica.Suite
-        , Replica.Suite.Core
-        , Replica.Suite.Parser
+        , Replica.Core
+        , Replica.Core.Parse
+        , Replica.Core.Types
 
-        , Replica.Text.Lexer
-        , Replica.Text.Parser
 
-        , Replica.Validation
+        , Replica.Option.Types
+        , Replica.Option.Validate
 
-main = Main
+        , Replica.Other.Validation
+
+main = Replica
 
 executable = replica

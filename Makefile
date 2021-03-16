@@ -1,5 +1,7 @@
 .PHONY: build
 
+testsName = tests
+
 build:
 	idris2 --build replica.ipkg
 
@@ -10,5 +12,15 @@ install:
 clean:
 	$(RM) -r build
 
+showtests:
+	dhall-to-json --file ${testsName}.dhall
+
+generate:
+	dhall-to-json --file ${testsName}.dhall --output ${testsName}.json
+	build/exec/replica run --interactive ${testsName}.json
+	rm ${testsName}.json
+
 test:
-	build/exec/replica tests
+	dhall-to-json --file ${testsName}.dhall --output ${testsName}.json
+	build/exec/replica run ${testsName}.json
+	rm ${testsName}.json

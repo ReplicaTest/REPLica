@@ -1,7 +1,0 @@
-test cli.failure.002
-
-description = "Missing test directory"
-
-exec = "../../../../build/exec/replica"
-
-params = test
