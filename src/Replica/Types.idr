@@ -524,7 +524,6 @@ namespace App
     = CanAccessTestFile String
     | InvalidJSON (List String)
 
-  covering
   getReplica :
     FileSystem (FSError :: e) =>
     Has [ State RunContext RunAction
@@ -541,18 +540,28 @@ namespace App
     pure repl
 
   runReplica :
-    SystemIO (SystemError :: e) =>
+    SystemIO (SystemError :: TestError :: e) =>
+    FileSystem (FSError :: TestError :: e) =>
     FileSystem (FSError :: e) =>
+    Console (TestError :: e) =>
     Has [ State RunContext RunAction
         , Exception ReplicaError
-        , Console
         ] e => App e ()
   runReplica = do
     repl <- getReplica
-    res <- ?runAllTests repl.tests
+    res <- runAllTests repl.tests
     traverse_ (either ?eh ?rh) (the (List $ Either TestError TestResult) res)
     where
       runAllTests : List Test -> App e (List (Either TestError TestResult))
+      runAllTests [] = pure []
+      runAllTests (x :: xs) = do
+        r <- handle
+               (new x runTest)
+               (pure . Right)
+               (\err : TestError => pure $ Left err)
+        rs <- runAllTests xs
+        pure $ r :: rs
+
 
   covering
   main : IO ()
