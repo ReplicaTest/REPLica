@@ -1,0 +1,22 @@
+module Replica.Other.Validation
+
+%default total
+
+public export
+data Validation : (err, a : Type) -> Type where
+  Valid : (x : a) -> Validation err a
+  Error : (e : err) -> Validation err a
+
+export
+Functor (Validation err) where
+  map f (Valid x) = Valid $ f x
+  map f (Error x) = Error x
+
+export
+(Semigroup err) => Applicative (Validation err) where
+  pure = Valid
+  (Valid f)  <*> (Valid x)  = Valid $ f x
+  (Valid _)  <*> (Error e)  = Error e
+  (Error e)  <*> (Valid x)  = Error e
+  (Error e1) <*> (Error e2) = Error $ e1 <+> e2
+

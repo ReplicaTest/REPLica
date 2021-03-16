@@ -26,65 +26,6 @@ The idea comes from the way tests are implemented in [idris2][idris tests].
 1. Clone this repository
 2. Build and install REPLica: `make install`
 
-## (Current) Usage
+### To be documented
 
-Once you have a directory with a [replica test](#test-structure), just run:
-
-`replica <test path>`
-
-## Test structure
-
-A test directory should contain:
-
-- a `test.repl`, which describes the command the test;
-- a `expected` file, with the expected output of the command.
-
-## test.repl
-
-### Minimal example
-
-```
-test testName -- mandatory preamble (though, testnName is not used at the moment)
-
-exec = pwd -- the name of the command to run
-```
-
-This example will lead to the execution of the following command:
-
-`pwd > output`
-
-And then compare it to the `expected` file of this directory.
-
-###More complete example
-
-```
-test antherTest
-
-exec = idris2
-
-params = "--repl mypackage.ipkg" -- optional parameters to send to the command line
-
-input = "myInput.txt" -- the path of a file that contains the input to be sent to the command line
-
-output = "output" -- the name of the output file that will store the result of the execution
-```
-
-This example will lead to the execution of the following command:
-
-`idris2 --repl mypackage.ipkg < myInput.txt > output`
-
-And then compare it to the `expected` file of this directory.
-
-## Example
-
-REPLica is tested with REPLica, you can have a look at the [test directory](tests)
-
-## Roadmap
-
-- Custom tests descriptors
-- Test suite management (through a tag system)
-- Command mapping (options to change the name of the command to test)
-- Cleaner file format
-
-[idris tests]: https://github.com/idris-lang/Idris2/tree/master/tests
-[golden]: https://ro-che.info/articles/2017-12-04-golden-tests
+Due to the current work on the tool, this doc is no longer up to date.
