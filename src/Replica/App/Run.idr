@@ -145,7 +145,7 @@ testCore = do
   outputFile <- handle getOutputFile pure
             (\err : FSError => throw $ FileSystemError
                 "Can't resolve output file")
-  exitStatus <- handle (system $ "\{t.command} >> \"\{outputFile}\"")
+  exitStatus <- handle (system $ "\{t.command} > \"\{outputFile}\"")
     (const $ pure 0)
     (\(Err n) => pure n)
   output <- handle (readFile $ outputFile) pure

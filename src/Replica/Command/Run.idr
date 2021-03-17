@@ -17,13 +17,13 @@ interactive = MkFlag
   []
   "(re)generate golden number if different/missing"
   False
-  not
+  True
 
 workingDir : ParamOption String
 workingDir = MkOption
   ("working-dir" ::: ["wdir"])
   ['w']
-  "set where the test are run"
+  "set where the test working directory"
   ".replica/test"
   (MkParam "dirName" Just)
 
@@ -52,26 +52,28 @@ export
 Monoid (RunAction' List) where
   neutral = MkRunAction empty empty empty
 
-interactiveOption : Bool -> RunAction' List -> RunAction' List
-interactiveOption x = record {interactive $= (x::)}
+interactiveOption : Bool -> RunAction' List
+interactiveOption x =
+  record {interactive = [x]} (neutral {ty = RunAction' List})
 
-workingDirOption : String -> RunAction' List -> RunAction' List
-workingDirOption x = record {workingDir $= (x::)}
+workingDirOption : String -> RunAction' List
+workingDirOption x =
+  record {workingDir = [x]} (neutral {ty = RunAction' List})
 
-fileOption : String -> RunAction' List -> RunAction' List
-fileOption x = record {file $= (x::)}
+fileOption : String -> RunAction' List
+fileOption x =
+  record {file = [x]} (neutral {ty = RunAction' List})
 
 
-parseRunOptions : List String -> RunAction' List ->
-  Validation (List String) (RunAction' List)
-parseRunOptions [] a = Valid a
-parseRunOptions xs@(x::tail) a = do
-  let Just (f, xs')
-      = map (mapFst interactiveOption) (parseFlagOption interactive xs)
-        <|> map (mapFst workingDirOption) (parseParamOption workingDir xs)
-        <|> (guard (tail == []) $> (fileOption x, tail))
-    | Nothing => Error ["Unknnown option \{x}"]
-  assert_total $ parseRunOptions xs' $ f a
+parseRunOptions : List String -> Validation (List String) (RunAction' List)
+parseRunOptions xs =
+  either
+    (\x => Error ["Unknnown option \{x}"])
+    Valid
+    $ parse [ inj $ map interactiveOption interactive
+            , inj $ map workingDirOption workingDir
+            , inj $ map fileOption testFile
+            ] xs
 
 validateRunAction : RunAction' List -> Validation (List String) RunAction
 validateRunAction r
@@ -84,7 +86,7 @@ validateRunAction r
 export
 parseRun : List String -> Validation (List String) RunAction
 parseRun ("run" :: xs)
-  = case parseRunOptions xs neutral of
+  = case parseRunOptions xs of
                 Valid x => validateRunAction x
                 Error e => Error e
 parseRun _ = empty

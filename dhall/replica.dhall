@@ -9,7 +9,7 @@ let Test : Type =
   , succeed : Optional Bool
   }
 
-let EmptyTest =
+let Simple =
   { Type = Test
   , default =
     { description = None Text
@@ -20,28 +20,14 @@ let EmptyTest =
     }
   }
 
+let Success = Simple with default.succeed = Some True
+let Failure = Simple with default.succeed = Some False
+
 let Replica : Type = Map Text Test
-
-let simpleTest : Text -> Test = \(cmd : Text) ->
-  EmptyTest::{ command = cmd}
-
-let successTest = \(cmd : Text) ->
-  EmptyTest::{command = cmd, succeed = Some True}
-
-let failureTest = \(cmd : Text) ->
-  EmptyTest::{command = cmd, succeed = Some False}
-
-let inDir = \(dir : Text) -> \(test : Test) ->
-  test // {workingDir = Some dir}
-
-let describe = \(description : Text) -> \(test : Test) ->
-  test // {description = Some description}
 
 in { Test
    , Replica
-   , simpleTest
-   , successTest
-   , failureTest
-   , inDir
-   , describe
+   , Simple
+   , Success
+   , Failure
    }
