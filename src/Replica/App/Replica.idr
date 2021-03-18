@@ -16,6 +16,7 @@ import Replica.App.System
 import Replica.Command.Run
 import Replica.Core.Parse
 import Replica.Core.Types
+import Replica.Option.Global
 import Replica.Other.String
 import Replica.Other.Validation
 
@@ -26,7 +27,7 @@ export
 data CurrentTest : Type where
 
 export
-data ReplicaDir : Type where
+data GlobalConfig : Type where
 
 public export
 data ReplicaError
@@ -34,24 +35,36 @@ data ReplicaError
   | InvalidJSON (List String)
 
 export
+testDir : String -> String
+testDir = (</> "test")
+
+export
+setAbsoluteReplicaDir : Has [State GlobalConfig GlobalOption, FileSystem] e => App e ()
+setAbsoluteReplicaDir = do
+  rdir <- map replicaDir $ get GlobalConfig
+  if isAbsolute rdir
+     then pure ()
+     else do
+       pwd <- getCurrentDir
+       modify GlobalConfig (record {replicaDir = pwd </> rdir})
+
+export
 getOutputFile : Has
   [ State CurrentTest Test
-  , State ReplicaDir String
-  , FileSystem] e => App e String
+  , State GlobalConfig GlobalOption ] e => App e String
 getOutputFile = do
-  d <- get ReplicaDir
+  d <- map replicaDir $ get GlobalConfig
   t <- get CurrentTest
-  pure $ d </> defaultOutput t
+  pure $ testDir d </> defaultOutput t
 
 export
 getExpectedFile : Has
   [ State CurrentTest Test
-  , State ReplicaDir String
-  , FileSystem] e => App e String
+  , State GlobalConfig GlobalOption ] e => App e String
 getExpectedFile = do
-  d <- get ReplicaDir
+  d <- map replicaDir $ get GlobalConfig
   t <- get CurrentTest
-  pure $ d </> defaultExpected t
+  pure $ testDir d </> defaultExpected t
 
 export
 getReplica :

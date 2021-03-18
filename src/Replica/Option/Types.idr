@@ -3,7 +3,10 @@ module Replica.Option.Types
 import Data.List
 import public Data.List1
 import public Data.List.AtIndex
+import Data.Maybe
 import public Data.OpenUnion
+
+import Replica.Help
 
 %default total
 
@@ -87,11 +90,11 @@ namespace Parts
 
   export
   Functor Part where
-    map func x =
-      let Left x1 = decomp x
-            | Right v => inj $ map func v
-      in let Left x2 = decomp x1
-            | Right v => inj $ map func v
+    map func x = let
+      Left x1 = decomp x
+        | Right v => inj $ map func v
+      Left x2 = decomp x1
+        | Right v => inj $ map func v
       in inj $ map func (decomp0 x2)
 
 namespace Parser
@@ -111,27 +114,74 @@ namespace Parser
     (<|>) (MkParser x) (MkParser y) = MkParser \xs => x xs <|> y xs
 
   toParser : Part a -> Parser a
-  toParser x =
-    let Left x1 = decomp x
+  toParser x = let
+    Left x1 = decomp x
       | Right v => MkParser \xs =>
           case xs of
                [str] => map (\res => ([], res)) $ v.parser str
                _ => Nothing
-    in let Left x2 = decomp x1
+    Left x2 = decomp x1
       | Right v => MkParser $ parseFlagOption v
-    in let x3 = decomp0 x2
+    x3 = decomp0 x2
     in MkParser $ parseParamOption x3
 
   export
+  parse' : Semigroup a =>
+    a ->
+    List (List String -> Maybe (List String, a)) ->
+    List String ->
+    Either (List1 String, a) (List String, a)
+  parse' x xs [] = pure ([], x)
+  parse' x xs (y::ys) = let
+    Just (ys', x') = choiceMap (flip apply (y::ys)) xs
+      | Nothing => Left (y:::ys,x)
+    in parse' (x<+>x') xs $ assert_smaller (y::ys) ys'
+
+  export
+  parseFragment : Monoid a => List (Part a) -> List String ->
+    Either (List1 String, a) (List String, a)
+  parseFragment = parse' neutral . map (parser . toParser)
+
+  export
   parse : Monoid a => List (Part a) -> List String -> Either String a
-  parse xs = map snd . parse' neutral (map (parser . toParser) xs)
+  parse xs = bimap (head . fst) snd . parseFragment xs
+
+namespace Help
+
+  optionName : (long : List String) -> (short : List Char) -> String
+  optionName long short = concat $ intersperse ", " $
+    map ("--" ++) long ++ map (\c => pack ['-',c]) short
+
+  export
+  helpPart : Part a -> List Help
+  helpPart x = let
+    Left x1 = decomp x
+      | Right v => []
+    Left x2 = decomp x1
+      | Right v => catMaybes
+          [ Just $ MkHelp (optionName (forget v.changeLong) v.changeShort)
+              Nothing v.description [] Nothing
+          , let nm = optionName v.enforceLong v.enforceShort
+            in guard (nm /= "") $> MkHelp nm Nothing "  do the opposite" [] Nothing
+          ]
+    v = decomp0 x2
+    in [ MkHelp "\{optionName (forget v.longName) v.shortName} <\{v.param.name}>"
+           Nothing v.description [] Nothing ]
+
+  export
+  commandHelp :
+    (name : String) -> (description : String) ->
+    (global : List1 Help) -> (options : List Help) ->
+    (param : Maybe (Param a)) -> Help
+  commandHelp name description global options param = MkHelp
+    name
+    (Just "replica [GLOBAL_OPTIONS] \{name} [OPTIONS]\{paramExt}")
+    description
+    ( catMaybes
+       [ Just $ MkPair "Global options" global
+       , map (MkPair "Specific options") $ toList1' options
+       ])
+    Nothing
     where
-      parse' : a ->
-        List (List String -> Maybe (List String, a)) ->
-        List String ->
-        Either String (List String, a)
-      parse' x xs [] = pure ([], x)
-      parse' x xs (y::ys) =
-        let Just (ys', x') = choiceMap (flip apply (y::ys)) xs
-             | Nothing => Left y
-        in parse' (x<+>x') xs $ assert_smaller ys ys'
+      paramExt : String
+      paramExt = maybe "" (.name) param

@@ -1,5 +1,8 @@
 module Replica.Command.Run
 
+import Data.String
+
+import Replica.Help
 import Replica.Option.Types
 import Replica.Option.Validate
 import Replica.Other.Validation
@@ -29,6 +32,13 @@ export
 Monoid (RunAction' List) where
   neutral = MkRunAction empty empty empty
 
+Show RunAction where
+  show x = unwords
+    [ "MkRunAction"
+    , show $ x.workingDir
+    , show $ x.interactive
+    , show $ x.file ]
+
 
 fileParam : Param String
 fileParam = MkParam "filename" Just
@@ -40,10 +50,8 @@ fileOption x =
 
 interactive : FlagOption Bool
 interactive = MkFlag
-  ("interactive" ::: [])
-  ['i']
-  []
-  []
+  (singleton "interactive") ['i']
+  [] []
   "(re)generate golden number if different/missing"
   False
   True
@@ -57,8 +65,8 @@ workingDir : ParamOption String
 workingDir = MkOption
   ("working-dir" ::: ["wdir"])
   ['w']
-  "set where the test working directory"
-  ".replica/test"
+  "set where is the test working directory"
+  "."
   (MkParam "dirName" Just)
 
 workingDirOption : String -> RunAction' List
@@ -92,3 +100,10 @@ parseRun ("run" :: xs)
                 Error e => Error e
 parseRun _ = empty
 
+export
+helpRun : (global : List1 Help) -> Help
+helpRun global = commandHelp "run" "Run tests from a Replica JSON file" global
+  (  (helpPart $ inj interactive)
+  ++ (helpPart $ inj workingDir)
+  )
+  (Just fileParam)

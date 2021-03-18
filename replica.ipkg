@@ -11,11 +11,13 @@ modules = Replica
         , Replica.App
         , Replica.App.Info
         , Replica.App.FileSystem
+        , Replica.App.Log
         , Replica.App.Replica
         , Replica.App.Run
         , Replica.App.System
 
         , Replica.Command
+        , Replica.Command.Help
         , Replica.Command.Info
         , Replica.Command.Run
 
@@ -23,7 +25,9 @@ modules = Replica
         , Replica.Core.Parse
         , Replica.Core.Types
 
+        , Replica.Help
 
+        , Replica.Option.Global
         , Replica.Option.Types
         , Replica.Option.Validate
 

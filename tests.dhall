@@ -14,7 +14,7 @@ in { simplest_success = Replica.Simple::{command = "true"}
         with workingDir = Some "tests/basic"
         with description = Some "Test that the workingDir parameter is taken into account"
 
-   , testReplica = (Meta.replicaTest Meta.Run::{testFile = "./tests/replica/empty.json"})
+   , testReplica = (Meta.replicaTest Meta.Run::{directory = "tests/replica", testFile = "empty.json"})
         with description = Some "Test that an empty test suite is passing"
         with succeed = Some True
    }

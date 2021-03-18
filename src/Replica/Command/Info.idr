@@ -1,5 +1,6 @@
 module Replica.Command.Info
 
+import Replica.Help
 import Replica.Option.Types
 import Replica.Option.Validate
 import Replica.Other.Validation
@@ -20,10 +21,7 @@ InfoAction = InfoAction' Prelude.id
 
 export
 Semigroup (InfoAction' List) where
-  (<+>) (MkInfo fileX)
-        (MkInfo fileY)
-    = MkInfo
-        (fileX ++ fileY)
+  (<+>) (MkInfo fileX) (MkInfo fileY) = MkInfo (fileX ++ fileY)
 
 export
 Monoid (InfoAction' List) where
@@ -51,4 +49,8 @@ parseInfo ("info" :: xs)
          Error e => Error e
 parseInfo _ = empty
 
-
+export
+helpInfo : (global : List1 Help) -> Help
+helpInfo global = commandHelp "info" "Display information about test suites" global
+  []
+  (Just testFile)

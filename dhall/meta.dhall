@@ -2,12 +2,21 @@ let Replica = ./replica.dhall
 
 let concatSep = https://prelude.dhall-lang.org/v20.1.0/Text/concatSep
 
-let replica_exe = "build/exec/replica"
+let replica_exe = "${env:PWD as Text}/build/exec/replica"
 
 let ReplicaTest : Type =
   { command : Text
+  , directory : Text
   , parameters : List Text
   , testFile : Text
+  }
+
+let Info =
+  { Type = ReplicaTest
+  , default =
+    { command = "info"
+    , parameters = [] : List Text
+    }
   }
 
 let Run =
@@ -19,12 +28,17 @@ let Run =
   }
 
 let buildReplica : ReplicaTest -> Text = \(replica : ReplicaTest) ->
-  concatSep " " [replica_exe, replica.command, concatSep " " replica.parameters, replica.testFile]
+  concatSep " " [ replica_exe
+                , replica.command
+                , concatSep " " replica.parameters
+                , replica.testFile]
 
 let replicaTest : ReplicaTest -> Replica.Test = \(replica : ReplicaTest) ->
   Replica.Simple::{command = buildReplica replica}
+    with workingDir = Some replica.directory
 
 in { ReplicaTest
    , Run
+   , Info
    , replicaTest
    }

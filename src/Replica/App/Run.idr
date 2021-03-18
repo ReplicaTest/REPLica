@@ -9,26 +9,21 @@ import Data.String
 
 import Language.JSON
 
-import System.Path
-
 import Replica.App.FileSystem
+import Replica.App.Log
 import Replica.App.Replica
 import Replica.App.System
+
 import Replica.Command.Run
 import Replica.Core.Parse
 import Replica.Core.Types
+import Replica.Option.Global
 import Replica.Other.String
 import Replica.Other.Validation
 
 %default total
 
 data RunContext : Type where
-
-replicaDir : Has [State RunContext RunAction, FileSystem] e => App e String
-replicaDir = do
-  d <- getCurrentDir
-  ctx <- get RunContext
-  pure $ d </> ctx.workingDir
 
 runAll :
   SystemIO (SystemError :: e) =>
@@ -53,7 +48,7 @@ expectedVsGiven old given = do
 
 askForNewGolden : FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
-      , State ReplicaDir String
+      , State GlobalConfig GlobalOption
       , Exception TestError
       , Console
       ] e => Maybe String -> String -> App e TestResult
@@ -81,7 +76,7 @@ askForNewGolden old given = do
 
 checkOutput : FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
-      , State ReplicaDir String
+      , State GlobalConfig GlobalOption
       , State RunContext RunAction
       , Exception TestError
       , Console ] e =>
@@ -116,16 +111,14 @@ checkOutput mustSucceed status expectedOutput output
 
 getExpected : FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
-      , State ReplicaDir String
+      , State GlobalConfig GlobalOption
       , State RunContext RunAction
       , Exception TestError
       , Console
       ] e => String -> App e (Maybe String)
 getExpected given = do
   t <- get CurrentTest
-  expectedFile <- handle getExpectedFile pure
-    (\err : FSError => throw $ FileSystemError
-                "Can't resolve exepctation file")
+  expectedFile <- getExpectedFile
   handle (readFile expectedFile)
     (pure . Just)
     (\err : FSError => case err of
@@ -135,16 +128,14 @@ getExpected given = do
 testCore : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
-      , State ReplicaDir String
+      , State GlobalConfig GlobalOption
       , State RunContext RunAction
       , Exception TestError
       , Console
       ] e => App e TestResult
 testCore = do
   t <- get CurrentTest
-  outputFile <- handle getOutputFile pure
-            (\err : FSError => throw $ FileSystemError
-                "Can't resolve output file")
+  outputFile <- getOutputFile
   exitStatus <- handle (system $ "\{t.command} > \"\{outputFile}\"")
     (const $ pure 0)
     (\(Err n) => pure n)
@@ -157,14 +148,16 @@ testCore = do
 performTest : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
-      , State ReplicaDir String
+      , State GlobalConfig GlobalOption
       , State RunContext RunAction
+      , State LogConfig (Maybe LogLevel)
       , Exception TestError
       , Console
       ] e => App e TestResult
 performTest = do
   t <- get CurrentTest
   runAll InitializationFailed t.beforeTest
+  log $ withOffset 2 "Running command: \{t.command}"
   res <- testCore
   runAll (WrapUpFailed res) t.afterTest
   pure res
@@ -172,19 +165,22 @@ performTest = do
 runTest : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State RunContext RunAction
-      , State ReplicaDir String
+      , State GlobalConfig GlobalOption
       , State CurrentTest Test
+      , State LogConfig (Maybe LogLevel)
       , Exception TestError
       , Console
       ] e => App e TestResult
 runTest = do
   ctx <- get RunContext
   t <- get CurrentTest
-  let wd = fromMaybe "." t.workingDir
+  let wd = fromMaybe (ctx.workingDir) t.workingDir
+  putStrLn "Executing \{t.name}"
+  log $ withOffset 2 "Working directory: \{show wd}"
   handle (inDir wd performTest)
     pure
     (\err : FSError => throw $ FileSystemError
-      "Error: cannot enter or exit test working directory \{show ctx.workingDir}")
+      "Error: cannot enter or exit test working directory \{show wd}")
 
 export
 Show ReplicaError where
@@ -225,18 +221,25 @@ runReplica : SystemIO (SystemError :: TestError :: e) =>
   FileSystem (FSError :: e) =>
   Console (TestError :: e) =>
   Has [ State RunContext RunAction
+      , State LogConfig (Maybe LogLevel)
+      , State GlobalConfig GlobalOption
       , Exception ReplicaError
       , Console
       ] e => App e Stats
 runReplica = do
-  rdir <- handle replicaDir
+  putStrLn !(map show $ get GlobalConfig)
+  handle setAbsoluteReplicaDir
     pure
     (\err : FSError => throw $ InaccessTestFile "current directory")
-  handle (system "mkdir -p \{show rdir}")
+  rDir <- map replicaDir $ get GlobalConfig
+  log "Replica directory: \{rDir}"
+  handle (system "mkdir -p \{show (testDir rDir)}")
     pure
-    (\err : SystemError => throw $ InaccessTestFile "\{show rdir}")
+    (\err : SystemError => throw $ InaccessTestFile "\{show (testDir rDir)}")
   repl <- getReplica RunContext file
-  res <- traverse (processTest rdir) repl.tests
+  putStrLn $ separator 60
+  putStrLn "Running tests:"
+  res <- traverse (processTest rDir) repl.tests
   putStrLn $ separator 60
   putStrLn "Test results:"
   traverse_ (uncurry testOutput) res
@@ -245,9 +248,9 @@ runReplica = do
   pure stats
   where
     processTest : String -> Test -> App e (String, Either TestError TestResult)
-    processTest rdir x = do
+    processTest rDir x = do
       r <- handle
-             (new rdir $ new x runTest)
+             (new x runTest)
              (pure . MkPair x.name . Right)
              (\err : TestError => pure (x.name, Left err))
       pure r
