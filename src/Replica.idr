@@ -20,7 +20,7 @@ import Replica.Other.Validation
 
 covering
 runRun : GlobalOption -> RunAction -> IO Int
-runRun opts ctx = run $ new opts $ new (Just Info) $ new ctx $ handle runReplica
+runRun opts ctx = run $ new opts $ new ctx $ handle runReplica
     (\stats => pure (the Int $ cast $ stats.failures + stats.errors))
     (\err : ReplicaError => putStrLn (show err) >> pure 253)
 

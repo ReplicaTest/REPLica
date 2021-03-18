@@ -14,6 +14,7 @@ record RunAction' (f : Type -> Type) where
   constructor MkRunAction
   workingDir : f String
   interactive : f Bool
+  threads : f Nat
   file : f String
 
 public export
@@ -26,17 +27,19 @@ Semigroup (RunAction' List) where
     MkRunAction
       (x.workingDir ++ y.workingDir)
       (x.interactive ++ y.interactive)
+      (x.threads ++ y.threads)
       (x.file ++ y.file)
 
 export
 Monoid (RunAction' List) where
-  neutral = MkRunAction empty empty empty
+  neutral = MkRunAction empty empty empty empty
 
 Show RunAction where
   show x = unwords
     [ "MkRunAction"
     , show $ x.workingDir
     , show $ x.interactive
+    , show $ x.threads
     , show $ x.file ]
 
 
@@ -74,6 +77,20 @@ workingDirOption x =
   record {workingDir = [x]} (neutral {ty = RunAction' List})
 
 
+threads : ParamOption Nat
+threads = MkOption
+  (singleton "threads")
+  ['n']
+  "max number of threads (default 1, 0 for no thread limit)"
+  1
+  (MkParam "n" parsePositive)
+
+threadsOption : Nat -> RunAction' List
+threadsOption x =
+  record {threads = [x]} (neutral {ty = RunAction' List})
+
+
+
 parseRunOptions : List String -> Validation (List String) (RunAction' List)
 parseRunOptions xs =
   either
@@ -81,6 +98,7 @@ parseRunOptions xs =
     Valid
     $ parse [ map {f = Part} interactiveOption $ inj interactive
             , map {f = Part} workingDirOption $ inj workingDir
+            , map {f = Part} threadsOption $ inj threads
             , map {f = Part} fileOption $ inj fileParam
             ] xs
 
@@ -89,6 +107,7 @@ validateRunAction r
   = [| MkRunAction
     (oneValidate (inj workingDir) r.workingDir)
     (oneValidate (inj interactive) r.interactive)
+    (oneValidate (inj threads) r.threads)
     (oneValidate (inj fileParam) r.file)
     |]
 
@@ -105,5 +124,6 @@ helpRun : (global : List1 Help) -> Help
 helpRun global = commandHelp "run" "Run tests from a Replica JSON file" global
   (  (helpPart $ inj interactive)
   ++ (helpPart $ inj workingDir)
+  ++ (helpPart $ inj threads)
   )
   (Just fileParam)
