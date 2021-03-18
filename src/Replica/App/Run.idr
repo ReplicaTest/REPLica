@@ -9,6 +9,8 @@ import Data.String
 
 import Language.JSON
 
+import System.Future
+
 import Replica.App.FileSystem
 import Replica.App.Log
 import Replica.App.Replica
@@ -24,6 +26,25 @@ import Replica.Other.Validation
 %default total
 
 data RunContext : Type where
+
+prepareReplicaDir : SystemIO (SystemError :: e) =>
+  FileSystem (FSError :: e) =>
+  Has [ State RunContext RunAction
+      , State GlobalConfig GlobalOption
+      , Exception ReplicaError
+      , Console
+      ] e => App e String
+prepareReplicaDir = do
+  putStrLn !(map show $ get GlobalConfig)
+  handle setAbsoluteReplicaDir
+    pure
+    (\err : FSError => throw $ CantAccessTestFile "current directory")
+  rDir <- getReplicaDir
+  log "Replica directory: \{rDir}"
+  handle (system "mkdir -p \{show (testDir rDir)}")
+    pure
+    (\err : SystemError => throw $ CantAccessTestFile "\{show (testDir rDir)}")
+  pure rDir
 
 runAll :
   SystemIO (SystemError :: e) =>
@@ -150,7 +171,6 @@ performTest : SystemIO (SystemError :: e) =>
   Has [ State CurrentTest Test
       , State GlobalConfig GlobalOption
       , State RunContext RunAction
-      , State LogConfig (Maybe LogLevel)
       , Exception TestError
       , Console
       ] e => App e TestResult
@@ -164,10 +184,9 @@ performTest = do
 
 runTest : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
-  Has [ State RunContext RunAction
+  Has [ State CurrentTest Test
+      , State RunContext RunAction
       , State GlobalConfig GlobalOption
-      , State CurrentTest Test
-      , State LogConfig (Maybe LogLevel)
       , Exception TestError
       , Console
       ] e => App e TestResult
@@ -182,10 +201,37 @@ runTest = do
     (\err : FSError => throw $ FileSystemError
       "Error: cannot enter or exit test working directory \{show wd}")
 
-export
-Show ReplicaError where
-  show (InaccessTestFile x) = "Can't access file \{x}"
-  show (InvalidJSON xs) = unlines $ "Can't parse JSON:" ::xs
+runAllTests : SystemIO (SystemError :: TestError :: e) =>
+  SystemIO (SystemError :: e) =>
+  FileSystem (FSError :: TestError :: e) =>
+  Console (TestError :: e) =>
+  Has [ State RunContext RunAction
+      , State GlobalConfig GlobalOption
+      , Console
+      ] e => Replica -> App e (List (String, Either TestError TestResult))
+runAllTests repl = do
+  putStrLn $ separator 60
+  putStrLn "Running tests:"
+  batchTests [] repl.tests -- traverse processTest repl.tests
+  where
+    processTest : Test -> App e (String, Either TestError TestResult)
+    processTest x = do
+      rdir <- getReplicaDir
+      r <- handle
+             (new x runTest)
+             (pure . MkPair x.name . Right)
+             (\err : TestError => pure (x.name, Left err))
+      pure r
+    batchTests : List (String, Either TestError TestResult) ->
+                 List Test -> App e (List (String, Either TestError TestResult))
+    batchTests acc [] = pure acc
+    batchTests acc xs = do
+      n <- map threads $ get RunContext
+      let (now, later) = if n == 0
+                            then (xs, Prelude.Nil)
+                            else splitAt n xs
+      res <- map await <$> traverse (map (fork . delay) . processTest) now
+      batchTests (acc ++ res) (assert_smaller xs later)
 
 testOutput :
   Has [ State RunContext RunAction
@@ -221,36 +267,17 @@ runReplica : SystemIO (SystemError :: TestError :: e) =>
   FileSystem (FSError :: e) =>
   Console (TestError :: e) =>
   Has [ State RunContext RunAction
-      , State LogConfig (Maybe LogLevel)
       , State GlobalConfig GlobalOption
       , Exception ReplicaError
       , Console
       ] e => App e Stats
 runReplica = do
-  putStrLn !(map show $ get GlobalConfig)
-  handle setAbsoluteReplicaDir
-    pure
-    (\err : FSError => throw $ InaccessTestFile "current directory")
-  rDir <- map replicaDir $ get GlobalConfig
-  log "Replica directory: \{rDir}"
-  handle (system "mkdir -p \{show (testDir rDir)}")
-    pure
-    (\err : SystemError => throw $ InaccessTestFile "\{show (testDir rDir)}")
+  rDir <- prepareReplicaDir
   repl <- getReplica RunContext file
-  putStrLn $ separator 60
-  putStrLn "Running tests:"
-  res <- traverse (processTest rDir) repl.tests
+  result <- runAllTests repl
   putStrLn $ separator 60
   putStrLn "Test results:"
-  traverse_ (uncurry testOutput) res
-  let stats = asStats $ map snd res
+  traverse_ (uncurry testOutput) result
+  let stats = asStats $ map snd result
   report $ stats
   pure stats
-  where
-    processTest : String -> Test -> App e (String, Either TestError TestResult)
-    processTest rDir x = do
-      r <- handle
-             (new x runTest)
-             (pure . MkPair x.name . Right)
-             (\err : TestError => pure (x.name, Left err))
-      pure r

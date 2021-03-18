@@ -31,17 +31,26 @@ data GlobalConfig : Type where
 
 public export
 data ReplicaError
-  = InaccessTestFile String
+  = CantAccessTestFile String
   | InvalidJSON (List String)
+
+export
+Show ReplicaError where
+  show (CantAccessTestFile x) = "Can't access file \{x}"
+  show (InvalidJSON xs) = unlines $ "Can't parse JSON:" ::xs
 
 export
 testDir : String -> String
 testDir = (</> "test")
 
 export
+getReplicaDir : State GlobalConfig GlobalOption e => App e String
+getReplicaDir = map replicaDir $ get GlobalConfig
+
+export
 setAbsoluteReplicaDir : Has [State GlobalConfig GlobalOption, FileSystem] e => App e ()
 setAbsoluteReplicaDir = do
-  rdir <- map replicaDir $ get GlobalConfig
+  rdir <- getReplicaDir
   if isAbsolute rdir
      then pure ()
      else do
@@ -76,7 +85,7 @@ getReplica ident toFile = do
   let file = toFile ctx
   content <- handle (readFile file)
                     pure
-                    (\err : FSError => throw $ InaccessTestFile file)
+                    (\err : FSError => throw $ CantAccessTestFile file)
   let Just json = parse content
         | Nothing => throw $ InvalidJSON []
   let Valid repl = jsonToReplica json

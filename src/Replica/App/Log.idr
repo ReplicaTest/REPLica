@@ -9,9 +9,6 @@ import Replica.Option.Global
 %default total
 
 export
-data LogConfig : Type where
-
-export
 interface Log e where
   logWithLevel : (lvl : LogLevel) -> (content : String) -> App e ()
 
