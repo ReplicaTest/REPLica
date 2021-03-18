@@ -5,8 +5,6 @@ import public Data.List1
 import public Data.List.AtIndex
 import public Data.OpenUnion
 
-import Replica.Other.Applicative
-
 %default total
 
 namespace Param
