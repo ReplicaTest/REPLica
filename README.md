@@ -26,6 +26,20 @@ The idea comes from the way tests are implemented in [idris2][idris tests].
 1. Clone this repository
 2. Build and install REPLica: `make install`
 
-### To be documented
+### Usage
 
-Due to the current work on the tool, this doc is no longer up to date.
+REPLica takes a JSON specification in input.
+Though, using [Dhall][] is prefered as it can allow us to build test template
+more easily and then translate it to JSON using [dhall-to-json][].
+
+For example, REPLica is tested with itelf, you can check the [test file][] to have an overview of the
+possibilities.
+
+You can then explore the tool possibilities with `replica help`.
+
+
+[Dhall]: https://dhall-lang.org
+[idris tests]: https://github.com/idris-lang/Idris2/tree/master/tests
+[golden]: https://ro-che.info/articles/2017-12-04-golden-tests
+[test file]: https://github.com/berewt/REPLica/blob/main/tests.dhall
+[dhall-to-json]: https://github.com/dhall-lang/dhall-haskell/blob/master/dhall-json/README.md
