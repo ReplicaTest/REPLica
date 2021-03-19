@@ -1,5 +1,7 @@
 # REPLica
 
+[![ci](https://github.com/berewt/REPLica/actions/workflows/ci.yml/badge.svg)](https://github.com/berewt/REPLica/actions/workflows/ci.yml)
+
 Golden tests for Commnd Line interfaces.
 
 ## Purpose
