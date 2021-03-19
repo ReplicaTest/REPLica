@@ -53,7 +53,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          repository: idris2/idris2
+          repository: idris-lang/idris2
           ref: master
       - name: Download Idris2 Artifact
         uses: actions/download-artifact@v2
