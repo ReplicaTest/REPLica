@@ -7,7 +7,7 @@ env:
 
 jobs:
 
-  build-previous-idris:
+  build-previous-idris2:
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: chez
@@ -16,7 +16,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get install -y chezscheme
-          echo "::add-path::$HOME/.idris2/bin"
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
       - name: Cache Chez Previous Version
         id: previous-version-cache
         uses: actions/cache@v2
@@ -42,7 +42,7 @@ jobs:
           name: installed-idris2-${{ env.IDRIS2_VERSION }}-chez
           path: ~/.idris2/
 
-  self-host-previous-version:
+  build-idris2-nightly2:
     needs: build-previous-idris
     runs-on: ubuntu-latest
     env:
@@ -72,15 +72,23 @@ jobs:
       - name: Artifact Idris2
         uses: actions/upload-artifact@v2
         with:
-          name: idris2-nightly-chez
+          name: idris2-nightly
           path: ~/.idris2/
 
   build-replica:
+    needs: build-idris2-nightly
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: idris2-nightly
+          path: ~/.idris2/
       - name: Make replica
-        run: make build
+        run: |
+          chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+          make build
       - name: Save artifacts
         uses: actions/upload-artifact@v2
         with:
@@ -89,7 +97,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    needs: [build-replica]
+    needs: build-replica
     steps:
       - name: Install dhall
         uses: dhall-lang/setup-dhall@v4
