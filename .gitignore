@@ -1,2 +1,2 @@
-.replica
+*.output
 tests.json

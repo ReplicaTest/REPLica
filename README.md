@@ -1,7 +1,5 @@
 # REPLica
 
-**WIP: file format and command line usage may (often) change.**
-
 Golden tests for Commnd Line interfaces.
 
 ## Purpose
@@ -14,22 +12,47 @@ If you want a more detailled introduction to golden testing, here is a [nice int
 
 The idea comes from the way tests are implemented in [idris2][idris tests].
 
+Its approach is similar to the one proposed by CI/CD tools like [github actions][] or [gitlab ci][]:
+a tests suite is described in a json (or more preferably [dhall][]) file that is processed by the
+tool to generate tests.
+
 ## Install
 
-### Requirements
+Requirements:
 
 - [idris2](https://idris-lang.org)
-- git
+- [git](https://git-scm.com)
+- preferably, [dhall][] and [dhall-to-json][]
 
-### Install
+Steps:
 
-1. Clone this repository
-2. Build and install REPLica: `make install`
+```shell
+# clone repo
+git clone git@github.com:berewt/REPLica.git
 
-### Usage
+# install replica
+make install
+
+# Ensure that `${HOME}/.local/bin` is in your path
+
+# health-check
+replica help
+```
+
+## Quickstart
+
+### With json
+
+Create a test file:
+
+```shell
+tee hello.json > /dev/null << EOF
+{ "hello": {"command"='echo "hello,word!"'} }
+EOF
+```
 
 REPLica takes a JSON specification in input.
-Though, using [Dhall][] is prefered as it can allow us to build test template
+Though, using [dhall][] is prefered as it can allow us to build test template
 more easily and then translate it to JSON using [dhall-to-json][].
 
 For example, REPLica is tested with itelf, you can check the [test file][] to have an overview of the
@@ -38,8 +61,8 @@ possibilities.
 You can then explore the tool possibilities with `replica help`.
 
 
-[Dhall]: https://dhall-lang.org
+[dhall]: https://dhall-lang.org
+[dhall-to-json]: https://github.com/dhall-lang/dhall-haskell/blob/master/dhall-json/README.md
 [idris tests]: https://github.com/idris-lang/Idris2/tree/master/tests
 [golden]: https://ro-che.info/articles/2017-12-04-golden-tests
 [test file]: https://github.com/berewt/REPLica/blob/main/tests.dhall
-[dhall-to-json]: https://github.com/dhall-lang/dhall-haskell/blob/master/dhall-json/README.md

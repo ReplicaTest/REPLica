@@ -48,13 +48,17 @@ prepareReplicaDir = do
 
 runAll :
   SystemIO (SystemError :: e) =>
+  State GlobalConfig GlobalOption e =>
   Exception TestError e =>
+  Console e =>
+  (phase : Maybe String) ->
   (String -> TestError) ->
   List String -> App e ()
-runAll  _ [] = pure ()
-runAll  liftError (x :: xs) =
+runAll phase liftError [] = pure ()
+runAll phase liftError (x :: xs) = do
+  maybe (pure ()) (\p => log "\{p}: \{x}") phase
   handle (system x)
-    (const $ runAll liftError xs)
+    (const $ runAll phase liftError xs)
     (\err : SystemError => throw $ liftError x)
 
 expectedVsGiven : Console e => Maybe String -> String -> App e ()
@@ -176,10 +180,10 @@ performTest : SystemIO (SystemError :: e) =>
       ] e => App e TestResult
 performTest = do
   t <- get CurrentTest
-  runAll InitializationFailed t.beforeTest
+  runAll (Just "Before") InitializationFailed t.beforeTest
   log $ withOffset 2 "Running command: \{t.command}"
   res <- testCore
-  runAll (WrapUpFailed res) t.afterTest
+  runAll (Just "After") (WrapUpFailed res) t.afterTest
   pure res
 
 runTest : SystemIO (SystemError :: e) =>
@@ -194,7 +198,7 @@ runTest = do
   ctx <- get RunContext
   t <- get CurrentTest
   let wd = fromMaybe (ctx.workingDir) t.workingDir
-  putStrLn "Executing \{t.name}"
+  log "Executing \{t.name}"
   log $ withOffset 2 "Working directory: \{show wd}"
   handle (inDir wd performTest)
     pure
@@ -211,8 +215,8 @@ runAllTests : SystemIO (SystemError :: TestError :: e) =>
       ] e => Replica -> App e (List (String, Either TestError TestResult))
 runAllTests repl = do
   putStrLn $ separator 60
-  putStrLn "Running tests:"
-  batchTests [] repl.tests -- traverse processTest repl.tests
+  putStrLn "Running tests..."
+  batchTests [] repl.tests
   where
     processTest : Test -> App e (String, Either TestError TestResult)
     processTest x = do
@@ -261,6 +265,20 @@ report x = do
     ]
 
 export
+defineActiveTests : FileSystem (FSError :: e) =>
+  Has [ State RunContext RunAction
+      , Exception ReplicaError
+      , Console
+      ] e => App e Replica
+defineActiveTests = do
+  repl <- getReplica RunContext file
+  selectedTests <- map only $ get RunContext
+  pure $ if null selectedTests
+     then repl
+     else record {tests $= filter (flip elem selectedTests . name)} repl
+
+
+export
 runReplica : SystemIO (SystemError :: TestError :: e) =>
   SystemIO (SystemError :: e) =>
   FileSystem (FSError :: TestError :: e) =>
@@ -273,7 +291,7 @@ runReplica : SystemIO (SystemError :: TestError :: e) =>
       ] e => App e Stats
 runReplica = do
   rDir <- prepareReplicaDir
-  repl <- getReplica RunContext file
+  repl <- defineActiveTests
   result <- runAllTests repl
   putStrLn $ separator 60
   putStrLn "Test results:"
