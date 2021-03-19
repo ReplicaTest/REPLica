@@ -35,7 +35,7 @@ prepareReplicaDir : SystemIO (SystemError :: e) =>
       , Console
       ] e => App e String
 prepareReplicaDir = do
-  putStrLn !(map show $ get GlobalConfig)
+  debug $ "GlobalConfig: \{!(map show $ get GlobalConfig)}"
   handle setAbsoluteReplicaDir
     pure
     (\err : FSError => throw $ CantAccessTestFile "current directory")

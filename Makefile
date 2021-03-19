@@ -3,8 +3,8 @@
 .SUFFIXES: .dhall .json
 
 TEST=tests.json
-REPLICA_GLOBAL=""
-REPLICA_RUN_OPTIONS=""
+REPLICA_GLOBAL=
+REPLICA_RUN=
 DEST=${HOME}/.local/bin
 
 build: build/exec/replica
@@ -23,9 +23,9 @@ clean:
 	dhall-to-json --file $? --output $@
 
 generate: ${TEST}
-	build/exec/replica ${REPLICA_GLOBAL} run ${REPLICA_RUN_OPTIONS} --interactive ${TEST}
+	build/exec/replica ${REPLICA_GLOBAL} run ${REPLICA_RUN} --interactive ${TEST}
 
 test: ${TEST} build
-	build/exec/replica run ${TEST}
+	build/exec/replica ${REPLICA_GLOBAL} run ${REPLICA_RUN} ${TEST}
 
 all: build test
