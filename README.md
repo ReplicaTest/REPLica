@@ -142,3 +142,5 @@ You can also explore the tool options with `replica help`.
 [idris tests]: https://github.com/idris-lang/Idris2/tree/master/tests
 [golden]: https://ro-che.info/articles/2017-12-04-golden-tests
 [test file]: https://github.com/berewt/REPLica/blob/main/tests.dhall
+[gitlab ci]: https://docs.gitlab.com/ee/ci/README.html
+[github actions]: https://github.com/features/actions
