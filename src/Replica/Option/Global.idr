@@ -61,7 +61,7 @@ replicaDir : ParamOption String
 replicaDir = MkOption
   (singleton "replica-dir")
   []
-  "set the location of replica store"
+  "set the location of replica store (default: \".replica\")"
   ".replica"
   (MkParam "dirName" Just)
 
