@@ -1,4 +1,4 @@
-let Map = https://prelude.dhall-lang.org/v20.1.0/Map/Type
+let Map = https://prelude.dhall-lang.org/v15.0.0/Map/Type
 
 let Test : Type =
   { description : Optional Text
@@ -9,7 +9,7 @@ let Test : Type =
   , succeed : Optional Bool
   }
 
-let Simple =
+let Minimal =
   { Type = Test
   , default =
     { description = None Text
@@ -20,14 +20,14 @@ let Simple =
     }
   }
 
-let Success = Simple with default.succeed = Some True
-let Failure = Simple with default.succeed = Some False
+let Success = Minimal with default.succeed = Some True
+let Failure = Minimal with default.succeed = Some False
 
 let Replica : Type = Map Text Test
 
 in { Test
    , Replica
-   , Simple
+   , Minimal
    , Success
    , Failure
    }

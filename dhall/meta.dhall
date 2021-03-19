@@ -34,7 +34,7 @@ let buildReplica : ReplicaTest -> Text = \(replica : ReplicaTest) ->
                 , replica.testFile]
 
 let replicaTest : ReplicaTest -> Replica.Test = \(replica : ReplicaTest) ->
-  Replica.Simple::{command = buildReplica replica}
+  Replica.Minimal::{command = buildReplica replica}
     with workingDir = Some replica.directory
 
 in { ReplicaTest

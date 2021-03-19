@@ -110,7 +110,7 @@ For example, the dhall equivalent to the "hello word" example is the following:
 ```
 let Replica = https://raw.githubusercontent.com/berewt/REPLica/main/dhall/replica.dhall
 
-in { hello = Replica.Simple::{command = "echo \"Hello, world!\""}}
+in { hello = Replica.Minimal::{command = "echo \"Hello, world!\""}}
 ```
 
 Supposed you have a `hello.dhall` file with this content, you can then do:

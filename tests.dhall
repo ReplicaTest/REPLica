@@ -1,7 +1,7 @@
 let Replica = ./dhall/replica.dhall
 let Meta = ./dhall/meta.dhall
 
-in { simplest_success = Replica.Simple::{command = "true"}
+in { simplest_success = Replica.Minimal::{command = "true"}
        with description = "A call to 'true' must succeed with no output"
 
    , test_success = Replica.Success::{command = "true"}
