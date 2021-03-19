@@ -50,18 +50,17 @@ jobs:
       IDRIS2_CG: chez
       IDRIS2_TESTS_CG: chez
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: idris-lang/idris2
+          ref: master
       - name: Cache Idris2
         id: last-idris2
         uses: actions/cache@v2
         with:
           path: ~/.idris2
           key: ${{ runner.os }}-idris2-bootstrapped-${{ hashfiles('**/*.idr') }}
-      - name: Checkout
-        if: steps.last-idris2.outputs.cache-hit != 'true'
-        uses: actions/checkout@v2
-        with:
-          repository: idris-lang/idris2
-          ref: master
       - name: Download Idris2 Artifact
         if: steps.last-idris2.outputs.cache-hit != 'true'
         uses: actions/download-artifact@v2
