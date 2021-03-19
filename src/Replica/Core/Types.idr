@@ -1,5 +1,7 @@
 module Replica.Core.Types
 
+import Data.String
+
 %default total
 
 public export
@@ -8,13 +10,27 @@ record Test where
   name: String
   description: Maybe String
   workingDir : Maybe String
-  -- tags: List String
+  tags: List String
   -- require : List String
   beforeTest : List String
   afterTest : List String
   -- env: Map String String
   command: String
   mustSucceed : Maybe Bool
+
+export
+Show Test where
+  show x = unwords
+    [ "MkTest"
+    , show x.name
+    , show x.description
+    , show x.workingDir
+    , show x.tags
+    , show x.beforeTest
+    , show x.afterTest
+    , show x.command
+    , show x.mustSucceed
+    ]
 
 export
 defaultExpected : Test -> String

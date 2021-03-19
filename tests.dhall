@@ -26,11 +26,20 @@ in { simplest_success = Replica.Minimal::{command = "true"}
    , testReplica = (Meta.replicaTest Meta.Run::{directory = "tests/replica", testFile = "empty.json"})
         with description = Some "Test that an empty test suite is passing"
         with succeed = Some True
+        with tags = ["meta"]
 
    , testOnly = (Meta.replicaTest Meta.Run::{ directory = "tests/replica"
                                             , parameters = ["--only one"]
                                             , testFile = "two.json"})
         with description = Some "Test test filtering with \"--only\""
         with succeed = Some True
+        with tags = ["meta"]
+
+   , testTags = (Meta.replicaTest Meta.Run::{ directory = "tests/replica"
+                                            , parameters = ["--tags shiny"]
+                                            , testFile = "two.json"})
+        with description = Some "Test test filtering with \"--only\""
+        with succeed = Some True
+        with tags = ["meta"]
 
    }

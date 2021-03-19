@@ -16,6 +16,13 @@ Its approach is similar to the one proposed by CI/CD tools like [github actions]
 a tests suite is described in a json (or more preferably [dhall][]) file that is processed by the
 tool to generate tests.
 
+## Feature
+
+- Test tags
+- Check exit status (0 or non 0 only)
+- Multi-threads
+- Run only selected tests/tags
+
 ## Install
 
 Requirements:

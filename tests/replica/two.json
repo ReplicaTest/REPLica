@@ -1,0 +1,12 @@
+{
+  "one": {
+    "command": "echo \"one\"",
+    "tags": []
+  },
+  "two": {
+    "command": "echo \"two\"",
+    "tags": [
+      "shiny"
+    ]
+  }
+}

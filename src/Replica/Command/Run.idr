@@ -16,6 +16,7 @@ record RunAction' (f : Type -> Type) where
   interactive : f Bool
   threads : f Nat
   only : f (List String)
+  onlyTags : f (List String)
   file : f String
 
 public export
@@ -30,11 +31,12 @@ Semigroup (RunAction' List) where
       (x.interactive ++ y.interactive)
       (x.threads ++ y.threads)
       (x.only ++ y.only)
+      (x.onlyTags ++ y.onlyTags)
       (x.file ++ y.file)
 
 export
 Monoid (RunAction' List) where
-  neutral = MkRunAction empty empty empty empty empty
+  neutral = MkRunAction empty empty empty empty empty empty
 
 export
 Show RunAction where
@@ -44,6 +46,7 @@ Show RunAction where
     , show $ x.interactive
     , show $ x.threads
     , show $ x.only
+    , show $ x.onlyTags
     , show $ x.file ]
 
 
@@ -107,7 +110,7 @@ onlyPart = inj only
     only : ParamOption (List String)
     only = MkOption
       (singleton "only")
-      []
+      ['n']
       "a comma separated list of the tests to run"
       []
       (MkParam "testX,testY" $ Just . go)
@@ -120,6 +123,25 @@ onlyOption : List String -> RunAction' List
 onlyOption xs =
   record {only = [xs]} (neutral {ty = RunAction' List})
 
+onlyTagsPart : Part (List String)
+onlyTagsPart = inj onlyTags
+  where
+    onlyTags : ParamOption (List String)
+    onlyTags = MkOption
+      ("tags" ::: ["only-tags"])
+      ['t']
+      "a comma separated list of the tags to run"
+      []
+      (MkParam "tagX,tagY" $ Just . go)
+      where
+        go : String -> List String
+        go = forget . split (== ',')
+
+
+onlyTagsOption : List String -> RunAction' List
+onlyTagsOption xs =
+  record {onlyTags = [xs]} (neutral {ty = RunAction' List})
+
 parseRunOptions : List String -> Validation (List String) (RunAction' List)
 parseRunOptions xs =
   either (\x => Error ["Unknnown option \{x}"]) Valid
@@ -127,6 +149,7 @@ parseRunOptions xs =
             , map {f = Part} workingDirOption workingDirPart
             , map {f = Part} threadsOption threadsPart
             , map {f = Part} onlyOption onlyPart
+            , map {f = Part} onlyTagsOption onlyTagsPart
             , map {f = Part} fileOption $ inj fileParam
             ] xs
 
@@ -137,6 +160,7 @@ validateRunAction r
     (oneValidate interactivePart r.interactive)
     (oneValidate threadsPart r.threads)
     (Valid $ join r.only)
+    (Valid $ join r.onlyTags)
     (oneValidate (inj fileParam) r.file)
     |]
 
@@ -155,5 +179,6 @@ helpRun global = commandHelp "run" "Run tests from a Replica JSON file" global
   ++ (helpPart {a = String} workingDirPart)
   ++ (helpPart {a = Nat} threadsPart)
   ++ (helpPart {a = List String} onlyPart)
+  ++ (helpPart {a = List String} onlyTagsPart)
   )
   (Just fileParam)

@@ -199,6 +199,7 @@ runTest = do
   t <- get CurrentTest
   let wd = fromMaybe (ctx.workingDir) t.workingDir
   log "Executing \{t.name}"
+  debug $ withOffset 2 $ show t
   log $ withOffset 2 "Working directory: \{show wd}"
   handle (inDir wd performTest)
     pure
@@ -267,15 +268,22 @@ report x = do
 export
 defineActiveTests : FileSystem (FSError :: e) =>
   Has [ State RunContext RunAction
+      , State GlobalConfig GlobalOption
       , Exception ReplicaError
       , Console
       ] e => App e Replica
 defineActiveTests = do
   repl <- getReplica RunContext file
   selectedTests <- map only $ get RunContext
-  pure $ if null selectedTests
-     then repl
-     else record {tests $= filter (flip elem selectedTests . name)} repl
+  selectedTags <- map onlyTags $ get RunContext
+  debug $ "Tags: \{show selectedTags}"
+  debug $ "Names: \{show selectedTests}"
+  pure $ record {tests $= filter (go selectedTags selectedTests)} repl
+  where
+    go : (tags, names : List String) -> Test -> Bool
+    go tags names t =
+      (null tags || not (null $ intersect t.tags tags))
+      && (null names || (t.name `elem` names))
 
 
 export
@@ -290,6 +298,7 @@ runReplica : SystemIO (SystemError :: TestError :: e) =>
       , Console
       ] e => App e Stats
 runReplica = do
+  debug $ "Command: \{show !(get RunContext)}"
   rDir <- prepareReplicaDir
   repl <- defineActiveTests
   result <- runAllTests repl
