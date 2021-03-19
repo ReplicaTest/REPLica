@@ -43,7 +43,7 @@ jobs:
           path: ~/.idris2/
 
   self-host-previous-version:
-    needs: build-previous-version
+    needs: build-previous-idris
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: chez
