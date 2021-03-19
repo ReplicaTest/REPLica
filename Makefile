@@ -5,7 +5,7 @@
 TEST=tests.json
 DEST=${HOME}/.local/bin
 
-build: build/exec/replica
+build:
 	idris2 --build replica.ipkg
 
 install:
