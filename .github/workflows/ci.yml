@@ -42,7 +42,7 @@ jobs:
           name: installed-idris2-${{ env.IDRIS2_VERSION }}-chez
           path: ~/.idris2/
 
-  build-idris2-nightly2:
+  build-idris2-nightly:
     needs: build-previous-idris
     runs-on: ubuntu-latest
     env:
