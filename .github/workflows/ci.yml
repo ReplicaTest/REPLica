@@ -43,7 +43,7 @@ jobs:
           path: ~/.idris2/
 
   build-idris2-nightly:
-    needs: build-previous-idris
+    needs: build-previous-idris2
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: chez
