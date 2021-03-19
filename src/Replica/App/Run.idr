@@ -275,15 +275,19 @@ defineActiveTests : FileSystem (FSError :: e) =>
 defineActiveTests = do
   repl <- getReplica RunContext file
   selectedTests <- map only $ get RunContext
+  excludedTests <- map exclude $ get RunContext
   selectedTags <- map onlyTags $ get RunContext
+  excludedTags <- map excludeTags $ get RunContext
   debug $ "Tags: \{show selectedTags}"
   debug $ "Names: \{show selectedTests}"
-  pure $ record {tests $= filter (go selectedTags selectedTests)} repl
+  pure $ record {tests $= filter (go selectedTags selectedTests excludedTags excludedTests)} repl
   where
-    go : (tags, names : List String) -> Test -> Bool
-    go tags names t =
+    go : (tags, names, negTags, negNames : List String) -> Test -> Bool
+    go tags names negTags negNames t =
       (null tags || not (null $ intersect t.tags tags))
       && (null names || (t.name `elem` names))
+      && (null negTags || (null $ intersect t.tags negTags))
+      && (null negNames || (not $ t.name `elem` negNames))
 
 
 export

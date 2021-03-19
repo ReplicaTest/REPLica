@@ -31,14 +31,28 @@ in { simplest_success = Replica.Minimal::{command = "true"}
    , testOnly = (Meta.replicaTest Meta.Run::{ directory = "tests/replica"
                                             , parameters = ["--only one"]
                                             , testFile = "two.json"})
-        with description = Some "Test test filtering with \"--only\""
+        with description = Some "Test tests filtering with \"--only\""
+        with succeed = Some True
+        with tags = ["meta"]
+
+   , testExclude = (Meta.replicaTest Meta.Run::{ directory = "tests/replica"
+                                            , parameters = ["--exclude one"]
+                                            , testFile = "two.json"})
+        with description = Some "Test tests filtering with \"--exclude\""
         with succeed = Some True
         with tags = ["meta"]
 
    , testTags = (Meta.replicaTest Meta.Run::{ directory = "tests/replica"
                                             , parameters = ["--tags shiny"]
                                             , testFile = "two.json"})
-        with description = Some "Test test filtering with \"--only\""
+        with description = Some "Test tests filtering with \"--only\""
+        with succeed = Some True
+        with tags = ["meta"]
+
+   , testExcludeTags = (Meta.replicaTest Meta.Run::{ directory = "tests/replica"
+                                            , parameters = ["--exclude-tags shiny"]
+                                            , testFile = "two.json"})
+        with description = Some "Test tests filtering with \"--exclude-tags\""
         with succeed = Some True
         with tags = ["meta"]
 

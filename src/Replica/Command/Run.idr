@@ -16,7 +16,9 @@ record RunAction' (f : Type -> Type) where
   interactive : f Bool
   threads : f Nat
   only : f (List String)
+  exclude : f (List String)
   onlyTags : f (List String)
+  excludeTags : f (List String)
   file : f String
 
 public export
@@ -31,12 +33,14 @@ Semigroup (RunAction' List) where
       (x.interactive ++ y.interactive)
       (x.threads ++ y.threads)
       (x.only ++ y.only)
+      (x.exclude ++ y.exclude)
       (x.onlyTags ++ y.onlyTags)
+      (x.excludeTags ++ y.excludeTags)
       (x.file ++ y.file)
 
 export
 Monoid (RunAction' List) where
-  neutral = MkRunAction empty empty empty empty empty empty
+  neutral = MkRunAction empty empty empty empty empty empty empty empty
 
 export
 Show RunAction where
@@ -123,6 +127,26 @@ onlyOption : List String -> RunAction' List
 onlyOption xs =
   record {only = [xs]} (neutral {ty = RunAction' List})
 
+
+excludePart : Part (List String)
+excludePart = inj only
+  where
+    only : ParamOption (List String)
+    only = MkOption
+      (singleton "exclude")
+      ['N']
+      "a comma separated list of the tests to exclude"
+      []
+      (MkParam "testX,testY" $ Just . go)
+      where
+        go : String -> List String
+        go = forget . split (== ',')
+
+excludeOption : List String -> RunAction' List
+excludeOption xs =
+  record {exclude = [xs]} (neutral {ty = RunAction' List})
+
+
 onlyTagsPart : Part (List String)
 onlyTagsPart = inj onlyTags
   where
@@ -137,10 +161,29 @@ onlyTagsPart = inj onlyTags
         go : String -> List String
         go = forget . split (== ',')
 
-
 onlyTagsOption : List String -> RunAction' List
 onlyTagsOption xs =
   record {onlyTags = [xs]} (neutral {ty = RunAction' List})
+
+
+excludeTagsPart : Part (List String)
+excludeTagsPart = inj onlyTags
+  where
+    onlyTags : ParamOption (List String)
+    onlyTags = MkOption
+      (singleton "exclude-tags")
+      ['T']
+      "a comma separated list of the tags to exclude"
+      []
+      (MkParam "tagX,tagY" $ Just . go)
+      where
+        go : String -> List String
+        go = forget . split (== ',')
+
+excludeTagsOption : List String -> RunAction' List
+excludeTagsOption xs =
+  record {excludeTags = [xs]} (neutral {ty = RunAction' List})
+
 
 parseRunOptions : List String -> Validation (List String) (RunAction' List)
 parseRunOptions xs =
@@ -149,7 +192,9 @@ parseRunOptions xs =
             , map {f = Part} workingDirOption workingDirPart
             , map {f = Part} threadsOption threadsPart
             , map {f = Part} onlyOption onlyPart
+            , map {f = Part} excludeOption excludePart
             , map {f = Part} onlyTagsOption onlyTagsPart
+            , map {f = Part} excludeTagsOption excludeTagsPart
             , map {f = Part} fileOption $ inj fileParam
             ] xs
 
@@ -160,7 +205,9 @@ validateRunAction r
     (oneValidate interactivePart r.interactive)
     (oneValidate threadsPart r.threads)
     (Valid $ join r.only)
+    (Valid $ join r.exclude)
     (Valid $ join r.onlyTags)
+    (Valid $ join r.excludeTags)
     (oneValidate (inj fileParam) r.file)
     |]
 
@@ -179,6 +226,8 @@ helpRun global = commandHelp "run" "Run tests from a Replica JSON file" global
   ++ (helpPart {a = String} workingDirPart)
   ++ (helpPart {a = Nat} threadsPart)
   ++ (helpPart {a = List String} onlyPart)
+  ++ (helpPart {a = List String} excludePart)
   ++ (helpPart {a = List String} onlyTagsPart)
+  ++ (helpPart {a = List String} excludeTagsPart)
   )
   (Just fileParam)
