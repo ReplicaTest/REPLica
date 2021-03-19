@@ -50,24 +50,35 @@ jobs:
       IDRIS2_CG: chez
       IDRIS2_TESTS_CG: chez
     steps:
+      - name: Cache Idris2
+        id: last-idris2
+        uses: actions/cache@v2
+        with:
+          path: ~/.idris2
+          key: ${{ runner.os }}-idris2-bootstrapped-${{ hashfiles('**/*.ttc') }}
       - name: Checkout
+        if: steps.last-idris2.outputs.cache-hit != 'true'
         uses: actions/checkout@v2
         with:
           repository: idris-lang/idris2
           ref: master
       - name: Download Idris2 Artifact
+        if: steps.last-idris2.outputs.cache-hit != 'true'
         uses: actions/download-artifact@v2
         with:
           name: installed-idris2-${{ env.IDRIS2_VERSION }}-chez
           path: ~/.idris2/
       - name: Install build dependencies
+        if: steps.last-idris2.outputs.cache-hit != 'true'
         run: |
           sudo apt-get install -y chezscheme
           echo "$HOME/.idris2/bin" >> $GITHUB_PATH
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
       - name: Build from previous version
+        if: steps.last-idris2.outputs.cache-hit != 'true'
         run: make all && make install && make clean
       - name: Build self-hosted from previous version
+        if: steps.last-idris2.outputs.cache-hit != 'true'
         run: make all && make install
       - name: Artifact Idris2
         uses: actions/upload-artifact@v2
@@ -85,12 +96,13 @@ jobs:
         with:
           name: idris2-nightly
           path: ~/.idris2/
-      - name: Make replica
+      - name: Install dependencies
         run: |
           sudo apt-get install -y chezscheme
           echo "$HOME/.idris2/bin" >> $GITHUB_PATH
           ls "$HOME/.idris2/bin"
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+      - name: Make replica
           make build && make test
       - name: Save artifacts
         uses: actions/upload-artifact@v2
