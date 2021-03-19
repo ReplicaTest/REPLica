@@ -89,7 +89,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    needs: [build]
+    needs: [build-replica]
     steps:
       - name: Install dhall
         uses: dhall-lang/setup-dhall@v4
