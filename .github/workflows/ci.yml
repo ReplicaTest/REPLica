@@ -63,7 +63,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get install -y chezscheme
-          echo "::add-path::$HOME/.idris2/bin"
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
       - name: Build from previous version
         run: make all && make install && make clean
