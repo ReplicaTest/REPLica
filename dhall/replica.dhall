@@ -1,4 +1,4 @@
-let Map = https://prelude.dhall-lang.org/v15.0.0/Map/Type
+let Map = https://prelude.dhall-lang.org/v20.1.0/Map/Type
 
 let Test : Type =
   { description : Optional Text

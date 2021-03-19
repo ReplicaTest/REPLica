@@ -1,26 +1,31 @@
-.PHONY: build
+.PHONY: build all
 
-testsName = tests
+.SUFFIXES: .dhall .json
 
-build:
+TEST=tests.json
+REPLICA_GLOBAL=
+REPLICA_RUN=
+DEST=${HOME}/.local/bin
+
+build: build/exec/replica
 	idris2 --build replica.ipkg
 
 install:
 	idris2 --install replica.ipkg
-	cp -r build/exec/* ${HOME}/.local/bin
+	mkdir -p ${DEST}
+	cp -r build/exec/* ${DEST}
 
 clean:
-	$(RM) -r build
-	$(RM) ${testsName}.json
+	${RM} -r build
+	${RM} ${TEST}
 
-showtests:
-	dhall-to-json --file ${testsName}.dhall
+.dhall.json:
+	dhall-to-json --file $? --output $@
 
-${testsName}.json:
-	dhall-to-json --file ${testsName}.dhall --output ${testsName}.json
+generate: ${TEST}
+	build/exec/replica ${REPLICA_GLOBAL} run ${REPLICA_RUN} --interactive ${TEST}
 
-generate: ${testsName}.json
-	build/exec/replica run --interactive ${testsName}.json
+test: ${TEST} build
+	build/exec/replica ${REPLICA_GLOBAL} run ${REPLICA_RUN} ${TEST}
 
-test: ${testsName}.json build
-	build/exec/replica run ${testsName}.json
+all: build test

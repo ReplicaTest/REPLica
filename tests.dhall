@@ -14,6 +14,15 @@ in { simplest_success = Replica.Simple::{command = "true"}
         with workingDir = Some "tests/basic"
         with description = Some "Test that the workingDir parameter is taken into account"
 
+   , testOutput = Replica.Success::{command = "echo \"Hello, World!\""}
+        with description = Some "Output is checked correctly"
+
+   , testBefore = Replica.Success::{command = "cat new.txt"}
+        with description = Some "Test that beforeTest is executed correctly"
+        with workingDir = "tests/basic"
+        with beforeTest = "echo \"Fresh content\" > new.txt"
+        with afterTest = "rm new.txt"
+
    , testReplica = (Meta.replicaTest Meta.Run::{directory = "tests/replica", testFile = "empty.json"})
         with description = Some "Test that an empty test suite is passing"
         with succeed = Some True
