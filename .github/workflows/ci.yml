@@ -55,7 +55,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.idris2
-          key: ${{ runner.os }}-idris2-bootstrapped-${{ hashfiles('**/*.ttc') }}
+          key: ${{ runner.os }}-idris2-bootstrapped-${{ hashfiles('**/*.idr') }}
       - name: Checkout
         if: steps.last-idris2.outputs.cache-hit != 'true'
         uses: actions/checkout@v2
@@ -96,6 +96,8 @@ jobs:
         with:
           name: idris2-nightly
           path: ~/.idris2/
+      - name: Install dhall
+        uses: dhall-lang/setup-dhall@v4
       - name: Install dependencies
         run: |
           sudo apt-get install -y chezscheme
