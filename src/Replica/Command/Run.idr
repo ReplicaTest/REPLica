@@ -9,20 +9,18 @@ import Replica.Other.Validation
 
 %default total
 
-namespace Types
+public export
+record RunAction' (f : Type -> Type) where
+  constructor MkRunAction
+  workingDir : f String
+  interactive : f Bool
+  threads : f Nat
+  only : f (List String)
+  file : f String
 
-  public export
-  record RunAction' (f : Type -> Type) where
-    constructor MkRunAction
-    workingDir : f String
-    interactive : f Bool
-    threads : f Nat
-    only : f (List String)
-    file : f String
-
-  public export
-  RunAction : Type
-  RunAction = RunAction' Prelude.id
+public export
+RunAction : Type
+RunAction = RunAction' Prelude.id
 
 export
 Semigroup (RunAction' List) where
