@@ -89,6 +89,7 @@ jobs:
         run: |
           sudo apt-get install -y chezscheme
           echo "$HOME/.idris2/bin" >> $GITHUB_PATH
+          ls "$HOME/.idris2/bin"
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
           make build && make test
       - name: Save artifacts
