@@ -41,24 +41,93 @@ replica help
 
 ## Quickstart
 
-### With json
-
-Create a test file:
-
 ```shell
 tee hello.json > /dev/null << EOF
-{ "hello": {"command"='echo "hello,word!"'} }
+{ "hello": {"command": "echo \"hello, world!\""} }
 EOF
 ```
 
-REPLica takes a JSON specification in input.
-Though, using [dhall][] is prefered as it can allow us to build test template
-more easily and then translate it to JSON using [dhall-to-json][].
+And then run replica on it: `replica run hello.json`.
+You sholu obtain the following result:
 
-For example, REPLica is tested with itelf, you can check the [test file][] to have an overview of the
+```
+$ replica run hello.json
+------------------------------------------------------------
+Running tests...
+------------------------------------------------------------
+Test results:
+  hello: ❌ WrongOutput
+------------------------------------------------------------
+Summary:
+  ❌ (Failure): 1 / 1
+```
+
+It's totally fine: `replica` has no golden value for this test yet, we need to build one.
+To do so, we will rerun the test in the interactive mode: `replica run --interactive hello.json`.
+Now you should be prompted if you want to set the golden value for the test:
+
+```
+$ replica run --interactive hello.json
+------------------------------------------------------------
+Running tests...
+hello: Golden value mismatch
+Expected: Nothing Found
+Given:
+hello, world!
+
+Do you want to set the golden value? [N/y]
+```
+
+Answer `y` (or `yes`) and the test should pass.
+Now that the golden value is set, we can retry to run the suite in a non interactive mode:
+`replica run hello.json`...
+
+```
+$ replica run hello.json
+------------------------------------------------------------
+Running tests...
+------------------------------------------------------------
+Test results:
+  hello: ✅
+------------------------------------------------------------
+Summary:
+  ✅ (Success): 1 / 1
+```
+
+
+TADA... it works.
+
+if you want to see it fails again, you can modify the command in `hello.json`.
+
+### Using dhall
+
+REPLica takes a JSON specification in input.
+Though, using [dhall][] is prefered as it can allow us to build test templates
+and then translate it to JSON using [dhall-to-json][].
+
+For example, the dhall equivalent to the "hello word" example is the following:
+
+```
+let Replica = https://raw.githubusercontent.com/berewt/REPLica/main/dhall/replica.dhall
+
+in { hello = Replica.Simple::{command = "echo \"Hello, world!\""}}
+```
+
+Supposed you have a `hello.dhall` file with this content, you can then do:
+
+```
+# translate it to json
+dhall-to-json hello.dhall -o hello.json
+# run the test
+replica run hello.json
+```
+
+## Going further
+
+REPLica is tested with itelf, you can check the [test file][] to have an overview of the
 possibilities.
 
-You can then explore the tool possibilities with `replica help`.
+You can also explore the tool options with `replica help`.
 
 
 [dhall]: https://dhall-lang.org
