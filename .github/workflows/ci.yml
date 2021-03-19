@@ -69,8 +69,6 @@ jobs:
         run: make all && make install && make clean
       - name: Build self-hosted from previous version
         run: make all && make install
-      - name: Test self-hosted from previous version
-        run: make test INTERACTIVE=''
       - name: Artifact Idris2
         uses: actions/upload-artifact@v2
         with:
@@ -89,27 +87,12 @@ jobs:
           path: ~/.idris2/
       - name: Make replica
         run: |
+          sudo apt-get install -y chezscheme
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
-          make build
+          make build && make test
       - name: Save artifacts
         uses: actions/upload-artifact@v2
         with:
           name: bundle
           path: build
-
-  test:
-    runs-on: ubuntu-latest
-    needs: build-replica
-    steps:
-      - name: Install dhall
-        uses: dhall-lang/setup-dhall@v4
-      - uses: actions/checkout@v2
-      - name: Restore artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: bundle
-          path: build
-      - name: Set executable
-        run: chmod +x build/exec/*
-      - name: Test
-        run: make test
