@@ -54,8 +54,8 @@ Show RunAction where
     , show $ x.file ]
 
 
-fileParam : Param String
-fileParam = MkParam "filename" Just
+fileParamPart : Part String
+fileParamPart = inj $ MkParam "filename" Just
 
 fileOption : String -> RunAction' List
 fileOption x =
@@ -195,7 +195,7 @@ parseRunOptions xs =
             , map {f = Part} excludeOption excludePart
             , map {f = Part} onlyTagsOption onlyTagsPart
             , map {f = Part} excludeTagsOption excludeTagsPart
-            , map {f = Part} fileOption $ inj fileParam
+            , map {f = Part} fileOption fileParamPart
             ] xs
 
 validateRunAction : RunAction' List -> Validation (List String) RunAction
@@ -208,7 +208,7 @@ validateRunAction r
     (Valid $ join r.exclude)
     (Valid $ join r.onlyTags)
     (Valid $ join r.excludeTags)
-    (oneValidate (inj fileParam) r.file)
+    (oneValidate fileParamPart r.file)
     |]
 
 export
@@ -230,4 +230,4 @@ helpRun global = commandHelp "run" "Run tests from a Replica JSON file" global
   ++ (helpPart {a = List String} onlyTagsPart)
   ++ (helpPart {a = List String} excludeTagsPart)
   )
-  (Just fileParam)
+  (prj fileParamPart)

@@ -21,6 +21,7 @@ tool to generate tests.
 ## Feature
 
 - Test tags
+- Test dependencies (test are run only if other tests succeed)
 - Check exit status (0 or non 0 only)
 - Multi-threads
 - Run only selected tests/tags

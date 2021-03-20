@@ -92,3 +92,6 @@ getReplica ident toFile = do
         | Error xs => throw $ InvalidJSON xs
   pure repl
 
+export
+when : Bool -> App e () -> App e ()
+when cond x = if cond then x else pure ()
