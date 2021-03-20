@@ -26,7 +26,7 @@ runRun opts ctx = run $ new opts $ new ctx $ handle runReplica
 
 covering
 runInfo : GlobalOption -> InfoAction -> IO Int
-runInfo opts info = run $ new info $ handle infoReplica
+runInfo opts info = run $ new opts $ new info $ handle infoReplica
     (const $ pure 0)
     (\err : ReplicaError => putStrLn (show err) >> pure 253)
 
