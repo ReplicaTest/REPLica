@@ -15,6 +15,18 @@ validateDesc (Just (JString x)) = Valid $ Just $ x
 validateDesc (Just x)
   = Error ["Test description should be a string, found: \{show x}"]
 
+validateRequire : JSON -> Validation (List String) String
+validateRequire (JString x) = Valid x
+validateRequire x = Error ["A requirement must be a testname, found: \{show x}"]
+
+validateRequireList : Maybe JSON -> Validation (List String) (List String)
+validateRequireList Nothing = Valid empty
+validateRequireList (Just JNull) = Valid empty
+validateRequireList (Just (JString x)) = Valid $ pure x
+validateRequireList (Just (JArray ys)) = traverse validateRequire ys
+validateRequireList (Just x) = Error
+  ["Require must contain a test name or an array of test names, found \{show x}"]
+
 validateWD : Maybe JSON -> Validation (List String) (Maybe String)
 validateWD Nothing = Valid empty
 validateWD (Just JNull) = Valid empty
@@ -68,6 +80,7 @@ jsonToTest str (JObject xs) =
   [| MkTest
   (pure str)
   (validateDesc $ lookup "description" xs)
+  (validateRequireList $ lookup "require" xs)
   (validateWD $ lookup "workingDir" xs)
   (validateTagList $ lookup "tags" xs)
   (validateBefore $ lookup "beforeTest" xs)

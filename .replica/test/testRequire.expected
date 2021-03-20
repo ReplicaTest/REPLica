@@ -1,0 +1,10 @@
+------------------------------------------------------------
+Running tests...
+------------------------------------------------------------
+Test results:
+  root_failed: ❌ WrongOutput Fails while it should pass
+  depends_failed: ⚠️  Test rely on test root_failed, which failed
+------------------------------------------------------------
+Summary:
+  ❌ (Failure): 1 / 2
+  ⚠️  (Errors): 1 / 2

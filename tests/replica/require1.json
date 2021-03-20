@@ -1,0 +1,20 @@
+{
+  "depends_failed": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "true",
+    "require": [
+      "root_failed"
+    ],
+    "succeed": true,
+    "tags": []
+  },
+  "root_failed": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "false",
+    "require": [],
+    "succeed": true,
+    "tags": []
+  }
+}
