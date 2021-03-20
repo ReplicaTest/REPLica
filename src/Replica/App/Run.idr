@@ -1,5 +1,6 @@
 module Replica.App.Run
 
+import Control.ANSI
 import Control.App
 import Control.App.Console
 
@@ -27,6 +28,39 @@ import Replica.Other.Validation
 %default total
 
 data RunContext : Type where
+
+ok : State GlobalConfig GlobalOption e => App e String
+ok = do
+  ascii <- map ascii $ get GlobalConfig
+  pure $ if ascii then "OK " else "✅ "
+
+ko : State GlobalConfig GlobalOption e => App e String
+ko = do
+  ascii <- map ascii $ get GlobalConfig
+  pure $ if ascii then "KO " else "❌ "
+
+err : State GlobalConfig GlobalOption e => App e String
+err = do
+  ascii <- map ascii $ get GlobalConfig
+  pure $ if ascii then "ERR" else "⚠️ "
+
+bold : State GlobalConfig GlobalOption e => App e (String -> String)
+bold = do
+  c <- map colour $ get GlobalConfig
+  pure $ if c then (show . bolden) else id
+
+
+yellow : State GlobalConfig GlobalOption e => App e (String -> String)
+yellow = do
+  c <- map colour $ get GlobalConfig
+  pure $ if c then (show . colored Yellow) else id
+
+
+red : State GlobalConfig GlobalOption e => App e (String -> String)
+red = do
+  c <- map colour $ get GlobalConfig
+  pure $ if c then (show . colored Red) else id
+
 
 prepareReplicaDir : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
@@ -217,7 +251,7 @@ runAllTests : SystemIO (SystemError :: TestError :: e) =>
       ] e =>  TestPlan -> App e (List (String, Either TestError TestResult))
 runAllTests plan = do
   putStrLn $ separator 60
-  putStrLn "Running tests..."
+  putStrLn $ !bold "Running tests..."
   batchTests [] plan
   where
     processTest : Test -> App e (String, Either TestError TestResult)
@@ -251,29 +285,30 @@ runAllTests plan = do
 
 testOutput :
   Has [ State RunContext RunAction
+      , State GlobalConfig GlobalOption
       , Console
       ] e => String -> Either TestError TestResult -> App e ()
 testOutput name x = do
-  putStr $ withOffset 2 "\{name}: "
+  putStr $ withOffset 2 ""
   case x of
-       Left y => putStr "⚠️  " >> putStrLn (show y)
-       Right Success => putStrLn "✅"
-       Right (Fail xs) => putStrLn "❌ \{unwords $ map show xs}"
+       Left y => putStr (!yellow "\{!err} \{name}: ") >> putStrLn (show y)
+       Right Success => putStrLn "\{!ok} \{name}"
+       Right (Fail xs) => putStrLn $ !red "\{!ko} \{name}: \{unwords $ map show xs}"
 
-report : Console e => Stats -> App e ()
+report : Console e => State GlobalConfig GlobalOption e => Stats -> App e ()
 report x = do
   putStrLn $ separator 60
-  putStrLn "Summary:"
+  putStrLn $ !bold "Summary:"
   let nb = countTests x
   if nb == 0
      then putStrLn $ withOffset 2 "No test"
      else putStrLn $ unlines $ catMaybes
     [ guard (x.successes > 0) $>
-        withOffset 2 "✅ (Success): \{show x.successes} / \{show nb}"
+        withOffset 2 "\{!ok} (Success): \{show x.successes} / \{show nb}"
     , guard (x.failures > 0) $>
-        withOffset 2 "❌ (Failure): \{show x.failures} / \{show nb}"
+        withOffset 2 "\{!ko} (Failure): \{show x.failures} / \{show nb}"
     , guard (x.errors > 0) $>
-        withOffset 2 "⚠️  (Errors): \{show x.errors} / \{show nb}"
+        withOffset 2 "\{!err}  (Errors): \{show x.errors} / \{show nb}"
     ]
 
 export
@@ -320,7 +355,7 @@ runReplica = do
   log $ displayPlan plan
   result <- runAllTests plan
   putStrLn $ separator 60
-  putStrLn "Test results:"
+  putStrLn $ !bold "Test results:"
   traverse_ (uncurry testOutput) result
   let stats = asStats $ map snd result
   report $ stats
