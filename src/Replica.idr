@@ -52,7 +52,6 @@ main = do
          putStrLn "Can't parse command arguments:"
          putStrLn $ unlines es
          putStrLn "usage: replica run [options]"
-  print cmdArgs
   let x = parseArgs cmdArgs
   case x of
        Error [] => do
