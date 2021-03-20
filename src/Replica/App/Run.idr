@@ -267,6 +267,9 @@ runAllTests plan = do
     processResult : TestPlan -> (String, Either TestError TestResult) -> TestPlan
     processResult plan (tName, (Right Success)) = validate tName plan
     processResult plan (tName, _) = fail tName plan
+    isSuccess : Either TestError TestResult -> Bool
+    isSuccess (Right Success) = True
+    isSuccess _ = False
     batchTests : List (String, Either TestError TestResult) ->
                  TestPlan -> App e (List (String, Either TestError TestResult))
     batchTests acc plan = do
@@ -279,9 +282,13 @@ runAllTests plan = do
               ]
            (now, nextBatches) => do
              res <- map await <$> traverse (map (fork . delay) . processTest) now
-             let plan' = record {now = nextBatches} plan
-             debug $ displayPlan plan'
-             batchTests (acc ++ res) $ assert_smaller plan (foldl processResult plan' res)
+             p <- map punitive $ get RunContext
+             if p && any (not . isSuccess . snd) res
+                then pure res
+                else do
+                   let plan' = record {now = nextBatches} plan
+                   debug $ displayPlan plan'
+                   batchTests (acc ++ res) $ assert_smaller plan (foldl processResult plan' res)
 
 testOutput :
   Has [ State RunContext RunAction

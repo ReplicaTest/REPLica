@@ -2,7 +2,7 @@
 
 [![ci](https://github.com/berewt/REPLica/actions/workflows/ci.yml/badge.svg)](https://github.com/berewt/REPLica/actions/workflows/ci.yml)
 
-Golden tests for Commnd Line interfaces.
+Golden tests for Command Line interfaces.
 
 ## Purpose
 
@@ -10,7 +10,7 @@ Replica aims at managing tests suites composed of command line interfaces calls.
 
 It compares the output of the command line to a "golden value": a stored value of the expected
 outcome of the command line call.
-If you want a more detailled introduction to golden testing, here is a [nice introduction][golden].
+If you want a more detailed introduction to golden testing, here is a [nice introduction][golden].
 
 The idea comes from the way tests are implemented in [idris2][idris tests].
 

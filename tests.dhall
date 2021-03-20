@@ -62,6 +62,14 @@ let tests =
         with description = Some "A test failed when its requirements failed"
         with succeed = Some False
         with tags = ["meta", "require", "run"]
+
+   , testPunitive = (Meta.replicaTest Meta.Run::{ directory = "tests/replica"
+                                                , parameters = ["--punitive"]
+                                                , testFile = "allButOne.json"})
+        with description = Some "Test the punitive mode"
+        with succeed = Some False
+        with tags = ["punitive", "meta", "run"]
+
    }
 
 let testsCheck : Map Text Replica.Test = toMap tests
