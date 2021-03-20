@@ -14,6 +14,7 @@ import System.Future
 import Replica.App.FileSystem
 import Replica.App.Log
 import Replica.App.Replica
+import Replica.App.Run.Dependencies
 import Replica.App.System
 
 import Replica.Command.Run
@@ -213,11 +214,11 @@ runAllTests : SystemIO (SystemError :: TestError :: e) =>
   Has [ State RunContext RunAction
       , State GlobalConfig GlobalOption
       , Console
-      ] e => Replica -> App e (List (String, Either TestError TestResult))
-runAllTests repl = do
+      ] e =>  TestPlan -> App e (List (String, Either TestError TestResult))
+runAllTests plan = do
   putStrLn $ separator 60
   putStrLn "Running tests..."
-  batchTests [] repl.tests
+  batchTests [] plan
   where
     processTest : Test -> App e (String, Either TestError TestResult)
     processTest x = do
@@ -227,16 +228,26 @@ runAllTests repl = do
              (pure . MkPair x.name . Right)
              (\err : TestError => pure (x.name, Left err))
       pure r
+    prepareBatch : Nat -> TestPlan -> (List Test, List Test)
+    prepareBatch n plan = if n == 0 then (plan.now, Prelude.Nil) else splitAt n plan.now
+    processResult : TestPlan -> (String, Either TestError TestResult) -> TestPlan
+    processResult plan (tName, (Right Success)) = validate tName plan
+    processResult plan (tName, _) = fail tName plan
     batchTests : List (String, Either TestError TestResult) ->
-                 List Test -> App e (List (String, Either TestError TestResult))
-    batchTests acc [] = pure acc
-    batchTests acc xs = do
+                 TestPlan -> App e (List (String, Either TestError TestResult))
+    batchTests acc plan = do
       n <- map threads $ get RunContext
-      let (now, later) = if n == 0
-                            then (xs, Prelude.Nil)
-                            else splitAt n xs
-      res <- map await <$> traverse (map (fork . delay) . processTest) now
-      batchTests (acc ++ res) (assert_smaller xs later)
+      case prepareBatch n plan of
+           ([], later) => pure $ join
+              [ acc
+              , map (\t => (t.name, Left Inaccessible)) plan.later
+              , map (\(reason, t) => (t.name, Left $ RequirementsFailed reason)) plan.skipped
+              ]
+           (now, nextBatches) => do
+             res <- map await <$> traverse (map (fork . delay) . processTest) now
+             let plan' = record {now = nextBatches} plan
+             debug $ displayPlan plan'
+             batchTests (acc ++ res) $ assert_smaller plan (foldl processResult plan' res)
 
 testOutput :
   Has [ State RunContext RunAction
@@ -271,7 +282,7 @@ defineActiveTests : FileSystem (FSError :: e) =>
       , State GlobalConfig GlobalOption
       , Exception ReplicaError
       , Console
-      ] e => App e Replica
+      ] e => App e TestPlan
 defineActiveTests = do
   repl <- getReplica RunContext file
   selectedTests <- map only $ get RunContext
@@ -280,7 +291,8 @@ defineActiveTests = do
   excludedTags <- map excludeTags $ get RunContext
   debug $ "Tags: \{show selectedTags}"
   debug $ "Names: \{show selectedTests}"
-  pure $ record {tests $= filter (go selectedTags selectedTests excludedTags excludedTests)} repl
+  let tests = filter (go selectedTags selectedTests excludedTags excludedTests) repl.tests
+  pure $ buildPlan tests
   where
     go : (tags, names, negTags, negNames : List String) -> Test -> Bool
     go tags names negTags negNames t =
@@ -304,8 +316,9 @@ runReplica : SystemIO (SystemError :: TestError :: e) =>
 runReplica = do
   debug $ "Command: \{show !(get RunContext)}"
   rDir <- prepareReplicaDir
-  repl <- defineActiveTests
-  result <- runAllTests repl
+  plan <- defineActiveTests
+  log $ displayPlan plan
+  result <- runAllTests plan
   putStrLn $ separator 60
   putStrLn "Test results:"
   traverse_ (uncurry testOutput) result

@@ -9,9 +9,9 @@ record Test where
   constructor MkTest
   name: String
   description: Maybe String
+  require : List String
   workingDir : Maybe String
   tags: List String
-  -- require : List String
   beforeTest : List String
   afterTest : List String
   -- env: Map String String
@@ -24,6 +24,7 @@ Show Test where
     [ "MkTest"
     , show x.name
     , show x.description
+    , show x.require
     , show x.workingDir
     , show x.tags
     , show x.beforeTest
@@ -72,12 +73,16 @@ data TestError
   = FileSystemError String
   | InitializationFailed String
   | WrapUpFailed TestResult String
+  | RequirementsFailed String
+  | Inaccessible
 
 export
 Show TestError where
   show (FileSystemError x) = "File error: \{x}"
   show (InitializationFailed x) = "Before test action failed: \{x}"
   show (WrapUpFailed x y) =  "After test action failed: \{y}"
+  show (RequirementsFailed x) = "Test rely on test \{x}, which failed"
+  show Inaccessible = "Test rely on other tests that weren't run"
 
 public export
 record Stats where
