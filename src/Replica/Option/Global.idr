@@ -83,7 +83,7 @@ logLevelPart : Part (Maybe LogLevel)
 logLevelPart = inj $ MkOption
   (singleton "log")
   []
-  "define the log level of the application <none, debug, info, warning, critical>"
+  "define the log level of the application <none, debug, info, warning, critical> (default: none)"
   Nothing
   logLevelParam
   where
@@ -132,7 +132,7 @@ asciiPart = inj ascii
     ascii = MkFlag
       (singleton "ascii") []
       ["utf8"] []
-      "use only ascii (no emoji) in output (unless there are som in you test file)"
+      "use only ascii (no emoji) in output (unless there are some in your test file)"
       False
       True
 
