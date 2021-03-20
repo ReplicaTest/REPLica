@@ -8,6 +8,7 @@ import Data.List1
 import Data.String
 
 import Replica.App.FileSystem
+import Replica.App.Format
 import Replica.App.Log
 import Replica.App.Replica
 import Replica.Command.Info
@@ -20,12 +21,7 @@ data InfoContext : Type where
 displayTestName : Console e =>
   State GlobalConfig GlobalOption e =>
   String -> App e ()
-displayTestName x = do
-  ascii <- map ascii $ get GlobalConfig
-  colour <- map colour $ get GlobalConfig
-  let bullet = if ascii then "?" else "❓"
-  let text = if colour then show (bolden "\{x}:") else "\{x}:"
-  putStrLn "\{bullet} \{text}"
+displayTestName x = putStrLn $ "\{!qmark} " ++ (!bold "\{x}:")
 
 displayExpectation : FileSystem (FSError :: e) =>
   Has [ State InfoContext InfoAction
@@ -44,8 +40,7 @@ displayExpectation = do
     expectation : String -> App e String
     expectation o = do
       c <- map colour $ get GlobalConfig
-      let mod = if c then show . colored Blue else id
-      pure $ unlines $ map (mod . withOffset 6) $ forget $ lines o
+      pure $ unlines $ map (!blue . withOffset 6) $ forget $ lines o
 
 displayTests : FileSystem (FSError :: e) =>
   Has [ State InfoContext InfoAction

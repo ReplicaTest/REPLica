@@ -13,6 +13,7 @@ import Language.JSON
 import System.Future
 
 import Replica.App.FileSystem
+import Replica.App.Format
 import Replica.App.Log
 import Replica.App.Replica
 import Replica.App.Run.Dependencies
@@ -28,39 +29,6 @@ import Replica.Other.Validation
 %default total
 
 data RunContext : Type where
-
-ok : State GlobalConfig GlobalOption e => App e String
-ok = do
-  ascii <- map ascii $ get GlobalConfig
-  pure $ if ascii then "OK " else "✅ "
-
-ko : State GlobalConfig GlobalOption e => App e String
-ko = do
-  ascii <- map ascii $ get GlobalConfig
-  pure $ if ascii then "KO " else "❌ "
-
-err : State GlobalConfig GlobalOption e => App e String
-err = do
-  ascii <- map ascii $ get GlobalConfig
-  pure $ if ascii then "ERR" else "⚠️ "
-
-bold : State GlobalConfig GlobalOption e => App e (String -> String)
-bold = do
-  c <- map colour $ get GlobalConfig
-  pure $ if c then (show . bolden) else id
-
-
-yellow : State GlobalConfig GlobalOption e => App e (String -> String)
-yellow = do
-  c <- map colour $ get GlobalConfig
-  pure $ if c then (show . colored Yellow) else id
-
-
-red : State GlobalConfig GlobalOption e => App e (String -> String)
-red = do
-  c <- map colour $ get GlobalConfig
-  pure $ if c then (show . colored Red) else id
-
 
 prepareReplicaDir : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>

@@ -11,6 +11,7 @@ modules = Replica
         , Replica.App
         , Replica.App.Info
         , Replica.App.FileSystem
+        , Replica.App.Format
         , Replica.App.Log
         , Replica.App.Replica
         , Replica.App.Run
