@@ -63,6 +63,13 @@ let tests =
         with succeed = Some False
         with tags = ["meta", "require", "run"]
 
+   , testSkipExculdedDependencies = (Meta.replicaTest Meta.Run::{ directory = "tests/replica"
+                                                                , parameters = ["--only depends_failed"]
+                                                                , testFile = "require1.json"})
+        with description = Some "Dependencies that aren't included in the selected tests are ignored"
+        with succeed = Some True
+        with tags = ["meta", "require", "run"]
+
    , testPunitive = (Meta.replicaTest Meta.Run::{ directory = "tests/replica"
                                                 , parameters = ["--punitive"]
                                                 , testFile = "allButOne.json"})

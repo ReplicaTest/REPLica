@@ -303,11 +303,11 @@ defineActiveTests = do
   excludedTags <- map excludeTags $ get RunContext
   debug $ "Tags: \{show selectedTags}"
   debug $ "Names: \{show selectedTests}"
-  let tests = filter (go selectedTags selectedTests excludedTags excludedTests) repl.tests
-  pure $ buildPlan tests
+  let (selected, rejected) = partition (go selectedTags selectedTests excludedTags excludedTests) repl.tests
+  pure $ foldl (\p, t => validate t.name p) (buildPlan selected) rejected
   where
     go : (tags, names, negTags, negNames : List String) -> Test -> Bool
-    go tags names negTags negNames t =
+    go tags names negTags negNames t = 
       (null tags || not (null $ intersect t.tags tags))
       && (null names || (t.name `elem` names))
       && (null negTags || (null $ intersect t.tags negTags))
