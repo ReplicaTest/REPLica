@@ -44,6 +44,14 @@ testDir : String -> String
 testDir = (</> "test")
 
 export
+logDir : String -> String
+logDir = (</> "log")
+
+export
+lastRunLog : String -> String
+lastRunLog rdir = logDir rdir </> "last.json"
+
+export
 getReplicaDir : State GlobalConfig GlobalOption e => App e String
 getReplicaDir = map replicaDir $ get GlobalConfig
 

@@ -73,7 +73,7 @@ validateStatus : Maybe JSON -> Validation (List String) (Maybe Bool)
 validateStatus Nothing = Valid empty
 validateStatus (Just JNull) = Valid empty
 validateStatus (Just (JBoolean x)) = Valid $ Just x
-validateStatus (Just x) = Error ["Status should be a booleas, found: \{show x}"]
+validateStatus (Just x) = Error ["Status should be a boolean, found: \{show x}"]
 
 jsonToTest : String -> JSON -> Validation (List String) Test
 jsonToTest str (JObject xs) =
@@ -89,9 +89,87 @@ jsonToTest str (JObject xs) =
   (validateStatus $ lookup "succeed" xs)
   |]
 jsonToTest str json =
-  Error ["Expecting a JSON object for testa '\{str}' and got: \{show json}"]
+  Error ["Expecting a JSON object for test '\{str}' and got: \{show json}"]
 
 export
 jsonToReplica : JSON -> Validation (List String) Replica
 jsonToReplica (JObject xs) = [| MkReplica $ traverse (uncurry jsonToTest) xs |]
 jsonToReplica _ = Error ["Replica test file must be a JSON object"]
+
+
+parseMissingGolden : List (String, JSON) -> Maybe FailReason
+parseMissingGolden xs = do
+  JString "Missing" <- lookup "reason" xs
+    | _ => Nothing
+  pure $ WrongOutput GoldenIsMissing
+
+parseWrongOutput : List (String, JSON) -> Lazy (Maybe FailReason)
+parseWrongOutput xs = do
+  JString exp <- lookup "expected" xs
+    | _ => Nothing
+  JString given <- lookup "given" xs
+    | _ => Nothing
+  pure $ WrongOutput $ DifferentOutput exp given
+
+parseWrongStatus : List (String, JSON) -> Maybe FailReason
+parseWrongStatus xs = do
+  JBoolean exp <- lookup "expected" xs
+    | _ => Nothing
+  pure $ WrongStatus exp
+
+parseFailReason : JSON -> Validation (List String) FailReason
+parseFailReason (JObject xs) = case lookup "type" xs of
+  Just (JString "output") => maybe
+    (Error ["Invalid Wrong output content"])
+    Valid
+    (parseMissingGolden xs <|> parseWrongOutput xs)
+  Just (JString "status") => maybe
+    (Error ["Invalid Wrong output content"])
+    Valid
+    (parseWrongStatus xs)
+  pat => Error ["Invalid object content for a fail reason: \{show xs}"]
+parseFailReason json =
+  Error ["Expecting a JSON object for a fail reason, got: \{show json}"]
+
+parseTestResult : JSON -> Validation (List String) TestResult
+parseTestResult (JObject [("Fail", JArray cause)]) = map Fail $ traverse parseFailReason cause
+parseTestResult (JString "Success") = Valid Success
+parseTestResult x = Error ["\{show x} can't be a valid result"]
+
+parseTestError : JSON -> Validation (List String) TestError
+parseTestError (JObject json) = case lookup "type" json of
+  Just (JString "FileSystemError") => map
+    FileSystemError
+    $ case lookup "content" json of
+           Just (JString str) => Valid str
+           _ => Error ["No content found for a FileSystemError"]
+  Just (JString "InitializationFailed") => map
+    InitializationFailed
+    $ case lookup "content" json of
+           Just (JString str) => Valid str
+           _ => Error ["No content found for a InitializationFailed"]
+  Just (JString "RequirementsFailed") => map
+    RequirementsFailed
+    $ case lookup "content" json of
+           Just (JString str) => Valid str
+           _ => Error ["No content found for a RequirementsFailed"]
+  Just (JString "WrapUpFailed") => map
+    (uncurry WrapUpFailed)
+    $ case (lookup "result" json, lookup "content" json) of
+           (Just result, Just (JString content)) => map (flip MkPair content) $ parseTestResult result
+           _ => Error ["No result and/or content found for a WrapUpFailed"]
+  pat => Error ["Can't pares TestError content"]
+parseTestError json =
+  Error ["Expecting a JSON object for a test error and got: \{show json}"]
+
+
+parseResult : JSON -> Validation (List String) (Either TestError TestResult)
+parseResult (JObject [("Error", cause)]) = map Left $ parseTestError cause
+parseResult (JObject [("Fail", JArray cause)]) = map (Right . Fail) $ traverse parseFailReason cause
+parseResult (JString "Success") = Valid $ Right Success
+parseResult x = Error ["\{show x} can't be a valid result"]
+
+export
+parseReport : JSON -> Validation (List String) (List (String, Either TestError TestResult))
+parseReport (JObject xs) = traverse (\(str, res) => map (MkPair str) (parseResult res)) xs
+parseReport x = Error ["A report must be an object. Found : \{show x}"]

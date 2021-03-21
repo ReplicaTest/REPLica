@@ -1,6 +1,7 @@
 module Replica.Core.Types
 
 import Data.String
+import Language.JSON
 
 %default total
 
@@ -60,13 +61,32 @@ data FailReason : Type where
 export
 Show FailReason where
   show (WrongStatus True) = "Fails while it should pass"
-  show (WrongStatus expected) = "Pass but it should fail"
+  show (WrongStatus False) = "Pass but it should fail"
   show (WrongOutput x) = "WrongOutput"
+
+namespace FailReason
+
+  export
+  toJSON : FailReason -> JSON
+  toJSON (WrongStatus e) = JObject
+    [("type", JString "status"), ("expected", JBoolean e), ("given", JBoolean $ not e)]
+  toJSON (WrongOutput GoldenIsMissing) = JObject
+    [("type", JString "output"), ("reason", JString "Missing")]
+  toJSON (WrongOutput (DifferentOutput x y)) = JObject
+    [("type", JString "output"), ("expected", JString x), ("given", JString y)]
 
 public export
 data TestResult
   = Success
   | Fail (List FailReason)
+
+namespace TestResult
+
+  export
+  toJSON : TestResult -> JSON
+  toJSON Success = JString "Success"
+  toJSON (Fail xs) = JObject [("Fail", JArray $ map toJSON xs)]
+
 
 public export
 data TestError
@@ -75,6 +95,21 @@ data TestError
   | WrapUpFailed TestResult String
   | RequirementsFailed String
   | Inaccessible
+
+namespace TestError
+
+  export
+  toJSON : TestError -> JSON
+  toJSON (FileSystemError x) =
+    JObject [("type", JString "FileSystemError") , ("content", JString x)]
+  toJSON (InitializationFailed x) =
+    JObject [("type", JString "InitializationFailed") , ("content", JString x)]
+  toJSON (WrapUpFailed x y) =
+    JObject [("type", JString "WrapUpFailed"),  ("result", toJSON x), ("content", JString y)]
+  toJSON (RequirementsFailed x) =
+    JObject [("type", JString "RequirementsFailed"), ("content", JString x)]
+  toJSON Inaccessible =
+    JObject [("type", JString "Inaccessible")]
 
 export
 Show TestError where
@@ -114,3 +149,12 @@ asStats = foldMap go
 export
 countTests : Stats -> Nat
 countTests x = x.successes + x.failures + x.errors
+
+export
+resultToJSON : Either TestError TestResult -> JSON
+resultToJSON (Left x) = JObject [("Error", toJSON x)]
+resultToJSON (Right x) = toJSON x
+
+export
+reportToJSON : List (String, Either TestError TestResult) -> JSON
+reportToJSON = JObject . map (map resultToJSON)

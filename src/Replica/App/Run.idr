@@ -11,6 +11,7 @@ import Data.String
 import Language.JSON
 
 import System.Future
+import System.Path
 
 import Replica.App.FileSystem
 import Replica.App.Format
@@ -44,9 +45,14 @@ prepareReplicaDir = do
     (\err : FSError => throw $ CantAccessTestFile "current directory")
   rDir <- getReplicaDir
   log "Replica directory: \{rDir}"
+  debug "Creating test directory: \{testDir rDir}"
   handle (system "mkdir -p \{show (testDir rDir)}")
     pure
     (\err : SystemError => throw $ CantAccessTestFile "\{show (testDir rDir)}")
+  debug "Creating log directory: \{testDir rDir}"
+  handle (system "mkdir -p \{show (logDir rDir)}")
+    pure
+    (\err : SystemError => throw $ CantAccessTestFile "\{show (logDir rDir)}")
   pure rDir
 
 runAll :
@@ -331,6 +337,10 @@ runReplica = do
   plan <- defineActiveTests
   log $ displayPlan plan
   result <- runAllTests plan
+  let logFile = lastRunLog rDir
+  handle (writeFile logFile (show $ reportToJSON result))
+    pure
+    (\err : FSError => throw $ CantAccessTestFile logFile)
   when !(map interactive $ get RunContext)
     (do
        putStrLn $ separator 60
