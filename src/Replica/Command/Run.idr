@@ -272,7 +272,7 @@ helpRun global = commandHelp "run" "Run tests from a Replica JSON file" global
   ++ (helpPart {a = List String} excludePart)
   ++ (helpPart {a = List String} onlyTagsPart)
   ++ (helpPart {a = List String} excludeTagsPart)
-  ++ (helpPart {a = List String} lastFailuresPart)
+  ++ (helpPart {a = Bool} lastFailuresPart)
   ++ (helpPart {a = Bool} punitivePart)
   )
   (prj fileParamPart)
