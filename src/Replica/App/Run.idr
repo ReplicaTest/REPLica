@@ -209,6 +209,18 @@ runTest = do
     (\err : FSError => throw $ FileSystemError
       "Error: cannot enter or exit test working directory \{show wd}")
 
+testOutput :
+  Has [ State RunContext RunAction
+      , State GlobalConfig GlobalOption
+      , Console
+      ] e => String -> Either TestError TestResult -> App e ()
+testOutput name x = do
+  putStr $ withOffset 2 ""
+  case x of
+       Left y => putStr (!yellow "\{!err} \{name}: ") >> putStrLn (show y)
+       Right Success => putStrLn "\{!ok} \{name}"
+       Right (Fail xs) => putStrLn $ !red "\{!ko} \{name}: \{unwords $ map show xs}"
+
 runAllTests : SystemIO (SystemError :: TestError :: e) =>
   SystemIO (SystemError :: e) =>
   FileSystem (FSError :: TestError :: e) =>
@@ -233,7 +245,7 @@ runAllTests plan = do
     prepareBatch : Nat -> TestPlan -> (List Test, List Test)
     prepareBatch n plan = if n == 0 then (plan.now, Prelude.Nil) else splitAt n plan.now
     processResult : TestPlan -> (String, Either TestError TestResult) -> TestPlan
-    processResult plan (tName, (Right Success)) = validate tName plan
+    processResult plan (tName, Right Success) = validate tName plan
     processResult plan (tName, _) = fail tName plan
     isSuccess : Either TestError TestResult -> Bool
     isSuccess (Right Success) = True
@@ -250,6 +262,8 @@ runAllTests plan = do
               ]
            (now, nextBatches) => do
              res <- map await <$> traverse (map (fork . delay) . processTest) now
+             when (not !(map interactive $ get RunContext))
+               (traverse_ (uncurry testOutput) res)
              p <- map punitive $ get RunContext
              if p && any (not . isSuccess . snd) res
                 then pure res
@@ -257,18 +271,6 @@ runAllTests plan = do
                    let plan' = record {now = nextBatches} plan
                    debug $ displayPlan plan'
                    batchTests (acc ++ res) $ assert_smaller plan (foldl processResult plan' res)
-
-testOutput :
-  Has [ State RunContext RunAction
-      , State GlobalConfig GlobalOption
-      , Console
-      ] e => String -> Either TestError TestResult -> App e ()
-testOutput name x = do
-  putStr $ withOffset 2 ""
-  case x of
-       Left y => putStr (!yellow "\{!err} \{name}: ") >> putStrLn (show y)
-       Right Success => putStrLn "\{!ok} \{name}"
-       Right (Fail xs) => putStrLn $ !red "\{!ko} \{name}: \{unwords $ map show xs}"
 
 report : Console e => State GlobalConfig GlobalOption e => Stats -> App e ()
 report x = do
@@ -329,9 +331,11 @@ runReplica = do
   plan <- defineActiveTests
   log $ displayPlan plan
   result <- runAllTests plan
-  putStrLn $ separator 60
-  putStrLn $ !bold "Test results:"
-  traverse_ (uncurry testOutput) result
+  when !(map interactive $ get RunContext)
+    (do
+       putStrLn $ separator 60
+       putStrLn $ !bold "Test results:"
+       traverse_ (uncurry testOutput) result)
   let stats = asStats $ map snd result
   report $ stats
   pure stats

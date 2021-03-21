@@ -1,9 +1,6 @@
 ------------------------------------------------------------
 [1mRunning tests...[0m
-------------------------------------------------------------
-[1mTest results:[0m
   [38;5;1m❌  root_failed: WrongOutput Fails while it should pass[0m
-  [38;5;3m⚠️  depends_failed: [0mTest rely on test root_failed, which failed
 ------------------------------------------------------------
 [1mSummary:[0m
   ❌  (Failure): 1 / 2
