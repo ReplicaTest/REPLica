@@ -119,6 +119,11 @@ Show TestError where
   show (RequirementsFailed x) = "Test rely on test \{x}, which failed"
   show Inaccessible = "Test rely on other tests that weren't run"
 
+export
+isSuccess : Either TestError TestResult -> Bool
+isSuccess (Right Success) = True
+isSuccess _ = False
+
 public export
 record Stats where
   constructor MkStats
