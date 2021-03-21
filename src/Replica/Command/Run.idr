@@ -19,6 +19,7 @@ record RunAction' (f : Type -> Type) where
   exclude : f (List String)
   onlyTags : f (List String)
   excludeTags : f (List String)
+  lastFailures : f Bool
   punitive : f Bool
   file : f String
 
@@ -37,12 +38,13 @@ Semigroup (RunAction' List) where
       (x.exclude ++ y.exclude)
       (x.onlyTags ++ y.onlyTags)
       (x.excludeTags ++ y.excludeTags)
+      (x.lastFailures ++ y.lastFailures)
       (x.punitive ++ y.punitive)
       (x.file ++ y.file)
 
 export
 Monoid (RunAction' List) where
-  neutral = MkRunAction empty empty empty empty empty empty empty empty empty
+  neutral = MkRunAction empty empty empty empty empty empty empty empty empty empty
 
 export
 Show RunAction where
@@ -55,6 +57,7 @@ Show RunAction where
     , show $ x.onlyTags
     , show $ x.exclude
     , show $ x.excludeTags
+    , show $ x.lastFailures
     , show $ x.punitive
     , show $ x.file ]
 
@@ -206,6 +209,21 @@ punitiveOption x =
   record {punitive = [x]} (neutral {ty = RunAction' List})
 
 
+lastFailuresPart : Part Bool
+lastFailuresPart = inj lastFailures
+  where
+    lastFailures : FlagOption Bool
+    lastFailures = MkFlag
+      (singleton "last-fails") ['l']
+      [] []
+      "if a previous run fails, rerun only the tests that failed"
+      False
+      True
+
+lastFailuresOption : Bool -> RunAction' List
+lastFailuresOption x =
+  record {lastFailures = [x]} (neutral {ty = RunAction' List})
+
 parseRunOptions : List String -> Validation (List String) (RunAction' List)
 parseRunOptions xs =
   either (\x => Error ["Unknnown option \{x}"]) Valid
@@ -216,6 +234,7 @@ parseRunOptions xs =
             , map {f = Part} excludeOption excludePart
             , map {f = Part} onlyTagsOption onlyTagsPart
             , map {f = Part} excludeTagsOption excludeTagsPart
+            , map {f = Part} lastFailuresOption lastFailuresPart
             , map {f = Part} punitiveOption punitivePart
             , map {f = Part} fileOption fileParamPart
             ] xs
@@ -230,6 +249,7 @@ validateRunAction r
     (Valid $ join r.exclude)
     (Valid $ join r.onlyTags)
     (Valid $ join r.excludeTags)
+    (oneValidate lastFailuresPart r.lastFailures)
     (oneValidate punitivePart r.punitive)
     (oneValidate fileParamPart r.file)
     |]

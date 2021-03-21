@@ -11,6 +11,7 @@ import Data.String
 import Language.JSON
 
 import System.Future
+import System.Path
 
 import Replica.App.FileSystem
 import Replica.App.Format
@@ -44,9 +45,14 @@ prepareReplicaDir = do
     (\err : FSError => throw $ CantAccessTestFile "current directory")
   rDir <- getReplicaDir
   log "Replica directory: \{rDir}"
+  debug "Creating test directory: \{testDir rDir}"
   handle (system "mkdir -p \{show (testDir rDir)}")
     pure
     (\err : SystemError => throw $ CantAccessTestFile "\{show (testDir rDir)}")
+  debug "Creating log directory: \{testDir rDir}"
+  handle (system "mkdir -p \{show (logDir rDir)}")
+    pure
+    (\err : SystemError => throw $ CantAccessTestFile "\{show (logDir rDir)}")
   pure rDir
 
 runAll :
@@ -247,9 +253,6 @@ runAllTests plan = do
     processResult : TestPlan -> (String, Either TestError TestResult) -> TestPlan
     processResult plan (tName, Right Success) = validate tName plan
     processResult plan (tName, _) = fail tName plan
-    isSuccess : Either TestError TestResult -> Bool
-    isSuccess (Right Success) = True
-    isSuccess _ = False
     batchTests : List (String, Either TestError TestResult) ->
                  TestPlan -> App e (List (String, Either TestError TestResult))
     batchTests acc plan = do
@@ -288,14 +291,14 @@ report x = do
         withOffset 2 "\{!err}  (Errors): \{show x.errors} / \{show nb}"
     ]
 
-export
-defineActiveTests : FileSystem (FSError :: e) =>
+
+filterTests : FileSystem (FSError :: e) =>
   Has [ State RunContext RunAction
       , State GlobalConfig GlobalOption
       , Exception ReplicaError
       , Console
       ] e => App e TestPlan
-defineActiveTests = do
+filterTests = do
   repl <- getReplica RunContext file
   selectedTests <- map only $ get RunContext
   excludedTests <- map exclude $ get RunContext
@@ -307,12 +310,42 @@ defineActiveTests = do
   pure $ foldl (\p, t => validate t.name p) (buildPlan selected) rejected
   where
     go : (tags, names, negTags, negNames : List String) -> Test -> Bool
-    go tags names negTags negNames t = 
+    go tags names negTags negNames t =
       (null tags || not (null $ intersect t.tags tags))
       && (null names || (t.name `elem` names))
       && (null negTags || (null $ intersect t.tags negTags))
       && (null negNames || (not $ t.name `elem` negNames))
 
+
+getLastFailures : FileSystem (FSError :: e) =>
+  Has [ State RunContext RunAction
+      , State GlobalConfig GlobalOption
+      , Exception ReplicaError
+      , Console
+      ] e => App e TestPlan
+getLastFailures = do
+  repl <- getReplica RunContext file
+  logFile <- lastRunLog <$> getReplicaDir
+  lastLog <- handle (readFile logFile) pure
+    (\err : FSError => throw $ CantAccessTestFile logFile)
+  let Just json = parse lastLog
+    | Nothing => throw $ InvalidJSON []
+  let Valid report = parseReport json
+    | Error err => throw $ InvalidJSON err
+  let notWorking = map fst $ filter (not . isSuccess . snd) report
+  let (selected, rejected) = partition (flip elem notWorking . name) repl.tests
+  debug $ "Previous invalid tests: \{show selected}"
+  pure $ foldl (\p, t => validate t.name p) (buildPlan selected) rejected
+
+defineActiveTests : FileSystem (FSError :: e) =>
+  Has [ State RunContext RunAction
+      , State GlobalConfig GlobalOption
+      , Exception ReplicaError
+      , Console
+      ] e => App e TestPlan
+defineActiveTests = if !(lastFailures <$> get RunContext)
+                       then getLastFailures
+                       else filterTests
 
 export
 runReplica : SystemIO (SystemError :: TestError :: e) =>
@@ -331,6 +364,10 @@ runReplica = do
   plan <- defineActiveTests
   log $ displayPlan plan
   result <- runAllTests plan
+  let logFile = lastRunLog rDir
+  handle (writeFile logFile (show $ reportToJSON result))
+    pure
+    (\err : FSError => throw $ CantAccessTestFile logFile)
   when !(map interactive $ get RunContext)
     (do
        putStrLn $ separator 60
