@@ -1,0 +1,20 @@
+{
+  "before": {
+    "afterTest": [],
+    "beforeTest": [
+      "oops"
+    ],
+    "command": "true",
+    "require": [],
+    "tags": [],
+    "workingDir": "getOut"
+  },
+  "later": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "true",
+    "require": [],
+    "tags": [],
+    "workingDir": "getOut"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "theChosen": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "true",
+    "require": [],
+    "succeed": true,
+    "tags": []
+  },
+  "unfortunate1": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "false",
+    "require": [],
+    "succeed": true,
+    "tags": []
+  },
+  "unfortunate2": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "false",
+    "require": [],
+    "succeed": true,
+    "tags": []
+  },
+  "unfortunate3": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "false",
+    "require": [],
+    "succeed": true,
+    "tags": []
+  }
+}

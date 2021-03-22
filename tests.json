@@ -1,0 +1,185 @@
+{
+  "simplest_success": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "true",
+    "description": "A call to 'true' must succeed with no output",
+    "require": [],
+    "tags": []
+  },
+  "testBefore": {
+    "afterTest": [
+      "rm new.txt"
+    ],
+    "beforeTest": [
+      "echo \"Fresh content\" > new.txt"
+    ],
+    "command": "cat new.txt",
+    "description": "Test that beforeTest is executed correctly",
+    "require": [],
+    "succeed": true,
+    "tags": [
+      "beforeTest"
+    ],
+    "workingDir": "tests/basic"
+  },
+  "testBeforeTestFailImpact": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "/Users/biri/Pro/Replica/build/exec/replica run  tests.json",
+    "description": "we should be able to fallback to a normal behaviour after a failure of beforeTest",
+    "require": [],
+    "tags": [
+      "beforeTest"
+    ],
+    "workingDir": "tests/replica/beforeFailed"
+  },
+  "testExclude": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "/Users/biri/Pro/Replica/build/exec/replica run --exclude one tests.json",
+    "description": "Test tests filtering with \"--exclude\"",
+    "require": [],
+    "succeed": true,
+    "tags": [
+      "filter",
+      "meta",
+      "run"
+    ],
+    "workingDir": "tests/replica/two"
+  },
+  "testExcludeTags": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "/Users/biri/Pro/Replica/build/exec/replica run --exclude-tags shiny tests.json",
+    "description": "Test tests filtering with \"--exclude-tags\"",
+    "require": [],
+    "succeed": true,
+    "tags": [
+      "filter",
+      "meta",
+      "run"
+    ],
+    "workingDir": "tests/replica/two"
+  },
+  "testOnly": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "/Users/biri/Pro/Replica/build/exec/replica run --only one tests.json",
+    "description": "Test tests filtering with \"--only\"",
+    "require": [],
+    "succeed": true,
+    "tags": [
+      "filter",
+      "meta",
+      "run"
+    ],
+    "workingDir": "tests/replica/two"
+  },
+  "testOutput": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "echo \"Hello, World!\"",
+    "description": "Output is checked correctly",
+    "require": [],
+    "succeed": true,
+    "tags": []
+  },
+  "testPunitive": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "/Users/biri/Pro/Replica/build/exec/replica run --punitive tests.json",
+    "description": "Test the punitive mode",
+    "require": [],
+    "succeed": false,
+    "tags": [
+      "punitive",
+      "meta",
+      "run"
+    ],
+    "workingDir": "tests/replica/allButOne"
+  },
+  "testReplica": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "/Users/biri/Pro/Replica/build/exec/replica run  tests.json",
+    "description": "Test that an empty test suite is passing",
+    "require": [],
+    "succeed": true,
+    "tags": [
+      "meta",
+      "run"
+    ],
+    "workingDir": "tests/replica/empty"
+  },
+  "testRequire": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "/Users/biri/Pro/Replica/build/exec/replica run  tests.json",
+    "description": "A test failed when its requirements failed",
+    "require": [],
+    "succeed": false,
+    "tags": [
+      "meta",
+      "require",
+      "run"
+    ],
+    "workingDir": "tests/replica/require1"
+  },
+  "testSkipExculdedDependencies": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "/Users/biri/Pro/Replica/build/exec/replica run --only depends_failed tests.json",
+    "description": "Dependencies that aren't included in the selected tests are ignored",
+    "require": [],
+    "succeed": true,
+    "tags": [
+      "meta",
+      "require",
+      "run"
+    ],
+    "workingDir": "tests/replica/require1"
+  },
+  "testTags": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "/Users/biri/Pro/Replica/build/exec/replica run --tags shiny tests.json",
+    "description": "Test tests filtering with \"--only\"",
+    "require": [],
+    "succeed": true,
+    "tags": [
+      "filter",
+      "meta",
+      "run"
+    ],
+    "workingDir": "tests/replica/two"
+  },
+  "testWorkingDir": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "./run.sh",
+    "description": "Test that the workingDir parameter is taken into account",
+    "require": [],
+    "succeed": true,
+    "tags": [],
+    "workingDir": "tests/basic"
+  },
+  "test_failure": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "false",
+    "description": "Test a non null exit code",
+    "require": [],
+    "succeed": false,
+    "tags": []
+  },
+  "test_success": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "true",
+    "description": "Check the success exit code",
+    "require": [],
+    "succeed": true,
+    "tags": []
+  }
+}
