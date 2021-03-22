@@ -40,18 +40,15 @@ prepareReplicaDir : SystemIO (SystemError :: e) =>
       ] e => App e String
 prepareReplicaDir = do
   debug $ "GlobalConfig: \{!(map show $ get GlobalConfig)}"
-  handle setAbsoluteReplicaDir
-    pure
+  catchNew setAbsoluteReplicaDir
     (\err : FSError => throw $ CantAccessTestFile "current directory")
   rDir <- getReplicaDir
   log "Replica directory: \{rDir}"
   debug "Creating test directory: \{testDir rDir}"
-  handle (system "mkdir -p \{show (testDir rDir)}")
-    pure
+  catchNew (system "mkdir -p \{show (testDir rDir)}")
     (\err : SystemError => throw $ CantAccessTestFile "\{show (testDir rDir)}")
   debug "Creating log directory: \{testDir rDir}"
-  handle (system "mkdir -p \{show (logDir rDir)}")
-    pure
+  catchNew (system "mkdir -p \{show (logDir rDir)}")
     (\err : SystemError => throw $ CantAccessTestFile "\{show (logDir rDir)}")
   pure rDir
 
@@ -93,9 +90,8 @@ askForNewGolden old given = do
   putStrLn $ "Do you want to " ++ maybe "set" (const "replace") old ++ " the golden value? [N/y]"
   if !readAnswer
      then do
-       expectedFile <- handle getExpectedFile pure
-          (\err : FSError => throw $ FileSystemError
-             "Can't resolve expectation file")
+       expectedFile <- catchNew getExpectedFile
+          (\err : FSError => throw $ FileSystemError "Can't resolve expectation file")
        handle (writeFile expectedFile given)
          (const $ pure Success)
          (\err : FSError => throw $ FileSystemError "Cannot write golden value")
@@ -173,7 +169,7 @@ testCore = do
   exitStatus <- handle (system $ "\{t.command} > \"\{outputFile}\"")
     (const $ pure 0)
     (\(Err n) => pure n)
-  output <- handle (readFile $ outputFile) pure
+  output <- catchNew (readFile $ outputFile)
     (\e : FSError => throw $
           FileSystemError "Can't read output file \{outputFile}")
   expected <- getExpected output
@@ -210,10 +206,18 @@ runTest = do
   log "Executing \{t.name}"
   debug $ withOffset 2 $ show t
   log $ withOffset 2 "Working directory: \{show wd}"
-  handle (inDir wd performTest)
-    pure
+  catchNew (inDir wd performTest)
     (\err : FSError => throw $ FileSystemError
       "Error: cannot enter or exit test working directory \{show wd}")
+  where
+    inDir : (dir : String) -> App e a -> App (FSError :: e) a
+    inDir dir exec = do
+      pwd <- getCurrentDir
+      changeDir dir
+      Right res <- lift $ catch (map Right $ exec) (\err : TestError => pure $ Left err)
+        | Left err => changeDir pwd >> lift (throw err)
+      changeDir pwd
+      pure res
 
 testOutput :
   Has [ State RunContext RunAction
@@ -326,7 +330,7 @@ getLastFailures : FileSystem (FSError :: e) =>
 getLastFailures = do
   repl <- getReplica RunContext file
   logFile <- lastRunLog <$> getReplicaDir
-  lastLog <- handle (readFile logFile) pure
+  lastLog <- catchNew (readFile logFile)
     (\err : FSError => throw $ CantAccessTestFile logFile)
   let Just json = parse lastLog
     | Nothing => throw $ InvalidJSON []
@@ -365,8 +369,7 @@ runReplica = do
   log $ displayPlan plan
   result <- runAllTests plan
   let logFile = lastRunLog rDir
-  handle (writeFile logFile (show $ reportToJSON result))
-    pure
+  catchNew (writeFile logFile (show $ reportToJSON result))
     (\err : FSError => throw $ CantAccessTestFile logFile)
   when !(map interactive $ get RunContext)
     (do

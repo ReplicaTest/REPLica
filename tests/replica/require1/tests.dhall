@@ -1,4 +1,4 @@
-let Replica = ../../dhall/replica.dhall
+let Replica = ../../../dhall/replica.dhall
 
 let tests =
   { root_failed = Replica.Minimal::{command = "false"}

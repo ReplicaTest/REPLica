@@ -31,7 +31,6 @@ export
 buildPlan : List Test -> TestPlan
 buildPlan xs = let
   (now, later) = partition isReady xs
-  -- TODO Filter requirements that are not in the list
   in Plan now later []
 
 export

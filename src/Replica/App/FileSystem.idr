@@ -58,15 +58,3 @@ Has [PrimIO, Exception FSError] e => FileSystem e where
     Right x <- primIO $ readFile f
       | Left err => throw (toFSError err f)
     pure x
-
-export total
-inDir : FileSystem (FSError :: es) =>
-  String -> App es a -> App (FSError :: es) a
-inDir dir exec = do
-  cwd <- getCurrentDir
-  changeDir dir
-  res <- lift exec
-  changeDir cwd
-  pure res
-
-
