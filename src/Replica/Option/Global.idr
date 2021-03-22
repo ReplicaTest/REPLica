@@ -67,28 +67,30 @@ export
 Monoid (GlobalOption' List) where
   neutral = MkGlobalOption empty empty empty empty
 
-replicaDirPart : Part String
+neutralGlobal : GlobalOption' List
+neutralGlobal = neutral
+
+replicaDirPart : Part (GlobalOption' List) String
 replicaDirPart = inj $ MkOption
-  (singleton "replica-dir")
-  []
-  "set the location of replica store (default: \".replica\")"
+  (singleton $ MkMod (singleton "replica-dir") []
+      (Right $ MkValue "DIR" Just)
+      "set the location of replica store (default: \".replica\")")
   ".replica"
-  (MkParam "dirName" Just)
+  \x =>record {replicaDir $= (x::)}
 
-replicaDirOption : String -> GlobalOption' List
-replicaDirOption x =
-  record {replicaDir = [x]} (neutral {ty = GlobalOption' List})
-
-logLevelPart : Part (Maybe LogLevel)
+logLevelPart : Part (GlobalOption' List) (Maybe LogLevel)
 logLevelPart = inj $ MkOption
-  (singleton "log")
-  []
-  "define the log level of the application <none, debug, info, warning, critical> (default: none)"
+  (toList1
+    [ MkMod (singleton "log") [] (Right logLevelValue)
+        "define the log level of the application <none, debug, info, warning, critical> (default: none)"
+    , MkMod (singleton "verbose") ['v'] (Left $ Just Info)
+        "similar to --log info"
+    ])
   Nothing
-  logLevelParam
+  \x => record {logLevel $= (x::)}
   where
-    logLevelParam : Param (Maybe LogLevel)
-    logLevelParam = MkParam "logLevel" (go . toLower)
+    logLevelValue : Value (Maybe LogLevel)
+    logLevelValue = MkValue "logLevel" (go . toLower)
       where
         go : String -> Maybe (Maybe LogLevel)
         go "none" = Just Nothing
@@ -99,57 +101,43 @@ logLevelPart = inj $ MkOption
         go _ = Nothing
 
 
-verbosePart : Part (Maybe LogLevel)
-verbosePart = inj $ MkFlag
-  (singleton "verbose") ['v']
-  [] []
-  "similar to --log info"
-  Nothing
-  (Just Info)
-
-logLevelOption : Maybe LogLevel -> GlobalOption' List
-logLevelOption x = record {logLevel = [x]} (neutral {ty = GlobalOption' List})
-
-colourPart : Part Bool
-colourPart = inj colour
-  where
-    colour : FlagOption Bool
-    colour = MkFlag
-      ("no-color" ::: ["no-colour"]) []
-      ["color", "colour"] ['c']
-      "desactivate colour in output"
+colourPart : Part (GlobalOption' List) Bool
+colourPart = inj $ MkOption
+      (toList1
+        [ MkMod (toList1 ["color", "colour"]) ['c'] (Left True)
+            "activate colour in output (default)"
+        , MkMod (toList1 ["no-color", "no-colour"]) [] (Left False)
+            "desactivate colour in output"
+        ])
       True
+      \x => record {colour $= (x::)}
+
+
+asciiPart : Part (GlobalOption' List) Bool
+asciiPart = inj $ MkOption
+      (toList1
+        [ MkMod (singleton "utf8") [] (Left False)
+            "allow emojis in reports (default)"
+        , MkMod (singleton "ascii") [] (Left True)
+             "use only ascii in reports (unless there are some in your test file)"
+        ])
       False
-
-colourOption : Bool -> GlobalOption' List
-colourOption x = record {colour = [x]} (neutral {ty = GlobalOption' List})
+      \x => record {ascii $= (x::)}
 
 
-asciiPart : Part Bool
-asciiPart = inj ascii
-  where
-    ascii : FlagOption Bool
-    ascii = MkFlag
-      (singleton "ascii") []
-      ["utf8"] []
-      "use only ascii (no emoji) in output (unless there are some in your test file)"
-      False
-      True
-
-asciiOption : Bool -> GlobalOption' List
-asciiOption x = record {ascii = [x]} (neutral {ty = GlobalOption' List})
-
+optParseGlobal : OptParse (GlobalOption' List) GlobalOption
+optParseGlobal =
+  [| MkGlobalOption
+    (liftAp replicaDirPart)
+    (liftAp colourPart)
+    (liftAp asciiPart)
+    (liftAp logLevelPart)
+  |]
 
 parseGlobalOptions : List String -> (List String, GlobalOption' List)
 parseGlobalOptions xs =
   either (mapFst forget) id
-    $ parseFragment
-        [ map {f = Part} replicaDirOption replicaDirPart
-        , map {f = Part} logLevelOption logLevelPart
-        , map {f = Part} logLevelOption verbosePart
-        , map {f = Part} colourOption colourPart
-        , map {f = Part} asciiOption asciiPart
-        ] xs
+    $ parse' neutral optParseGlobal xs
 
 validateGeneral : GlobalOption' List -> Validation (List String) GlobalOption
 validateGeneral r
@@ -169,9 +157,4 @@ parseGlobal xs = let
 export
 globalOptionsHelp : List1 Help
 globalOptionsHelp = toList1 {ok = ?trustMe}
-  (  (helpPart {a = String } replicaDirPart)
-  ++ (helpPart {a = Maybe LogLevel} logLevelPart)
-  ++ (helpPart {a = Maybe LogLevel} verbosePart)
-  ++ (helpPart {a = Bool} colourPart)
-  ++ (helpPart {a = Bool} asciiPart)
-  )
+  $ runApM (\p => partHelp p) optParseGlobal

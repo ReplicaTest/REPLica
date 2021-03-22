@@ -18,12 +18,9 @@ oneWithDefault _ _ [z] = Valid z
 oneWithDefault x y _ = Error ["\{x} is set several time"]
 
 export
-oneValidate : Part a -> List a -> Validation (List String) a
-oneValidate x =
-  let
-    Left x1 = decomp x
-      | Right v => one v.name
-    Left x2 = decomp x1
-     | Right v => oneWithDefault v.changeLong.head v.defaultValue
-    v = decomp0 x2
-  in oneWithDefault v.longName.head v.defaultValue
+oneValidate : Part b a -> List a -> Validation (List String) a
+oneValidate x = let
+  Left x1 = decomp x
+    | Right v => one v.name
+  v = decomp0 x1
+  in oneWithDefault v.mods.head.longNames.head v.defaultValue
