@@ -1,4 +1,4 @@
-let Replica = ../../dhall/replica.dhall
+let Replica = ../../../dhall/replica.dhall
 
 in {
    , unfortunate1 = Replica.Minimal::{command = "false"}

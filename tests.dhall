@@ -24,29 +24,35 @@ let tests =
         with workingDir = Some "tests/basic"
         with beforeTest = ["echo \"Fresh content\" > new.txt"]
         with afterTest = ["rm new.txt"]
+        with tags = ["beforeTest"]
 
-   , testReplica = (Meta.replicaTest Meta.Run::{directory = "tests/replica/empty", testFile = "tests.json"})
+   , testReplica =
+        (Meta.replicaTest Meta.Run::{ directory = "tests/replica/empty"
+                                    , testFile = "tests.json"})
         with description = Some "Test that an empty test suite is passing"
         with succeed = Some True
         with tags = ["meta", "run"]
 
-   , testOnly = (Meta.replicaTest Meta.Run::{ directory = "tests/replica/two"
-                                            , parameters = ["--only one"]
-                                            , testFile = "tests.json"})
+   , testOnly =
+        (Meta.replicaTest Meta.Run::{ directory = "tests/replica/two"
+                                    , parameters = ["--only one"]
+                                    , testFile = "tests.json"})
         with description = Some "Test tests filtering with \"--only\""
         with succeed = Some True
         with tags = ["filter", "meta", "run"]
 
-   , testExclude = (Meta.replicaTest Meta.Run::{ directory = "tests/replica/two"
-                                            , parameters = ["--exclude one"]
-                                            , testFile = "tests.json"})
+   , testExclude =
+        (Meta.replicaTest Meta.Run::{ directory = "tests/replica/two"
+                                    , parameters = ["--exclude one"]
+                                    , testFile = "tests.json"})
         with description = Some "Test tests filtering with \"--exclude\""
         with succeed = Some True
         with tags = ["filter", "meta", "run"]
 
-   , testTags = (Meta.replicaTest Meta.Run::{ directory = "tests/replica/two"
-                                            , parameters = ["--tags shiny"]
-                                            , testFile = "tests.json"})
+   , testTags =
+        (Meta.replicaTest Meta.Run::{ directory = "tests/replica/two"
+                                    , parameters = ["--tags shiny"]
+                                    , testFile = "tests.json"})
         with description = Some "Test tests filtering with \"--only\""
         with succeed = Some True
         with tags = ["filter", "meta", "run"]
@@ -73,13 +79,19 @@ let tests =
         with succeed = Some True
         with tags = ["meta", "require", "run"]
 
-   , testPunitive = (Meta.replicaTest Meta.Run::{ directory = "tests/replica/allButOne"
-                                                , parameters = ["--punitive"]
-                                                , testFile = "tests.json"})
+   , testPunitive =
+        (Meta.replicaTest Meta.Run::{ directory = "tests/replica/allButOne"
+                                    , parameters = ["--punitive"]
+                                    , testFile = "tests.json"})
         with description = Some "Test the punitive mode"
         with succeed = Some False
         with tags = ["punitive", "meta", "run"]
 
+   , testBeforeTestFailImpact =
+        (Meta.replicaTest Meta.Run::{ directory = "tests/replica/beforeFailed"
+                                    , testFile = "tests.json"})
+        with description = Some "we should be able to fallback to a normal behaviour after a failure of beforeTest"
+        with tags = ["beforeTest"]
    }
 
 let testsCheck : Map Text Replica.Test = toMap tests

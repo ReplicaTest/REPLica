@@ -209,6 +209,15 @@ runTest = do
   catchNew (inDir wd performTest)
     (\err : FSError => throw $ FileSystemError
       "Error: cannot enter or exit test working directory \{show wd}")
+  where
+    inDir : (dir : String) -> App e a -> App (FSError :: e) a
+    inDir dir exec = do
+      pwd <- getCurrentDir
+      changeDir dir
+      Right res <- lift $ catch (map Right $ exec) (\err : TestError => pure $ Left err)
+        | Left err => changeDir pwd >> lift (throw err)
+      changeDir pwd
+      pure res
 
 testOutput :
   Has [ State RunContext RunAction
