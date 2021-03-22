@@ -46,6 +46,9 @@ export
 Monoid (RunAction' List) where
   neutral = MkRunAction empty empty empty empty empty empty empty empty empty empty
 
+neutralRun : RunAction' List
+neutralRun = neutral
+
 export
 Show RunAction where
   show x = unwords
@@ -62,182 +65,115 @@ Show RunAction where
     , show $ x.file ]
 
 
-fileParamPart : Part String
-fileParamPart = inj $ MkParam "filename" Just
+fileParamPart : Part (RunAction' List) String
+fileParamPart = inj $ MkParam "JSON_FILE" Just
+                \x => record {file $= (x::)}
 
-fileOption : String -> RunAction' List
-fileOption x =
-  record {file = [x]} (neutral {ty = RunAction' List})
-
-
-interactivePart : Part Bool
-interactivePart = inj interactive
-  where
-    interactive : FlagOption Bool
-    interactive = MkFlag
-      (singleton "interactive") ['i']
-      [] []
-      "(re)generate golden number if different/missing"
+interactivePart : Part (RunAction' List) Bool
+interactivePart = inj $ MkOption
+      (singleton $ MkMod (singleton "interactive") ['i'] (Left True)
+            "(re)generate golden number if different/missing")
       False
-      True
+      \x => record {interactive $= (x::)}
 
-interactiveOption : Bool -> RunAction' List
-interactiveOption x =
-  record {interactive = [x]} (neutral {ty = RunAction' List})
-
-workingDirPart : Part String
-workingDirPart = inj workingDir
-  where
-    workingDir : ParamOption String
-    workingDir = MkOption
-      ("working-dir" ::: ["wdir"])
-      ['w']
-      "set where is the test working directory"
+workingDirPart : Part (RunAction' List) String
+workingDirPart = inj $ MkOption
+      (singleton $ MkMod ("working-dir" ::: ["wdir"]) ['w']
+          (Right $ MkValue "DIR" Just)
+          "set where is the test working directory")
       "."
-      (MkParam "dirName" Just)
-
-workingDirOption : String -> RunAction' List
-workingDirOption x =
-  record {workingDir = [x]} (neutral {ty = RunAction' List})
+      \x => record {workingDir $= (x::)}
 
 
-threadsPart : Part Nat
-threadsPart = inj threads
-  where
-    threads : ParamOption Nat
-    threads = MkOption
-      (singleton "threads")
-      ['n']
-      "max number of threads (default 1, 0 for no thread limit)"
+threadsPart : Part (RunAction' List) Nat
+threadsPart = inj $ MkOption
+      (singleton $ MkMod (singleton "threads") ['n']
+          (Right $ MkValue "n" parsePositive)
+          "max number of threads (default 1, 0 for no thread limit)")
       1
-      (MkParam "n" parsePositive)
+      \x => record {threads $= (x::)}
 
-threadsOption : Nat -> RunAction' List
-threadsOption x =
-  record {threads = [x]} (neutral {ty = RunAction' List})
-
-onlyPart : Part (List String)
-onlyPart = inj only
-  where
-    only : ParamOption (List String)
-    only = MkOption
-      (singleton "only")
-      ['n']
-      "a comma separated list of the tests to run"
+onlyPart : Part (RunAction' List) (List String)
+onlyPart = inj $ MkOption
+      (singleton $ MkMod (singleton "only") ['n']
+          (Right $ MkValue "testX,testY" $ Just . go)
+          "a comma separated list of the tests to run")
       []
-      (MkParam "testX,testY" $ Just . go)
+      \xs => record {only = [xs]}
       where
         go : String -> List String
         go = forget . split (== ',')
 
 
-onlyOption : List String -> RunAction' List
-onlyOption xs =
-  record {only = [xs]} (neutral {ty = RunAction' List})
-
-
-excludePart : Part (List String)
-excludePart = inj only
-  where
-    only : ParamOption (List String)
-    only = MkOption
-      (singleton "exclude")
-      ['N']
-      "a comma separated list of the tests to exclude"
+excludePart : Part (RunAction' List) (List String)
+excludePart = inj $ MkOption
+      (singleton $ MkMod (singleton "exclude") ['N']
+          (Right $ MkValue "testX,testY" $ Just . go)
+          "a comma separated list of the tests to exclude")
       []
-      (MkParam "testX,testY" $ Just . go)
+      \xs => record {exclude = [xs]}
       where
         go : String -> List String
         go = forget . split (== ',')
 
-excludeOption : List String -> RunAction' List
-excludeOption xs =
-  record {exclude = [xs]} (neutral {ty = RunAction' List})
-
-
-onlyTagsPart : Part (List String)
-onlyTagsPart = inj onlyTags
-  where
-    onlyTags : ParamOption (List String)
-    onlyTags = MkOption
-      ("tags" ::: ["only-tags"])
-      ['t']
-      "a comma separated list of the tags to run"
+onlyTagsPart : Part (RunAction' List) (List String)
+onlyTagsPart = inj $ MkOption
+      (singleton $ MkMod ("tags" ::: ["only-tags"]) ['t']
+          (Right $ MkValue "TAGS" $ Just . go)
+          "a comma separated list of the tags to run")
       []
-      (MkParam "tagX,tagY" $ Just . go)
+      \xs => record {onlyTags = [xs]}
       where
         go : String -> List String
         go = forget . split (== ',')
 
-onlyTagsOption : List String -> RunAction' List
-onlyTagsOption xs =
-  record {onlyTags = [xs]} (neutral {ty = RunAction' List})
-
-
-excludeTagsPart : Part (List String)
-excludeTagsPart = inj onlyTags
-  where
-    onlyTags : ParamOption (List String)
-    onlyTags = MkOption
-      (singleton "exclude-tags")
-      ['T']
-      "a comma separated list of the tags to exclude"
+excludeTagsPart : Part (RunAction' List) (List String)
+excludeTagsPart = inj $ MkOption
+      (singleton $ MkMod (singleton "exclude-tags") ['T']
+          (Right $ MkValue "TAGS" $ Just . go)
+          "a comma separated list of the tags to exclude")
       []
-      (MkParam "tagX,tagY" $ Just . go)
+      \xs => record {excludeTags = [xs]}
       where
         go : String -> List String
         go = forget . split (== ',')
 
-excludeTagsOption : List String -> RunAction' List
-excludeTagsOption xs =
-  record {excludeTags = [xs]} (neutral {ty = RunAction' List})
 
-
-punitivePart : Part Bool
-punitivePart = inj punitive
-  where
-    punitive : FlagOption Bool
-    punitive = MkFlag
-      (singleton "punitive") ['p']
-      [] []
-      "fail fast mode: stops on the first test that fails"
+punitivePart : Part (RunAction' List) Bool
+punitivePart = inj $ MkOption
+      (singleton $ MkMod ("punitive" ::: ["fail-fast"]) ['p']
+          (Left True)
+          "fail fast mode: stops on the first test that fails")
       False
-      True
-
-punitiveOption : Bool -> RunAction' List
-punitiveOption x =
-  record {punitive = [x]} (neutral {ty = RunAction' List})
+      \x => record {punitive $= (x::)}
 
 
-lastFailuresPart : Part Bool
-lastFailuresPart = inj lastFailures
-  where
-    lastFailures : FlagOption Bool
-    lastFailures = MkFlag
-      (singleton "last-fails") ['l']
-      [] []
-      "if a previous run fails, rerun only the tests that failed"
+lastFailuresPart : Part (RunAction' List) Bool
+lastFailuresPart = inj $ MkOption
+      (singleton $ MkMod (singleton "last-fails") ['l']
+          (Left True)
+          "if a previous run fails, rerun only the tests that failed")
       False
-      True
+      \x => record {lastFailures $= (x::)}
 
-lastFailuresOption : Bool -> RunAction' List
-lastFailuresOption x =
-  record {lastFailures = [x]} (neutral {ty = RunAction' List})
+optParseRun : OptParse (RunAction' List) RunAction
+optParseRun =
+    [| MkRunAction
+       (liftAp workingDirPart)
+       (liftAp interactivePart)
+       (liftAp threadsPart)
+       (liftAp onlyPart)
+       (liftAp excludePart)
+       (liftAp onlyTagsPart)
+       (liftAp excludeTagsPart)
+       (liftAp lastFailuresPart)
+       (liftAp punitivePart)
+       (liftAp fileParamPart)
+    |]
 
 parseRunOptions : List String -> Validation (List String) (RunAction' List)
-parseRunOptions xs =
-  either (\x => Error ["Unknnown option \{x}"]) Valid
-    $ parse [ map {f = Part} interactiveOption interactivePart
-            , map {f = Part} workingDirOption workingDirPart
-            , map {f = Part} threadsOption threadsPart
-            , map {f = Part} onlyOption onlyPart
-            , map {f = Part} excludeOption excludePart
-            , map {f = Part} onlyTagsOption onlyTagsPart
-            , map {f = Part} excludeTagsOption excludeTagsPart
-            , map {f = Part} lastFailuresOption lastFailuresPart
-            , map {f = Part} punitiveOption punitivePart
-            , map {f = Part} fileOption fileParamPart
-            ] xs
+parseRunOptions xs = either (\x => Error ["Unknnown option \{x}"]) Valid
+    $ parse optParseRun xs
 
 validateRunAction : RunAction' List -> Validation (List String) RunAction
 validateRunAction r
@@ -255,6 +191,12 @@ validateRunAction r
     |]
 
 export
+test : List String ->
+       Either (List1 String, RunAction' List)
+              (List String, RunAction' List)
+test = parse' neutral optParseRun
+
+export
 parseRun : List String -> Validation (List String) RunAction
 parseRun ("run" :: xs)
   = case parseRunOptions xs of
@@ -265,14 +207,5 @@ parseRun _ = empty
 export
 helpRun : (global : List1 Help) -> Help
 helpRun global = commandHelp "run" "Run tests from a Replica JSON file" global
-  (  (helpPart {a = Bool} interactivePart)
-  ++ (helpPart {a = String} workingDirPart)
-  ++ (helpPart {a = Nat} threadsPart)
-  ++ (helpPart {a = List String} onlyPart)
-  ++ (helpPart {a = List String} excludePart)
-  ++ (helpPart {a = List String} onlyTagsPart)
-  ++ (helpPart {a = List String} excludeTagsPart)
-  ++ (helpPart {a = Bool} lastFailuresPart)
-  ++ (helpPart {a = Bool} punitivePart)
-  )
+  optParseRun
   (prj fileParamPart)

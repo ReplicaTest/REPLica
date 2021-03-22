@@ -23,38 +23,33 @@ Semigroup (InfoAction' List) where
     (x.showExpectation ++ y.showExpectation)
     (x.file ++ y.file)
 
+infoNeutral : InfoAction' List
+infoNeutral = MkInfo empty empty
+
 export
 Monoid (InfoAction' List) where
-  neutral = MkInfo empty empty
+  neutral = infoNeutral
 
-testFilePart : Part String
-testFilePart = inj $ MkParam "filename" Just
+testFilePart : Part (InfoAction' List) String
+testFilePart =
+  inj $ MkParam "JSON_FILE" Just (\x => record {file $= (x::)})
 
-fileOption : String -> InfoAction' List
-fileOption x = record {file = [x]} (neutral {ty = InfoAction' List})
-
-showExpectationPart : Part Bool
-showExpectationPart = inj showExpectation
-  where
-    showExpectation : FlagOption Bool
-    showExpectation = MkFlag
-      (singleton "expectations") ['e']
-      [] []
-      "show expectation for each test"
+showExpectationPart : Part (InfoAction' List) Bool
+showExpectationPart = inj $ MkOption
+      ( singleton
+        $ MkMod (singleton "expectations") ['e'] (Left True)
+          "show expectation for each test")
       False
-      True
+      (\b => record {showExpectation = [b]})
 
-showExpectationOption : Bool -> InfoAction' List
-showExpectationOption x =
-  record {showExpectation = [x]} (neutral {ty = InfoAction' List})
 
+optParseInfo : OptParse (InfoAction' List) InfoAction
+optParseInfo = [|MkInfo (liftAp showExpectationPart) (liftAp testFilePart)|]
 
 parseInfoOptions : List String -> Validation (List String) (InfoAction' List)
 parseInfoOptions xs =
   either (\x => Error ["Unknown option \{x}"]) Valid
-    $ parse [ map {f = Part} showExpectationOption showExpectationPart
-            , map {f = Part} fileOption testFilePart
-            ] xs
+  $ parse optParseInfo xs
 
 validateInfoAction : InfoAction' List -> Validation (List String) InfoAction
 validateInfoAction nfo =
@@ -73,6 +68,6 @@ parseInfo _ = empty
 
 export
 helpInfo : (global : List1 Help) -> Help
-helpInfo global = commandHelp "info" "Display information about test suites" global
-  (helpPart {a = Bool} showExpectationPart)
-  (prj testFilePart)
+helpInfo global =
+  commandHelp "info" "Display information about test suites" global
+    optParseInfo (prj testFilePart)

@@ -33,6 +33,8 @@ modules = Replica
         , Replica.Option.Types
         , Replica.Option.Validate
 
+        , Replica.Other.Free
+        , Replica.Other.String
         , Replica.Other.Validation
 
 main = Replica
