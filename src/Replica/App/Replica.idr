@@ -103,3 +103,7 @@ getReplica ident toFile = do
 export
 when : Bool -> App e () -> App e ()
 when cond x = if cond then x else pure ()
+
+export
+catchNew : App (err :: e) a -> (err -> App e a) -> App e a
+catchNew x f = handle x pure (\er : err => f er)
