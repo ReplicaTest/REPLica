@@ -1,3 +1,3 @@
 *.output
 **/.replica/log
-./tests.json
+/tests.json
