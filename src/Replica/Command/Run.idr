@@ -1,5 +1,6 @@
 module Replica.Command.Run
 
+import Data.List
 import Data.String
 
 import Replica.Help
@@ -19,6 +20,7 @@ record RunAction' (f : Type -> Type) where
   exclude : f (List String)
   onlyTags : f (List String)
   excludeTags : f (List String)
+  hideSuccess : f Bool
   lastFailures : f Bool
   punitive : f Bool
   file : f String
@@ -38,13 +40,17 @@ Semigroup (RunAction' List) where
       (x.exclude ++ y.exclude)
       (x.onlyTags ++ y.onlyTags)
       (x.excludeTags ++ y.excludeTags)
+      (x.hideSuccess ++ y.hideSuccess)
       (x.lastFailures ++ y.lastFailures)
       (x.punitive ++ y.punitive)
       (x.file ++ y.file)
 
 export
 Monoid (RunAction' List) where
-  neutral = MkRunAction empty empty empty empty empty empty empty empty empty empty
+  neutral = MkRunAction
+    empty empty empty empty empty
+    empty empty empty empty empty
+    empty
 
 neutralRun : RunAction' List
 neutralRun = neutral
@@ -60,6 +66,7 @@ Show RunAction where
     , show $ x.onlyTags
     , show $ x.exclude
     , show $ x.excludeTags
+    , show $ x.hideSuccess
     , show $ x.lastFailures
     , show $ x.punitive
     , show $ x.file ]
@@ -147,6 +154,13 @@ punitivePart = inj $ MkOption
       False
       \x => record {punitive $= (x::)}
 
+hideSuccessPart : Part (RunAction' List) Bool
+hideSuccessPart = inj $ MkOption
+      (singleton $ MkMod (toList1 ["hide-success", "fail-only"]) []
+          (Left True)
+          "hide successful tests in the report")
+      False
+      \x => record {hideSuccess $= (x::)}
 
 lastFailuresPart : Part (RunAction' List) Bool
 lastFailuresPart = inj $ MkOption
@@ -166,6 +180,7 @@ optParseRun =
        (liftAp excludePart)
        (liftAp onlyTagsPart)
        (liftAp excludeTagsPart)
+       (liftAp hideSuccessPart)
        (liftAp lastFailuresPart)
        (liftAp punitivePart)
        (liftAp fileParamPart)
@@ -185,6 +200,7 @@ validateRunAction r
     (Valid $ join r.exclude)
     (Valid $ join r.onlyTags)
     (Valid $ join r.excludeTags)
+    (oneValidate hideSuccessPart r.hideSuccess)
     (oneValidate lastFailuresPart r.lastFailures)
     (oneValidate punitivePart r.punitive)
     (oneValidate fileParamPart r.file)

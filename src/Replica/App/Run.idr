@@ -213,7 +213,8 @@ runTest = do
     inDir dir exec = do
       pwd <- getCurrentDir
       changeDir dir
-      Right res <- lift $ catch (Right <$> exec) (\err : TestError => pure $ Left err)
+      Right res <- lift $ catch (Right <$> exec)
+                                (\err : TestError => pure $ Left err)
         | Left err => changeDir pwd >> lift (throw err)
       changeDir pwd
       pure res
@@ -223,12 +224,15 @@ testOutput :
       , State GlobalConfig GlobalOption
       , Console
       ] e => String -> Either TestError TestResult -> App e ()
-testOutput name x = do
-  putStr $ withOffset 2 ""
-  case x of
-       Left y => putStr (!yellow "\{!err} \{name}: ") >> putStrLn (show y)
-       Right Success => putStrLn "\{!ok} \{name}"
-       Right (Fail xs) => putStrLn $ !red "\{!ko} \{name}: \{unwords $ map show xs}"
+testOutput name (Left y) = do
+  putStr (withOffset 2 $ (!yellow "\{!err} \{name}: "))
+  putStrLn (show y)
+testOutput name (Right Success) = do
+  if !(hideSuccess <$> get RunContext)
+     then pure ()
+     else putStrLn $ withOffset 2 "\{!ok} \{name}"
+testOutput name (Right (Fail xs)) = do
+  putStrLn $ withOffset 2 $ !red "\{!ko} \{name}: \{unwords $ map show xs}"
 
 runAllTests : SystemIO (SystemError :: TestError :: e) =>
   SystemIO (SystemError :: e) =>
@@ -252,7 +256,9 @@ runAllTests plan = do
              (\err : TestError => pure (x.name, Left err))
       pure r
     prepareBatch : Nat -> TestPlan -> (List Test, List Test)
-    prepareBatch n plan = if n == 0 then (plan.now, Prelude.Nil) else splitAt n plan.now
+    prepareBatch n plan = if n == 0
+                             then (plan.now, Prelude.Nil)
+                             else splitAt n plan.now
     processResult : TestPlan -> (String, Either TestError TestResult) -> TestPlan
     processResult plan (tName, Right Success) = validate tName plan
     processResult plan (tName, _) = fail tName plan
