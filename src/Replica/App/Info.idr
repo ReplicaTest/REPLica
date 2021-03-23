@@ -30,17 +30,14 @@ displayExpectation : FileSystem (FSError :: e) =>
       , Console] e => App e ()
 displayExpectation = do
   t <- get CurrentTest
-  f <- getExpectedFile
-  handle (readFile f)
-    (\o => do
-      putStrLn $ withOffset 4 $ "Expected:"
-      putStrLn !(expectation o))
+  handle (readFile !getExpectedFile)
+    (\o => do putStrLn $ withOffset 4 $ "Expected:"
+              putStrLn !(expectation o))
     (\err : FSError => putStrLn "No expectation yet.")
   where
     expectation : String -> App e String
-    expectation o = do
-      c <- map colour $ get GlobalConfig
-      pure $ unlines $ map (!blue . withOffset 6) $ forget $ lines o
+    expectation o =
+      pure . unlines . map (!blue . withOffset 6) . forget $ lines o
 
 displayTests : FileSystem (FSError :: e) =>
   Has [ State InfoContext InfoAction
@@ -57,7 +54,7 @@ displayTests = do
   when (not $ null t.require)
     $ putStrLn . withOffset 4 $ "Require: \{show t.require}"
   putStrLn $ withOffset 4 "Command : \{show t.command}"
-  when !(map showExpectation $ get InfoContext)
+  when !(showExpectation <$> get InfoContext)
     displayExpectation
   putStrLn ""
 

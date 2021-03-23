@@ -21,7 +21,7 @@ import Replica.Other.Validation
 covering
 runRun : GlobalOption -> RunAction -> IO Int
 runRun opts ctx = run $ new opts $ new ctx $ handle runReplica
-    (\stats => pure (the Int $ cast $ stats.failures + stats.errors))
+    (\stats => pure (cast $ stats.failures + stats.errors))
     (\err : ReplicaError => putStrLn (show err) >> pure 253)
 
 covering
@@ -31,7 +31,7 @@ runInfo opts info = run $ new opts $ new info $ handle infoReplica
     (\err : ReplicaError => putStrLn (show err) >> pure 253)
 
 runHelp : Help -> IO ()
-runHelp h = putStrLn (display h)
+runHelp = putStrLn . display
 
 covering
 runCommand : GlobalOption -> Actions -> IO Int
@@ -65,5 +65,5 @@ main = do
        Valid cmd => do
          exitCode <- runCommand opts cmd
          exitWith $ case choose (exitCode == 0) of
-           (Left x) => ExitSuccess
-           (Right x) => ExitFailure exitCode
+           Right x => ExitFailure exitCode
+           Left  x => ExitSuccess

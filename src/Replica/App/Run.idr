@@ -39,7 +39,7 @@ prepareReplicaDir : SystemIO (SystemError :: e) =>
       , Console
       ] e => App e String
 prepareReplicaDir = do
-  debug $ "GlobalConfig: \{!(map show $ get GlobalConfig)}"
+  debug $ "GlobalConfig: \{!(show <$> get GlobalConfig)}"
   catchNew setAbsoluteReplicaDir
     (\err : FSError => throw $ CantAccessTestFile "current directory")
   rDir <- getReplicaDir
@@ -63,17 +63,16 @@ runAll :
 runAll phase liftError [] = pure ()
 runAll phase liftError (x :: xs) = do
   maybe (pure ()) (\p => log "\{p}: \{x}") phase
-  handle (system x)
+  handle (system "\{x} 2> /dev/null")
     (const $ runAll phase liftError xs)
     (\err : SystemError => throw $ liftError x)
 
 expectedVsGiven : Console e => Maybe String -> String -> App e ()
 expectedVsGiven old given = do
-  case old of
-       Nothing => putStrLn "Expected: Nothing Found"
-       Just str => do
-         putStrLn "Expected:"
-         putStrLn str
+  let Just str = old
+        | Nothing => putStrLn "Expected: Nothing Found"
+  putStrLn "Expected:"
+  putStrLn str
   putStrLn "Given:"
   putStrLn given
 
@@ -87,7 +86,7 @@ askForNewGolden old given = do
   t <- get CurrentTest
   putStrLn $ "\{t.name}: Golden value mismatch"
   expectedVsGiven old given
-  putStrLn $ "Do you want to " ++ maybe "set" (const "replace") old ++ " the golden value? [N/y]"
+  putStrLn $ "Do you want to \{maybe "set" (const "replace") old} the golden value? [N/y]"
   if !readAnswer
      then do
        expectedFile <- catchNew getExpectedFile
@@ -116,28 +115,28 @@ checkOutput : FileSystem (FSError :: e) =>
 checkOutput mustSucceed status expectedOutput output
   = do
     ctx <- get RunContext
-    case checkExpectation of
-         Success => pure $ checkStatus
-         Fail err => case checkStatus of
-            Fail err2 => pure $ Fail $ err ++ err2
-            Success => if ctx.interactive
-              then askForNewGolden expectedOutput output
-              else pure $ Fail err
+    let Fail err = checkExpectation
+      | Success => pure $ checkStatus
+    let Success = checkStatus
+      | Fail err2 => pure $ Fail $ err ++ err2
+    if ctx.interactive
+       then askForNewGolden expectedOutput output
+       else pure $ Fail err
     where
       checkStatus : TestResult
-      checkStatus = maybe
-        Success
-        (\s => if (s && status == 0) || (not s && status /= 0)
-                  then Success
-                  else Fail [WrongStatus s])
-        mustSucceed
+      checkStatus =
+        let Just s = mustSucceed
+              | Nothing => Success
+        in if (s && status == 0) || (not s && status /= 0)
+              then Success
+              else Fail [WrongStatus s]
       checkExpectation : TestResult
-      checkExpectation = maybe
-        (Fail [WrongOutput GoldenIsMissing])
-        (\exp => if exp == output
-          then Success
-          else Fail [WrongOutput $ DifferentOutput exp output])
-        expectedOutput
+      checkExpectation =
+        let Just exp = expectedOutput
+              | Nothing => Fail [WrongOutput GoldenIsMissing]
+        in if exp == output
+              then Success
+              else Fail [WrongOutput $ DifferentOutput exp output]
 
 getExpected : FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
@@ -214,7 +213,7 @@ runTest = do
     inDir dir exec = do
       pwd <- getCurrentDir
       changeDir dir
-      Right res <- lift $ catch (map Right $ exec) (\err : TestError => pure $ Left err)
+      Right res <- lift $ catch (Right <$> exec) (\err : TestError => pure $ Left err)
         | Left err => changeDir pwd >> lift (throw err)
       changeDir pwd
       pure res
@@ -260,7 +259,7 @@ runAllTests plan = do
     batchTests : List (String, Either TestError TestResult) ->
                  TestPlan -> App e (List (String, Either TestError TestResult))
     batchTests acc plan = do
-      n <- map threads $ get RunContext
+      n <- threads <$> get RunContext
       case prepareBatch n plan of
            ([], later) => pure $ join
               [ acc
@@ -269,9 +268,9 @@ runAllTests plan = do
               ]
            (now, nextBatches) => do
              res <- map await <$> traverse (map (fork . delay) . processTest) now
-             when (not !(map interactive $ get RunContext))
+             when (not !(interactive <$> get RunContext))
                (traverse_ (uncurry testOutput) res)
-             p <- map punitive $ get RunContext
+             p <- punitive <$> get RunContext
              if p && any (not . isSuccess . snd) res
                 then pure res
                 else do
@@ -304,10 +303,10 @@ filterTests : FileSystem (FSError :: e) =>
       ] e => App e TestPlan
 filterTests = do
   repl <- getReplica RunContext file
-  selectedTests <- map only $ get RunContext
-  excludedTests <- map exclude $ get RunContext
-  selectedTags <- map onlyTags $ get RunContext
-  excludedTags <- map excludeTags $ get RunContext
+  selectedTests <- only <$> get RunContext
+  excludedTests <- exclude <$> get RunContext
+  selectedTags <- onlyTags <$> get RunContext
+  excludedTags <- excludeTags <$> get RunContext
   debug $ "Tags: \{show selectedTags}"
   debug $ "Names: \{show selectedTests}"
   let (selected, rejected) = partition (go selectedTags selectedTests excludedTags excludedTests) repl.tests
@@ -336,7 +335,7 @@ getLastFailures = do
     | Nothing => throw $ InvalidJSON []
   let Valid report = parseReport json
     | Error err => throw $ InvalidJSON err
-  let notWorking = map fst $ filter (not . isSuccess . snd) report
+  let notWorking = fst <$> filter (not . isSuccess . snd) report
   let (selected, rejected) = partition (flip elem notWorking . name) repl.tests
   debug $ "Previous invalid tests: \{show selected}"
   pure $ foldl (\p, t => validate t.name p) (buildPlan selected) rejected
@@ -371,11 +370,10 @@ runReplica = do
   let logFile = lastRunLog rDir
   catchNew (writeFile logFile (show $ reportToJSON result))
     (\err : FSError => throw $ CantAccessTestFile logFile)
-  when !(map interactive $ get RunContext)
-    (do
-       putStrLn $ separator 60
-       putStrLn $ !bold "Test results:"
-       traverse_ (uncurry testOutput) result)
-  let stats = asStats $ map snd result
+  when !(interactive <$> get RunContext)
+    (do putStrLn $ separator 60
+        putStrLn $ !bold "Test results:"
+        traverse_ (uncurry testOutput) result)
+  let stats = asStats $ snd <$> result
   report $ stats
   pure stats
