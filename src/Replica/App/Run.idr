@@ -306,17 +306,17 @@ filterTests : FileSystem (FSError :: e) =>
       , State GlobalConfig GlobalOption
       , Exception ReplicaError
       , Console
-      ] e => App e TestPlan
-filterTests = do
-  repl <- getReplica RunContext file
+      ] e => (s, r : List Test) ->App e TestPlan
+filterTests s r = do
   selectedTests <- only <$> get RunContext
   excludedTests <- exclude <$> get RunContext
   selectedTags <- onlyTags <$> get RunContext
   excludedTags <- excludeTags <$> get RunContext
   debug $ "Tags: \{show selectedTags}"
   debug $ "Names: \{show selectedTests}"
-  let (selected, rejected) = partition (go selectedTags selectedTests excludedTags excludedTests) repl.tests
-  pure $ foldl (\p, t => validate t.name p) (buildPlan selected) rejected
+  let (selected, rejected) =
+    partition (go selectedTags selectedTests excludedTags excludedTests) s
+  pure $ foldl (\p, t => validate t.name p) (buildPlan selected) (r ++ rejected)
   where
     go : (tags, names, negTags, negNames : List String) -> Test -> Bool
     go tags names negTags negNames t =
@@ -331,7 +331,7 @@ getLastFailures : FileSystem (FSError :: e) =>
       , State GlobalConfig GlobalOption
       , Exception ReplicaError
       , Console
-      ] e => App e TestPlan
+      ] e => App e (List Test, List Test)
 getLastFailures = do
   repl <- getReplica RunContext file
   logFile <- lastRunLog <$> getReplicaDir
@@ -344,7 +344,7 @@ getLastFailures = do
   let notWorking = fst <$> filter (not . isSuccess . snd) report
   let (selected, rejected) = partition (flip elem notWorking . name) repl.tests
   debug $ "Previous invalid tests: \{show selected}"
-  pure $ foldl (\p, t => validate t.name p) (buildPlan selected) rejected
+  pure (selected, rejected)
 
 defineActiveTests : FileSystem (FSError :: e) =>
   Has [ State RunContext RunAction
@@ -352,9 +352,14 @@ defineActiveTests : FileSystem (FSError :: e) =>
       , Exception ReplicaError
       , Console
       ] e => App e TestPlan
-defineActiveTests = if !(lastFailures <$> get RunContext)
-                       then getLastFailures
-                       else filterTests
+defineActiveTests = do
+  last <- the (App e (List Test, List Test)) $
+     if !(lastFailures <$> get RunContext)
+        then getLastFailures
+        else do
+          repl <- getReplica RunContext file
+          pure (repl.tests, [])
+  uncurry filterTests last
 
 export
 runReplica : SystemIO (SystemError :: TestError :: e) =>
