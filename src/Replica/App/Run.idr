@@ -5,6 +5,7 @@ import Control.App
 import Control.App.Console
 
 import Data.List
+import Data.List1
 import Data.Maybe
 import Data.String
 
@@ -67,14 +68,16 @@ runAll phase liftError (x :: xs) = do
     (const $ runAll phase liftError xs)
     (\err : SystemError => throw $ liftError x)
 
+expectedvsGiven : State GlobalConfig GlobalOption e =>
+  Nat -> String -> String -> App e (List String)
+expectedvsGiven k expected given = pure $ map (withOffset k) $
+  ( "Expected:" :: map !red (forget $ lines expected)) ++
+  ( "Given:" :: map !green (forget $ lines given))
+
 nativeShow : State GlobalConfig GlobalOption e =>
   Console e => String -> String -> App e ()
-nativeShow expected given = putStrLn $ unlines
-  [ "Expected:"
-  , !red expected
-  , "Given:"
-  , !green given
-  ]
+nativeShow expected given =
+  putStrLn $ unlines !(expectedvsGiven 0 expected given)
 
 showDiff : SystemIO (SystemError :: e) =>
   State GlobalConfig GlobalOption e =>
@@ -255,13 +258,21 @@ testOutput :
       ] e => String -> Either TestError TestResult -> App e ()
 testOutput name (Left y) = do
   putStr (withOffset 2 $ (!yellow "\{!err} \{name}: "))
-  putStrLn (show y)
+  putStrLn (displayTestError y)
 testOutput name (Right Success) = do
   if !(hideSuccess <$> get RunContext)
      then pure ()
      else putStrLn $ withOffset 2 "\{!ok} \{name}"
 testOutput name (Right (Fail xs)) = do
-  putStrLn $ withOffset 2 $ !red "\{!ko} \{name}: \{unwords $ map show xs}"
+  putStrLn $ withOffset 2 $ !red "\{!ko} \{name}: \{unwords $ map displayFailReason xs}"
+  let Just (expected, given) = getContentMismatch xs
+    | Nothing => pure ()
+  putStrLn $ unlines !(expectedvsGiven 6 expected given)
+  where
+    getContentMismatch : List FailReason -> Maybe (String, String)
+    getContentMismatch [] = Nothing
+    getContentMismatch (WrongOutput (DifferentOutput x y) :: _) = Just (x, y)
+    getContentMismatch (_ :: xs) = getContentMismatch xs
 
 runAllTests : SystemIO (SystemError :: TestError :: e) =>
   SystemIO (SystemError :: e) =>

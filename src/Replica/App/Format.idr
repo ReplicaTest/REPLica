@@ -59,5 +59,5 @@ export
 blue : State GlobalConfig GlobalOption e => App e (String -> String)
 blue = do
   c <- map colour $ get GlobalConfig
-  pure $ if c then (show . colored Blue) else id
+  pure $ if c then (show . colored BrightBlue) else id
 

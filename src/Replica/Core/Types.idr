@@ -58,11 +58,20 @@ data FailReason : Type where
   WrongStatus : (expectSuccess : Bool) -> FailReason
   WrongOutput : OutputError -> FailReason
 
+{-
 export
 Show FailReason where
   show (WrongStatus True) = "Fails while it should pass"
   show (WrongStatus False) = "Pass but it should fail"
   show (WrongOutput x) = "WrongOutput"
+  -}
+
+export
+displayFailReason : FailReason -> String
+displayFailReason (WrongStatus True) = "[Fails while it should pass]"
+displayFailReason (WrongStatus False) = "[Pass but it should fail]"
+displayFailReason (WrongOutput GoldenIsMissing) = "[Missing Golden]"
+displayFailReason (WrongOutput x) = "[WrongOutput]"
 
 namespace FailReason
 
@@ -112,12 +121,12 @@ namespace TestError
     JObject [("type", JString "Inaccessible")]
 
 export
-Show TestError where
-  show (FileSystemError x) = "File error: \{x}"
-  show (InitializationFailed x) = "Before test action failed: \{x}"
-  show (WrapUpFailed x y) =  "After test action failed: \{y}"
-  show (RequirementsFailed x) = "Test rely on test \{x}, which failed"
-  show Inaccessible = "Test rely on other tests that weren't run"
+displayTestError : TestError -> String
+displayTestError (FileSystemError x) = "File error: \{x}"
+displayTestError (InitializationFailed x) = "Before test action failed: \{x}"
+displayTestError (WrapUpFailed x y) =  "After test action failed: \{y}"
+displayTestError (RequirementsFailed x) = "Test rely on test \{x}, which failed"
+displayTestError Inaccessible = "Test rely on other tests that weren't run"
 
 export
 isSuccess : Either TestError TestResult -> Bool
