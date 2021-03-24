@@ -64,7 +64,7 @@ runAll :
 runAll phase liftError [] = pure ()
 runAll phase liftError (x :: xs) = do
   maybe (pure ()) (\p => log "\{p}: \{x}") phase
-  handle (system "(\{x}) &> /dev/null")
+  handle (system "(\{x}) 1> /dev/null 2> /dev/null")
     (const $ runAll phase liftError xs)
     (\err : SystemError => throw $ liftError x)
 
