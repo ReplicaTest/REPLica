@@ -5,6 +5,7 @@ import Control.App
 import Control.App.Console
 
 import Data.List
+import Data.List1
 import Data.Maybe
 import Data.String
 
@@ -63,20 +64,50 @@ runAll :
 runAll phase liftError [] = pure ()
 runAll phase liftError (x :: xs) = do
   maybe (pure ()) (\p => log "\{p}: \{x}") phase
-  handle (system "\{x} 2> /dev/null")
+  handle (system "(\{x}) 1> /dev/null 2> /dev/null")
     (const $ runAll phase liftError xs)
     (\err : SystemError => throw $ liftError x)
 
-expectedVsGiven : Console e => Maybe String -> String -> App e ()
+expectedvsGiven : State GlobalConfig GlobalOption e =>
+  Nat -> String -> String -> App e (List String)
+expectedvsGiven k expected given = pure $ map (withOffset k) $
+  ( "Expected:" :: map !red (forget $ lines expected)) ++
+  ( "Given:" :: map !green (forget $ lines given))
+
+nativeShow : State GlobalConfig GlobalOption e =>
+  Console e => String -> String -> App e ()
+nativeShow expected given =
+  putStrLn $ unlines !(expectedvsGiven 0 expected given)
+
+showDiff : SystemIO (SystemError :: e) =>
+  State GlobalConfig GlobalOption e =>
+  State CurrentTest Test e =>
+  Console e => DiffCommand -> String -> String -> App e ()
+showDiff Native expected given = nativeShow expected given
+showDiff Diff x y = catchNew
+  (system $ "git diff --minimal --word-diff=color --no-index -- \{!getExpectedFile} \{!getOutputFile}")
+  (\err : SystemError => nativeShow x y)
+showDiff GitDiff x y = catchNew
+  (system $ "git diff --minimal --word-diff=color --no-index -- \{!getExpectedFile} \{!getOutputFile}")
+  (\err : SystemError => nativeShow x y)
+showDiff (Custom z) x y = catchNew
+  (system $ "\{z} \{!getExpectedFile} \{!getOutputFile}")
+  (\err : SystemError => nativeShow x y)
+
+expectedVsGiven : SystemIO (SystemError :: e) =>
+  State CurrentTest Test e =>
+  State GlobalConfig GlobalOption e =>
+  Console e => Maybe String -> String -> App e ()
 expectedVsGiven old given = do
   let Just str = old
-        | Nothing => putStrLn "Expected: Nothing Found"
-  putStrLn "Expected:"
-  putStrLn str
-  putStrLn "Given:"
-  putStrLn given
+        | Nothing => do
+    putStrLn "Expected: Nothing Found"
+    putStrLn "Given:"
+    putStrLn given
+  showDiff !(diff <$> get GlobalConfig) str given
 
-askForNewGolden : FileSystem (FSError :: e) =>
+askForNewGolden : SystemIO (SystemError :: e) =>
+  FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
       , State GlobalConfig GlobalOption
       , Exception TestError
@@ -103,7 +134,8 @@ askForNewGolden old given = do
       answer <- getLine
       pure $ toLower answer `elem` ["y", "yes"]
 
-checkOutput : FileSystem (FSError :: e) =>
+checkOutput :  SystemIO (SystemError :: e) =>
+  FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
       , State GlobalConfig GlobalOption
       , State RunContext RunAction
@@ -165,7 +197,7 @@ testCore : SystemIO (SystemError :: e) =>
 testCore = do
   t <- get CurrentTest
   outputFile <- getOutputFile
-  exitStatus <- handle (system $ "\{t.command} > \"\{outputFile}\"")
+  exitStatus <- handle (system $ "(\{t.command}) > \"\{outputFile}\"")
     (const $ pure 0)
     (\(Err n) => pure n)
   output <- catchNew (readFile $ outputFile)
@@ -201,10 +233,10 @@ runTest : SystemIO (SystemError :: e) =>
 runTest = do
   ctx <- get RunContext
   t <- get CurrentTest
-  let wd = fromMaybe (ctx.workingDir) t.workingDir
+  let wd = fromMaybe ctx.workingDir t.workingDir
   log "Executing \{t.name}"
   debug $ withOffset 2 $ show t
-  log $ withOffset 2 "Working directory: \{show wd}"
+  log   $ withOffset 2 "Working directory: \{show wd}"
   catchNew (inDir wd performTest)
     (\err : FSError => throw $ FileSystemError
       "Error: cannot enter or exit test working directory \{show wd}")
@@ -226,13 +258,21 @@ testOutput :
       ] e => String -> Either TestError TestResult -> App e ()
 testOutput name (Left y) = do
   putStr (withOffset 2 $ (!yellow "\{!err} \{name}: "))
-  putStrLn (show y)
+  putStrLn (displayTestError y)
 testOutput name (Right Success) = do
   if !(hideSuccess <$> get RunContext)
      then pure ()
      else putStrLn $ withOffset 2 "\{!ok} \{name}"
 testOutput name (Right (Fail xs)) = do
-  putStrLn $ withOffset 2 $ !red "\{!ko} \{name}: \{unwords $ map show xs}"
+  putStrLn $ withOffset 2 $ !red "\{!ko} \{name}: \{unwords $ map displayFailReason xs}"
+  let Just (expected, given) = getContentMismatch xs
+    | Nothing => pure ()
+  putStrLn $ unlines !(expectedvsGiven 6 expected given)
+  where
+    getContentMismatch : List FailReason -> Maybe (String, String)
+    getContentMismatch [] = Nothing
+    getContentMismatch (WrongOutput (DifferentOutput x y) :: _) = Just (x, y)
+    getContentMismatch (_ :: xs) = getContentMismatch xs
 
 runAllTests : SystemIO (SystemError :: TestError :: e) =>
   SystemIO (SystemError :: e) =>

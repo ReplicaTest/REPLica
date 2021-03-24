@@ -24,6 +24,20 @@ levelToNat Info = 1
 levelToNat Warning = 2
 levelToNat Critical = 3
 
+public export
+data DiffCommand
+  = Native
+  | Diff
+  | GitDiff
+  | Custom String
+
+export
+Show DiffCommand where
+  show Native = "Native"
+  show Diff = "Diff"
+  show GitDiff = "GitDiff"
+  show (Custom x) = "Custom \{show x}"
+
 export
 Eq LogLevel where
   (==) = (==) `on` levelToNat
@@ -39,6 +53,7 @@ record GlobalOption' (f : Type -> Type) where
   colour : f Bool
   ascii : f Bool
   logLevel : f (Maybe LogLevel)
+  diff : f DiffCommand
 
 public export
 GlobalOption : Type
@@ -52,6 +67,7 @@ Show GlobalOption where
     , show x.colour
     , show x.ascii
     , show x.logLevel
+    , show x.diff
     ]
 
 export
@@ -62,10 +78,11 @@ Semigroup (GlobalOption' List) where
       (x.colour <+> y.colour)
       (x.ascii <+> y.ascii)
       (x.logLevel <+> y.logLevel)
+      (x.diff <+> y.diff)
 
 export
 Monoid (GlobalOption' List) where
-  neutral = MkGlobalOption empty empty empty empty
+  neutral = MkGlobalOption empty empty empty empty empty
 
 neutralGlobal : GlobalOption' List
 neutralGlobal = neutral
@@ -82,7 +99,10 @@ logLevelPart : Part (GlobalOption' List) (Maybe LogLevel)
 logLevelPart = inj $ MkOption
   (toList1
     [ MkMod (singleton "log") [] (Right logLevelValue)
-        "define the log level of the application <none, debug, info, warning, critical> (default: none)"
+        #"""
+        define the log level of the application
+        available values: <none, debug, info, warning, critical> (default: none)
+        """#
     , MkMod (singleton "verbose") ['v'] (Left $ Just Info)
         "similar to --log info"
     ])
@@ -124,6 +144,23 @@ asciiPart = inj $ MkOption
       False
       \x => record {ascii $= (x::)}
 
+diffPart : Part (GlobalOption' List) DiffCommand
+diffPart = inj $ MkOption
+  (toList1 [ MkMod (singleton "diff") ['d'] (Right parseDiff)
+     #"""
+     diff command use to display difference between the given and the golden one
+     available values: <git|diff|native|custom_command> (default : native)
+     """#])
+  Native
+  \x => record {diff $= (x::)}
+  where
+    go : String -> DiffCommand
+    go "native" = Native
+    go "git" = GitDiff
+    go "diff" = Diff
+    go x = Custom x
+    parseDiff : Value DiffCommand
+    parseDiff = MkValue "CMD" (Just . go . toLower)
 
 optParseGlobal : OptParse (GlobalOption' List) GlobalOption
 optParseGlobal =
@@ -132,6 +169,7 @@ optParseGlobal =
     (liftAp colourPart)
     (liftAp asciiPart)
     (liftAp logLevelPart)
+    (liftAp diffPart)
   |]
 
 parseGlobalOptions : List String -> (List String, GlobalOption' List)
@@ -146,6 +184,7 @@ validateGeneral r
     (oneValidate colourPart r.colour)
     (oneValidate asciiPart r.ascii)
     (oneValidate logLevelPart r.logLevel)
+    (oneValidate diffPart r.diff)
     |]
 
 export

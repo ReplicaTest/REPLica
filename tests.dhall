@@ -33,6 +33,13 @@ let tests =
         with succeed = Some True
         with tags = ["meta", "run"]
 
+   , testOutputMismatch =
+        (Meta.replicaTest Meta.Run::{ directory = "tests/replica/mismatch"
+                                    , testFile = "tests.json"})
+        with description = Some "Content mismatch is printed on error"
+        with succeed = Some False
+        with tags = ["meta", "run"]
+
    , testOnly =
         (Meta.replicaTest Meta.Run::{ directory = "tests/replica/two"
                                     , parameters = ["--only one"]

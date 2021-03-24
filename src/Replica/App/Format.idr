@@ -44,6 +44,12 @@ yellow = do
   pure $ if c then (show . colored Yellow) else id
 
 export
+green : State GlobalConfig GlobalOption e => App e (String -> String)
+green = do
+  c <- map colour $ get GlobalConfig
+  pure $ if c then (show . colored Green) else id
+
+export
 red : State GlobalConfig GlobalOption e => App e (String -> String)
 red = do
   c <- map colour $ get GlobalConfig
@@ -53,5 +59,5 @@ export
 blue : State GlobalConfig GlobalOption e => App e (String -> String)
 blue = do
   c <- map colour $ get GlobalConfig
-  pure $ if c then (show . colored Blue) else id
+  pure $ if c then (show . colored BrightBlue) else id
 
