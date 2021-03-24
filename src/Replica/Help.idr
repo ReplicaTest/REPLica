@@ -19,12 +19,15 @@ record Help where
 padRightTo : Nat -> String -> String
 padRightTo k x = x ++ pack (replicate (minus k (length x)) ' ')
 
-entrySynopsis : Nat -> Help -> String
-entrySynopsis k x = "\{padRightTo k x.name}  \{x.description}"
+entrySynopsis : Nat -> Help -> List String
+entrySynopsis k x =
+  let (y:::ys) = lines x.description
+  in "\{padRightTo k x.name}  \{y}" :: map (pack (replicate (2 + k) ' ') ++) ys
+
 
 chapterSynopsis : Nat -> String -> List1 Help -> String
 chapterSynopsis k x xs = unlines $
-  "\{x}:" :: map (withOffset 2 . entrySynopsis k) (forget xs)
+  "\{x}:" :: map (withOffset 2) (forget xs >>= entrySynopsis k)
 
 export
 display : Help -> String

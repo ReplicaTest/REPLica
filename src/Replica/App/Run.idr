@@ -63,20 +63,48 @@ runAll :
 runAll phase liftError [] = pure ()
 runAll phase liftError (x :: xs) = do
   maybe (pure ()) (\p => log "\{p}: \{x}") phase
-  handle (system "\{x} 2> /dev/null")
+  handle (system "(\{x}) &> /dev/null")
     (const $ runAll phase liftError xs)
     (\err : SystemError => throw $ liftError x)
 
-expectedVsGiven : Console e => Maybe String -> String -> App e ()
+nativeShow : State GlobalConfig GlobalOption e =>
+  Console e => String -> String -> App e ()
+nativeShow expected given = putStrLn $ unlines
+  [ "Expected:"
+  , !red expected
+  , "Given:"
+  , !green given
+  ]
+
+showDiff : SystemIO (SystemError :: e) =>
+  State GlobalConfig GlobalOption e =>
+  State CurrentTest Test e =>
+  Console e => DiffCommand -> String -> String -> App e ()
+showDiff Native expected given = nativeShow expected given
+showDiff Diff x y = catchNew
+  (system $ "git diff --minimal --word-diff=color --no-index -- \{!getExpectedFile} \{!getOutputFile}")
+  (\err : SystemError => nativeShow x y)
+showDiff GitDiff x y = catchNew
+  (system $ "git diff --minimal --word-diff=color --no-index -- \{!getExpectedFile} \{!getOutputFile}")
+  (\err : SystemError => nativeShow x y)
+showDiff (Custom z) x y = catchNew
+  (system $ "\{z} \{!getExpectedFile} \{!getOutputFile}")
+  (\err : SystemError => nativeShow x y)
+
+expectedVsGiven : SystemIO (SystemError :: e) =>
+  State CurrentTest Test e =>
+  State GlobalConfig GlobalOption e =>
+  Console e => Maybe String -> String -> App e ()
 expectedVsGiven old given = do
   let Just str = old
-        | Nothing => putStrLn "Expected: Nothing Found"
-  putStrLn "Expected:"
-  putStrLn str
-  putStrLn "Given:"
-  putStrLn given
+        | Nothing => do
+    putStrLn "Expected: Nothing Found"
+    putStrLn "Given:"
+    putStrLn given
+  showDiff !(diff <$> get GlobalConfig) str given
 
-askForNewGolden : FileSystem (FSError :: e) =>
+askForNewGolden : SystemIO (SystemError :: e) =>
+  FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
       , State GlobalConfig GlobalOption
       , Exception TestError
@@ -103,7 +131,8 @@ askForNewGolden old given = do
       answer <- getLine
       pure $ toLower answer `elem` ["y", "yes"]
 
-checkOutput : FileSystem (FSError :: e) =>
+checkOutput :  SystemIO (SystemError :: e) =>
+  FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
       , State GlobalConfig GlobalOption
       , State RunContext RunAction
@@ -165,7 +194,7 @@ testCore : SystemIO (SystemError :: e) =>
 testCore = do
   t <- get CurrentTest
   outputFile <- getOutputFile
-  exitStatus <- handle (system $ "\{t.command} > \"\{outputFile}\"")
+  exitStatus <- handle (system $ "(\{t.command}) > \"\{outputFile}\"")
     (const $ pure 0)
     (\(Err n) => pure n)
   output <- catchNew (readFile $ outputFile)
@@ -201,10 +230,10 @@ runTest : SystemIO (SystemError :: e) =>
 runTest = do
   ctx <- get RunContext
   t <- get CurrentTest
-  let wd = fromMaybe (ctx.workingDir) t.workingDir
+  let wd = fromMaybe ctx.workingDir t.workingDir
   log "Executing \{t.name}"
   debug $ withOffset 2 $ show t
-  log $ withOffset 2 "Working directory: \{show wd}"
+  log   $ withOffset 2 "Working directory: \{show wd}"
   catchNew (inDir wd performTest)
     (\err : FSError => throw $ FileSystemError
       "Error: cannot enter or exit test working directory \{show wd}")
