@@ -27,3 +27,6 @@ export
   (<|>) (Error e) (Valid y) = Valid y
   (<|>) (Error e) (Error r) = Error $ e <+> r
 
+export
+fromEither : Applicative f =>  Either err a -> Validation (f err) a
+fromEither = either (Error . pure) Valid

@@ -47,10 +47,10 @@ main : IO ()
 main = do
   (cmd::args) <- getArgs
     | _ => putStrLn "Error"
-  let Valid (cmdArgs, opts) = parseGlobal args
-    | Error es => do
+  let Right (cmdArgs, opts) = parseGlobal args
+    | Left e => do
          putStrLn "Can't parse command arguments:"
-         putStrLn $ unlines es
+         putStrLn e
          putStrLn "usage: replica run [options]"
   let x = parseArgs cmdArgs
   case x of
