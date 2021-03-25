@@ -15,7 +15,7 @@ Actions = Union Prelude.id [RunAction, InfoAction, Help]
 
 export
 parseArgs : List String -> Validation (List String) Actions
-parseArgs xs = choiceMap (flip apply xs)
+parseArgs xs = choiceMap (fromEither . flip apply xs)
   [ map inj . parseRun
   , map inj . parseInfo
   , map inj . parseHelp

@@ -31,8 +31,8 @@ modules = Replica
 
         , Replica.Option.Global
         , Replica.Option.Types
-        , Replica.Option.Validate
 
+        , Replica.Other.Decorated
         , Replica.Other.Free
         , Replica.Other.String
         , Replica.Other.Validation

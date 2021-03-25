@@ -2,7 +2,7 @@ module Replica.Command.Info
 
 import Replica.Help
 import Replica.Option.Types
-import Replica.Option.Validate
+import Replica.Other.Decorated
 import Replica.Other.Validation
 
 %default total
@@ -15,56 +15,54 @@ record InfoAction' (f : Type -> Type) where
 
 public export
 InfoAction : Type
-InfoAction = InfoAction' Prelude.id
+InfoAction = Done InfoAction'
 
 export
-Semigroup (InfoAction' List) where
-  (<+>) x y = MkInfo
-    (x.showExpectation ++ y.showExpectation)
-    (x.file ++ y.file)
-
-infoNeutral : InfoAction' List
-infoNeutral = MkInfo empty empty
+TyMap InfoAction' where
+  tyMap func x = MkInfo (func x.showExpectation) (func x.file)
 
 export
-Monoid (InfoAction' List) where
-  neutral = infoNeutral
+TyTraversable InfoAction' where
+  tyTraverse func x = [| MkInfo (func x.showExpectation) (func x.file) |]
 
-testFilePart : Part (InfoAction' List) String
+testFilePart : Part (Builder InfoAction') String
 testFilePart =
-  inj $ MkParam "JSON_FILE" Just (\x => record {file $= (x::)})
+  inj $ MkParam "JSON_FILE" Just go
+  where
+    go : String -> Builder InfoAction' -> Either String (Builder InfoAction')
+    go = one file
+             (\x => record {file = Right x})
+             (\x, y => "More than one test file were given: \{y}, \{x}")
 
-showExpectationPart : Part (InfoAction' List) Bool
+showExpectationPart : Part (Builder InfoAction') Bool
 showExpectationPart = inj $ MkOption
       ( singleton
         $ MkMod (singleton "expectations") ['e'] (Left True)
           "show expectation for each test")
       False
-      (\b => record {showExpectation = [b]})
+      go
+  where
+    go : Bool -> Builder InfoAction' -> Either String (Builder InfoAction')
+    go = ifSame showExpectation
+                (\x => record {showExpectation = Right x})
+                (const $ const "Contradictory values for expectations")
 
 
-optParseInfo : OptParse (InfoAction' List) InfoAction
+optParseInfo : OptParse (Builder InfoAction') InfoAction
 optParseInfo = [|MkInfo (liftAp showExpectationPart) (liftAp testFilePart)|]
 
-parseInfoOptions : List String -> Validation (List String) (InfoAction' List)
-parseInfoOptions xs =
-  either (\x => Error ["Unknown option \{x}"]) Valid
-  $ parse optParseInfo xs
-
-validateInfoAction : InfoAction' List -> Validation (List String) InfoAction
-validateInfoAction nfo =
-  [| MkInfo
-  (oneValidate showExpectationPart nfo.showExpectation)
-  (oneValidate testFilePart nfo.file)
-  |]
+defaultInfo : Default InfoAction'
+defaultInfo = MkInfo (defaultPart showExpectationPart) (defaultPart testFilePart)
 
 export
-parseInfo : List String -> Validation (List String) InfoAction
-parseInfo ("info" :: xs)
-  = case parseInfoOptions xs of
-         Valid x => validateInfoAction x
-         Error e => Error e
-parseInfo _ = empty
+parseInfo : List String -> Either String InfoAction
+parseInfo ("info"::xs) =
+  either (\x => Left "Unknown option \{x}") buildInfo
+  $ parse (initBuilder defaultInfo) optParseInfo xs
+  where
+    buildInfo : Builder InfoAction' -> Either String InfoAction
+    buildInfo = maybe (Left "File is not set") pure . build
+parseInfo _ = Left "Not an info action"
 
 export
 helpInfo : (global : List1 Help) -> Help
