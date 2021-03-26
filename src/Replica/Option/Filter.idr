@@ -4,7 +4,7 @@ import Data.List
 import Data.String
 
 import Replica.Option.Types
-import public Replica.Other.Decorated
+import Replica.Other.Decorated
 
 %default total
 

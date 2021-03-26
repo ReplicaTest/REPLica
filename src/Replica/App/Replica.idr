@@ -17,6 +17,7 @@ import Replica.Command.Run
 import Replica.Core.Parse
 import Replica.Core.Types
 import Replica.Option.Global
+import Replica.Other.Decorated
 import Replica.Other.String
 import Replica.Other.Validation
 
@@ -52,11 +53,11 @@ lastRunLog : String -> String
 lastRunLog rdir = logDir rdir </> "last.json"
 
 export
-getReplicaDir : State GlobalConfig GlobalOption e => App e String
+getReplicaDir : State GlobalConfig Global e => App e String
 getReplicaDir = map replicaDir $ get GlobalConfig
 
 export
-setAbsoluteReplicaDir : Has [State GlobalConfig GlobalOption, FileSystem] e => App e ()
+setAbsoluteReplicaDir : Has [State GlobalConfig Global, FileSystem] e => App e ()
 setAbsoluteReplicaDir = do
   rdir <- getReplicaDir
   if isAbsolute rdir
@@ -68,7 +69,7 @@ setAbsoluteReplicaDir = do
 export
 getOutputFile : Has
   [ State CurrentTest Test
-  , State GlobalConfig GlobalOption ] e => App e String
+  , State GlobalConfig Global ] e => App e String
 getOutputFile = do
   d <- map replicaDir $ get GlobalConfig
   t <- get CurrentTest
@@ -77,7 +78,7 @@ getOutputFile = do
 export
 getExpectedFile : Has
   [ State CurrentTest Test
-  , State GlobalConfig GlobalOption ] e => App e String
+  , State GlobalConfig Global ] e => App e String
 getExpectedFile = do
   d <- map replicaDir $ get GlobalConfig
   t <- get CurrentTest

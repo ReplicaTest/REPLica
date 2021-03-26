@@ -1,9 +1,10 @@
 module Replica.Command.Info
 
 import Replica.Help
+import Replica.Option.Filter
+import Replica.Option.Global
 import Replica.Option.Types
 import Replica.Other.Decorated
-import Replica.Other.Validation
 
 %default total
 
@@ -12,6 +13,8 @@ record InfoAction' (f : Type -> Type) where
   constructor MkInfo
   showExpectation : f Bool
   file : f String
+  filter : Filter' f
+  global : Global' f
 
 public export
 InfoAction : Type
@@ -19,11 +22,16 @@ InfoAction = Done InfoAction'
 
 export
 TyMap InfoAction' where
-  tyMap func x = MkInfo (func x.showExpectation) (func x.file)
+  tyMap func x = MkInfo
+    (func x.showExpectation) (func x.file)
+    (tyMap func x.filter) (tyMap func x.global)
 
 export
 TyTraversable InfoAction' where
-  tyTraverse func x = [| MkInfo (func x.showExpectation) (func x.file) |]
+  tyTraverse func x = [| MkInfo
+      (func x.showExpectation) (func x.file)
+      (tyTraverse func x.filter) (tyTraverse func x.global)
+      |]
 
 testFilePart : Part (Builder InfoAction') String
 testFilePart =
@@ -49,10 +57,18 @@ showExpectationPart = inj $ MkOption
 
 
 optParseInfo : OptParse (Builder InfoAction') InfoAction
-optParseInfo = [|MkInfo (liftAp showExpectationPart) (liftAp testFilePart)|]
+optParseInfo = [|MkInfo
+  (liftAp showExpectationPart)
+  (liftAp testFilePart)
+  (embed filter (\x => record {filter = x}) optParseFilter)
+  (embed global (\x => record {global = x}) optParseGlobal)
+  |]
 
 defaultInfo : Default InfoAction'
-defaultInfo = MkInfo (defaultPart showExpectationPart) (defaultPart testFilePart)
+defaultInfo = MkInfo
+  (defaultPart showExpectationPart)
+  (defaultPart testFilePart)
+  defaultFilter defaultGlobal
 
 export
 parseInfo : List String -> Either String InfoAction

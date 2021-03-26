@@ -14,18 +14,19 @@ import Replica.App.Replica
 import Replica.Command.Info
 import Replica.Core
 import Replica.Option.Global
+import Replica.Other.Decorated
 import Replica.Other.String
 
 data InfoContext : Type where
 
 displayTestName : Console e =>
-  State GlobalConfig GlobalOption e =>
+  State GlobalConfig Global e =>
   String -> App e ()
 displayTestName x = putStrLn $ "\{!qmark} " ++ (!bold "\{x}:")
 
 displayExpectation : FileSystem (FSError :: e) =>
   Has [ State InfoContext InfoAction
-      , State GlobalConfig GlobalOption
+      , State GlobalConfig Global
       , State CurrentTest Test
       , Console] e => App e ()
 displayExpectation = do
@@ -41,7 +42,7 @@ displayExpectation = do
 
 displayTests : FileSystem (FSError :: e) =>
   Has [ State InfoContext InfoAction
-      , State GlobalConfig GlobalOption
+      , State GlobalConfig Global
       , State CurrentTest Test
       , Console] e =>
   App e ()
@@ -63,7 +64,7 @@ infoReplica :
   FileSystem (FSError :: e) =>
   Has
     [ State InfoContext InfoAction
-    , State GlobalConfig GlobalOption
+    , State GlobalConfig Global
     , Exception ReplicaError
     , Console
     ] e => App e ()

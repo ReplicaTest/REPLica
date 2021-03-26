@@ -5,6 +5,7 @@ import Control.App.Console
 
 import Replica.App.Replica
 import Replica.Option.Global
+import Replica.Other.Decorated
 
 %default total
 
@@ -29,7 +30,7 @@ critical : Log e => String -> App e ()
 critical = logWithLevel Critical
 
 export
-Console e => State GlobalConfig GlobalOption e => Log e where
+Console e => State GlobalConfig Global e => Log e where
   logWithLevel lvl content = do
     Just threshold <- map logLevel $ get GlobalConfig
       | Nothing => pure ()

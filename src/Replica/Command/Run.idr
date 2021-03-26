@@ -6,7 +6,8 @@ import Data.String
 import Replica.Help
 import Replica.Option.Types
 import public Replica.Option.Filter
-import public Replica.Other.Decorated
+import public Replica.Option.Global
+import Replica.Other.Decorated
 
 %default total
 
@@ -16,10 +17,11 @@ record RunAction' (f : Type -> Type) where
   workingDir : f String
   interactive : f Bool
   threads : f Nat
-  filter : Filter' f
   hideSuccess : f Bool
   punitive : f Bool
   file : f String
+  filter : Filter' f
+  global : Global' f
 
 public export
 RunAction : Type
@@ -31,10 +33,11 @@ TyMap RunAction' where
       (func x.workingDir)
       (func x.interactive)
       (func x.threads)
-      (tyMap func x.filter)
       (func x.hideSuccess)
       (func x.punitive)
       (func x.file)
+      (tyMap func x.filter)
+      (tyMap func x.global)
 
 TyTraversable RunAction' where
   tyTraverse func x = [|
@@ -42,10 +45,11 @@ TyTraversable RunAction' where
       (func x.workingDir)
       (func x.interactive)
       (func x.threads)
-      (tyTraverse func x.filter)
       (func x.hideSuccess)
       (func x.punitive)
       (func x.file)
+      (tyTraverse func x.filter)
+      (tyTraverse func x.global)
       |]
 
 export
@@ -55,10 +59,12 @@ Show RunAction where
     , show x.workingDir
     , show x.interactive
     , show x.threads
-    , show x.filter
     , show x.hideSuccess
     , show x.punitive
-    , show x.file ]
+    , show x.file
+    , show x.filter
+    , show x.global
+    ]
 
 fileParamPart : Part (Builder RunAction') String
 fileParamPart = inj $ MkParam "JSON_FILE" Just go
@@ -139,10 +145,11 @@ optParseRun =
        (liftAp workingDirPart)
        (liftAp interactivePart)
        (liftAp threadsPart)
-       (embed filter (\x => record {filter = x}) optParseFilter)
        (liftAp hideSuccessPart)
        (liftAp punitivePart)
        (liftAp fileParamPart)
+       (embed filter (\x => record {filter = x}) optParseFilter)
+       (embed global (\x => record {global = x}) optParseGlobal)
     |]
 
 defaultRun : Default RunAction'
@@ -150,10 +157,11 @@ defaultRun = MkRunAction
        (defaultPart workingDirPart)
        (defaultPart interactivePart)
        (defaultPart threadsPart)
-       defaultFilter
        (defaultPart hideSuccessPart)
        (defaultPart punitivePart)
        (defaultPart fileParamPart)
+       defaultFilter
+       defaultGlobal
 
 export
 parseRun : List String -> Either String RunAction
