@@ -348,10 +348,10 @@ filterTests : FileSystem (FSError :: e) =>
       , Console
       ] e => (s, r : List Test) ->App e TestPlan
 filterTests s r = do
-  selectedTests <- only <$> get RunContext
-  excludedTests <- exclude <$> get RunContext
-  selectedTags <- onlyTags <$> get RunContext
-  excludedTags <- excludeTags <$> get RunContext
+  selectedTests <- (.filter.only) <$> get RunContext
+  excludedTests <- (.filter.exclude)<$> get RunContext
+  selectedTags <- (.filter.onlyTags) <$> get RunContext
+  excludedTags <- (.filter.excludeTags) <$> get RunContext
   debug $ "Tags: \{show selectedTags}"
   debug $ "Names: \{show selectedTests}"
   let (selected, rejected) =
@@ -394,7 +394,7 @@ defineActiveTests : FileSystem (FSError :: e) =>
       ] e => App e TestPlan
 defineActiveTests = do
   last <- the (App e (List Test, List Test)) $
-     if !(lastFailures <$> get RunContext)
+     if !((.filter.lastFailures) <$> get RunContext)
         then getLastFailures
         else do
           repl <- getReplica RunContext file

@@ -5,8 +5,8 @@ import Data.String
 
 import Replica.Help
 import Replica.Option.Types
+import public Replica.Option.Filter
 import public Replica.Other.Decorated
-import Replica.Other.Validation
 
 %default total
 
@@ -16,12 +16,8 @@ record RunAction' (f : Type -> Type) where
   workingDir : f String
   interactive : f Bool
   threads : f Nat
-  only : f (List String)
-  exclude : f (List String)
-  onlyTags : f (List String)
-  excludeTags : f (List String)
+  filter : Filter' f
   hideSuccess : f Bool
-  lastFailures : f Bool
   punitive : f Bool
   file : f String
 
@@ -35,12 +31,8 @@ TyMap RunAction' where
       (func x.workingDir)
       (func x.interactive)
       (func x.threads)
-      (func x.only)
-      (func x.exclude)
-      (func x.onlyTags)
-      (func x.excludeTags)
+      (tyMap func x.filter)
       (func x.hideSuccess)
-      (func x.lastFailures)
       (func x.punitive)
       (func x.file)
 
@@ -50,12 +42,8 @@ TyTraversable RunAction' where
       (func x.workingDir)
       (func x.interactive)
       (func x.threads)
-      (func x.only)
-      (func x.exclude)
-      (func x.onlyTags)
-      (func x.excludeTags)
+      (tyTraverse func x.filter)
       (func x.hideSuccess)
-      (func x.lastFailures)
       (func x.punitive)
       (func x.file)
       |]
@@ -64,18 +52,13 @@ export
 Show RunAction where
   show x = unwords
     [ "MkRunAction"
-    , show $ x.workingDir
-    , show $ x.interactive
-    , show $ x.threads
-    , show $ x.only
-    , show $ x.onlyTags
-    , show $ x.exclude
-    , show $ x.excludeTags
-    , show $ x.hideSuccess
-    , show $ x.lastFailures
-    , show $ x.punitive
-    , show $ x.file ]
-
+    , show x.workingDir
+    , show x.interactive
+    , show x.threads
+    , show x.filter
+    , show x.hideSuccess
+    , show x.punitive
+    , show x.file ]
 
 fileParamPart : Part (Builder RunAction') String
 fileParamPart = inj $ MkParam "JSON_FILE" Just go
@@ -124,65 +107,6 @@ threadsPart = inj $ MkOption
              (\x => record {threads = Right x})
              (\x, y => "More than one threads values were given: \{show y}, \{show x}")
 
-onlyPart : Part (Builder RunAction') (List String)
-onlyPart = inj $ MkOption
-      (singleton $ MkMod (singleton "only") ['n']
-          (Right $ MkValue "testX,testY" $ Just . go)
-          "a comma separated list of the tests to run")
-      [] compose
-      where
-        go : String -> List String
-        go = forget . split (== ',')
-        compose : List String -> Builder RunAction' -> Either String (Builder RunAction')
-        compose xs x = case either (const []) (intersect xs) x.exclude of
-          [] => Right $ record {only $= Right . (++ xs) . either (const []) id} x
-          xs => Left "Some tests were both included and excluded: \{show xs}"
-
-
-excludePart : Part (Builder RunAction') (List String)
-excludePart = inj $ MkOption
-      (singleton $ MkMod (singleton "exclude") ['N']
-          (Right $ MkValue "testX,testY" $ Just . go)
-          "a comma separated list of the tests to exclude")
-      [] compose
-      where
-        go : String -> List String
-        go = forget . split (== ',')
-        compose : List String -> Builder RunAction' -> Either String (Builder RunAction')
-        compose xs x = case either (const []) (intersect xs) x.only of
-          [] => Right $ record {exclude $= Right . (++ xs) . either (const []) id} x
-          xs => Left "Some tests were both included and excluded: \{show xs}"
-
-onlyTagsPart : Part (Builder RunAction') (List String)
-onlyTagsPart = inj $ MkOption
-      (singleton $ MkMod ("tags" ::: ["only-tags"]) ['t']
-          (Right $ MkValue "TAGS" $ Just . go)
-          "a comma separated list of the tags to run")
-      [] compose
-      where
-        go : String -> List String
-        go = forget . split (== ',')
-        compose : List String -> Builder RunAction' -> Either String (Builder RunAction')
-        compose xs x = case either (const []) (intersect xs) x.excludeTags of
-          [] => Right $ record {onlyTags $= Right . (++ xs) . either (const []) id} x
-          xs => Left "Some tags were both included and excluded: \{show xs}"
-
-excludeTagsPart : Part (Builder RunAction') (List String)
-excludeTagsPart = inj $ MkOption
-      (singleton $ MkMod (singleton "exclude-tags") ['T']
-          (Right $ MkValue "TAGS" $ Just . go)
-          "a comma separated list of the tags to exclude")
-      []
-      compose
-      where
-        go : String -> List String
-        go = forget . split (== ',')
-        compose : List String -> Builder RunAction' -> Either String (Builder RunAction')
-        compose xs x = case either (const []) (intersect xs) x.onlyTags of
-          [] => Right $ record {excludeTags $= Right . (++ xs) . either (const []) id} x
-          xs => Left "Some tags were both included and excluded: \{show xs}"
-
-
 punitivePart : Part (Builder RunAction') Bool
 punitivePart = inj $ MkOption
       (singleton $ MkMod ("punitive" ::: ["fail-fast"]) ['p']
@@ -209,32 +133,14 @@ hideSuccessPart = inj $ MkOption
                     (\x => record {hideSuccess = Right x})
                     (const $ const "Contradictory values for hide success mode")
 
-lastFailuresPart : Part (Builder RunAction') Bool
-lastFailuresPart = inj $ MkOption
-      (singleton $ MkMod (singleton "last-fails") ['l']
-          (Left True)
-          "if a previous run fails, rerun only the tests that failed")
-      False
-      go
-      where
-        go : Bool -> Builder RunAction' -> Either String (Builder RunAction')
-        go = ifSame lastFailures
-                    (\x => record {lastFailures = Right x})
-                    (const $ const "Contradictory values for last failures mode")
-
-
 optParseRun : OptParse (Builder RunAction') RunAction
 optParseRun =
     [| MkRunAction
        (liftAp workingDirPart)
        (liftAp interactivePart)
        (liftAp threadsPart)
-       (liftAp onlyPart)
-       (liftAp excludePart)
-       (liftAp onlyTagsPart)
-       (liftAp excludeTagsPart)
+       (embed filter (\x => record {filter = x}) optParseFilter)
        (liftAp hideSuccessPart)
-       (liftAp lastFailuresPart)
        (liftAp punitivePart)
        (liftAp fileParamPart)
     |]
@@ -244,12 +150,8 @@ defaultRun = MkRunAction
        (defaultPart workingDirPart)
        (defaultPart interactivePart)
        (defaultPart threadsPart)
-       (defaultPart onlyPart)
-       (defaultPart excludePart)
-       (defaultPart onlyTagsPart)
-       (defaultPart excludeTagsPart)
+       defaultFilter
        (defaultPart hideSuccessPart)
-       (defaultPart lastFailuresPart)
        (defaultPart punitivePart)
        (defaultPart fileParamPart)
 
