@@ -25,6 +25,7 @@ import Replica.Command.Run
 import Replica.Core.Parse
 import Replica.Core.Types
 import Replica.Option.Global
+import Replica.Other.Decorated
 import Replica.Other.String
 import Replica.Other.Validation
 
@@ -35,7 +36,7 @@ data RunContext : Type where
 prepareReplicaDir : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State RunContext RunAction
-      , State GlobalConfig GlobalOption
+      , State GlobalConfig Global
       , Exception ReplicaError
       , Console
       ] e => App e String
@@ -55,7 +56,7 @@ prepareReplicaDir = do
 
 runAll :
   SystemIO (SystemError :: e) =>
-  State GlobalConfig GlobalOption e =>
+  State GlobalConfig Global e =>
   Exception TestError e =>
   Console e =>
   (phase : Maybe String) ->
@@ -68,19 +69,19 @@ runAll phase liftError (x :: xs) = do
     (const $ runAll phase liftError xs)
     (\err : SystemError => throw $ liftError x)
 
-expectedvsGiven : State GlobalConfig GlobalOption e =>
+expectedvsGiven : State GlobalConfig Global e =>
   Nat -> String -> String -> App e (List String)
 expectedvsGiven k expected given = pure $ map (withOffset k) $
   ( "Expected:" :: map !red (forget $ lines expected)) ++
   ( "Given:" :: map !green (forget $ lines given))
 
-nativeShow : State GlobalConfig GlobalOption e =>
+nativeShow : State GlobalConfig Global e =>
   Console e => String -> String -> App e ()
 nativeShow expected given =
   putStrLn $ unlines !(expectedvsGiven 0 expected given)
 
 showDiff : SystemIO (SystemError :: e) =>
-  State GlobalConfig GlobalOption e =>
+  State GlobalConfig Global e =>
   State CurrentTest Test e =>
   Console e => DiffCommand -> String -> String -> App e ()
 showDiff Native expected given = nativeShow expected given
@@ -96,7 +97,7 @@ showDiff (Custom z) x y = catchNew
 
 expectedVsGiven : SystemIO (SystemError :: e) =>
   State CurrentTest Test e =>
-  State GlobalConfig GlobalOption e =>
+  State GlobalConfig Global e =>
   Console e => Maybe String -> String -> App e ()
 expectedVsGiven old given = do
   let Just str = old
@@ -109,7 +110,7 @@ expectedVsGiven old given = do
 askForNewGolden : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
-      , State GlobalConfig GlobalOption
+      , State GlobalConfig Global
       , Exception TestError
       , Console
       ] e => Maybe String -> String -> App e TestResult
@@ -137,7 +138,7 @@ askForNewGolden old given = do
 checkOutput :  SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
-      , State GlobalConfig GlobalOption
+      , State GlobalConfig Global
       , State RunContext RunAction
       , Exception TestError
       , Console ] e =>
@@ -172,7 +173,7 @@ checkOutput mustSucceed status expectedOutput output
 
 getExpected : FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
-      , State GlobalConfig GlobalOption
+      , State GlobalConfig Global
       , State RunContext RunAction
       , Exception TestError
       , Console
@@ -189,7 +190,7 @@ getExpected given = do
 testCore : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
-      , State GlobalConfig GlobalOption
+      , State GlobalConfig Global
       , State RunContext RunAction
       , Exception TestError
       , Console
@@ -209,7 +210,7 @@ testCore = do
 performTest : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
-      , State GlobalConfig GlobalOption
+      , State GlobalConfig Global
       , State RunContext RunAction
       , Exception TestError
       , Console
@@ -226,7 +227,7 @@ runTest : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
       , State RunContext RunAction
-      , State GlobalConfig GlobalOption
+      , State GlobalConfig Global
       , Exception TestError
       , Console
       ] e => App e TestResult
@@ -253,7 +254,7 @@ runTest = do
 
 testOutput :
   Has [ State RunContext RunAction
-      , State GlobalConfig GlobalOption
+      , State GlobalConfig Global
       , Console
       ] e => String -> Either TestError TestResult -> App e ()
 testOutput name (Left y) = do
@@ -279,7 +280,7 @@ runAllTests : SystemIO (SystemError :: TestError :: e) =>
   FileSystem (FSError :: TestError :: e) =>
   Console (TestError :: e) =>
   Has [ State RunContext RunAction
-      , State GlobalConfig GlobalOption
+      , State GlobalConfig Global
       , Console
       ] e =>  TestPlan -> App e (List (String, Either TestError TestResult))
 runAllTests plan = do
@@ -324,7 +325,7 @@ runAllTests plan = do
                    debug $ displayPlan plan'
                    batchTests (acc ++ res) $ assert_smaller plan (foldl processResult plan' res)
 
-report : Console e => State GlobalConfig GlobalOption e => Stats -> App e ()
+report : Console e => State GlobalConfig Global e => Stats -> App e ()
 report x = do
   putStrLn $ separator 60
   putStrLn $ !bold "Summary:"
@@ -343,37 +344,24 @@ report x = do
 
 filterTests : FileSystem (FSError :: e) =>
   Has [ State RunContext RunAction
-      , State GlobalConfig GlobalOption
+      , State GlobalConfig Global
       , Exception ReplicaError
       , Console
-      ] e => (s, r : List Test) ->App e TestPlan
+      ] e => (s, r : List Test) -> App e TestPlan
 filterTests s r = do
-  selectedTests <- only <$> get RunContext
-  excludedTests <- exclude <$> get RunContext
-  selectedTags <- onlyTags <$> get RunContext
-  excludedTags <- excludeTags <$> get RunContext
-  debug $ "Tags: \{show selectedTags}"
-  debug $ "Names: \{show selectedTests}"
-  let (selected, rejected) =
-    partition (go selectedTags selectedTests excludedTags excludedTests) s
+  f <- filter <$> get RunContext
+  debug $ "Filters: \{show f}"
+  let (selected, rejected) = partition (keepTest f) s
   pure $ foldl (\p, t => validate t.name p) (buildPlan selected) (r ++ rejected)
-  where
-    go : (tags, names, negTags, negNames : List String) -> Test -> Bool
-    go tags names negTags negNames t =
-      (null tags || not (null $ intersect t.tags tags))
-      && (null names || (t.name `elem` names))
-      && (null negTags || (null $ intersect t.tags negTags))
-      && (null negNames || (not $ t.name `elem` negNames))
-
 
 getLastFailures : FileSystem (FSError :: e) =>
   Has [ State RunContext RunAction
-      , State GlobalConfig GlobalOption
+      , State GlobalConfig Global
       , Exception ReplicaError
       , Console
       ] e => App e (List Test, List Test)
 getLastFailures = do
-  repl <- getReplica RunContext file
+  repl <- getReplica
   logFile <- lastRunLog <$> getReplicaDir
   lastLog <- catchNew (readFile logFile)
     (\err : FSError => throw $ CantAccessTestFile logFile)
@@ -388,16 +376,16 @@ getLastFailures = do
 
 defineActiveTests : FileSystem (FSError :: e) =>
   Has [ State RunContext RunAction
-      , State GlobalConfig GlobalOption
+      , State GlobalConfig Global
       , Exception ReplicaError
       , Console
       ] e => App e TestPlan
 defineActiveTests = do
   last <- the (App e (List Test, List Test)) $
-     if !(lastFailures <$> get RunContext)
+     if !((.filter.lastFailures) <$> get RunContext)
         then getLastFailures
         else do
-          repl <- getReplica RunContext file
+          repl <- getReplica
           pure (repl.tests, [])
   uncurry filterTests last
 
@@ -408,7 +396,7 @@ runReplica : SystemIO (SystemError :: TestError :: e) =>
   FileSystem (FSError :: e) =>
   Console (TestError :: e) =>
   Has [ State RunContext RunAction
-      , State GlobalConfig GlobalOption
+      , State GlobalConfig Global
       , Exception ReplicaError
       , Console
       ] e => App e Stats

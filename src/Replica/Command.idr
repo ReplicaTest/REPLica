@@ -3,6 +3,7 @@ module Replica.Command
 import Data.List.AtIndex
 import Data.OpenUnion
 
+import Replica.Other.Decorated
 import Replica.Other.Validation
 
 import public Replica.Command.Info

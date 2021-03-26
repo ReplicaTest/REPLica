@@ -30,6 +30,7 @@ modules = Replica
         , Replica.Help
 
         , Replica.Option.Global
+        , Replica.Option.Filter
         , Replica.Option.Types
 
         , Replica.Other.Decorated

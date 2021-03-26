@@ -51,6 +51,13 @@ record Option b a where
   defaultValue : a
   setter : a -> b -> Either String b
 
+export
+embedOption : (c -> b) -> (b -> c -> c) -> Option b a -> Option c a
+embedOption f g x = MkOption x.mods x.defaultValue (embed f g x.setter)
+  where
+    embed : (c -> b) -> (b -> c -> c) -> (a -> b -> Either String b) -> a -> c -> Either String c
+    embed unwrap wrap set p w = flip wrap w <$> set p (unwrap w)
+
 namespace Param
 
   public export
@@ -60,15 +67,35 @@ namespace Param
     parser : String -> Maybe a
     setter : a -> b -> Either String b
 
+  export
+  embedParam : (c -> b) -> (b -> c -> c) -> Param b a -> Param c a
+  embedParam f g x = MkParam x.name x.parser (embed f g x.setter)
+    where
+      embed : (c -> b) -> (b -> c -> c) -> (a -> b -> Either String b) -> a -> c -> Either String c
+      embed unwrap wrap set p w = flip wrap w <$> set p (unwrap w)
+
 namespace Parts
 
   public export
   Part : Type -> Type -> Type
   Part b a = Union (\p => p b a) [Param, Option]
 
+  export
+  embedPart : (c -> b) -> (b -> c -> c) -> Part b a -> Part c a
+  embedPart get set x = let
+    Left x1 = decomp x
+      | Right v => inj $ embedParam get set v
+    v = decomp0 x1
+    in inj $ embedOption get set v
+
 public export
 OptParse : Type -> Type -> Type
 OptParse = Ap . Part
+
+export
+embed : (c -> b) -> (b -> c -> c) -> OptParse b a -> OptParse c a
+embed get set (Pure x) = Pure x
+embed get set (MkAp x y) = MkAp (embedPart get set x) $ embed get set y
 
 namespace Parser
 
@@ -166,17 +193,17 @@ namespace Help
   export
   commandHelp :
     (name : String) -> (description : String) ->
-    (global : List1 Help) -> (options : OptParse b c) ->
-    (param : Maybe (Param b a)) -> Help
-  commandHelp name description global options param = MkHelp
+    (options : OptParse b c) ->
+    (param : Maybe String) -> Help
+  commandHelp name description options param = MkHelp
     name
-    (Just "replica [GLOBAL_OPTIONS] \{name} [OPTIONS] \{paramExt}")
+    (Just "replica \{name} [OPTIONS]\{paramExt param}")
     description
     ( catMaybes
-       [ Just $ MkPair "Global options" global
-       , map (MkPair "Specific options") $
-           toList1' $ runApM (\p => partHelp p) options ])
+       [ map (MkPair "Options") $
+           toList1' $ reverse $ runApM (\p => partHelp p) options
+       ])
     Nothing
     where
-      paramExt : String
-      paramExt = maybe "" (.name) param
+      paramExt : Maybe String -> String
+      paramExt = maybe "" (" "<+>)

@@ -17,6 +17,7 @@ import Replica.Command.Run
 import Replica.Core.Parse
 import Replica.Core.Types
 import Replica.Option.Global
+import Replica.Other.Decorated
 import Replica.Other.String
 import Replica.Other.Validation
 
@@ -52,11 +53,11 @@ lastRunLog : String -> String
 lastRunLog rdir = logDir rdir </> "last.json"
 
 export
-getReplicaDir : State GlobalConfig GlobalOption e => App e String
+getReplicaDir : State GlobalConfig Global e => App e String
 getReplicaDir = map replicaDir $ get GlobalConfig
 
 export
-setAbsoluteReplicaDir : Has [State GlobalConfig GlobalOption, FileSystem] e => App e ()
+setAbsoluteReplicaDir : Has [State GlobalConfig Global, FileSystem] e => App e ()
 setAbsoluteReplicaDir = do
   rdir <- getReplicaDir
   if isAbsolute rdir
@@ -68,7 +69,7 @@ setAbsoluteReplicaDir = do
 export
 getOutputFile : Has
   [ State CurrentTest Test
-  , State GlobalConfig GlobalOption ] e => App e String
+  , State GlobalConfig Global ] e => App e String
 getOutputFile = do
   d <- map replicaDir $ get GlobalConfig
   t <- get CurrentTest
@@ -77,7 +78,7 @@ getOutputFile = do
 export
 getExpectedFile : Has
   [ State CurrentTest Test
-  , State GlobalConfig GlobalOption ] e => App e String
+  , State GlobalConfig Global ] e => App e String
 getExpectedFile = do
   d <- map replicaDir $ get GlobalConfig
   t <- get CurrentTest
@@ -85,15 +86,15 @@ getExpectedFile = do
 
 export
 getReplica :
-  FileSystem (FSError :: e) => (0 ident : Type) ->
-  Has [ State ident t
-      , Exception ReplicaError ] e => (t -> String) -> App e Replica
-getReplica ident toFile = do
-  ctx <- get ident
-  let file = toFile ctx
-  content <- handle (readFile file)
+  FileSystem (FSError :: e) =>
+  Has [ State GlobalConfig Global
+      , Exception ReplicaError ] e => App e Replica
+getReplica = do
+  ctx <- get GlobalConfig
+  let f = ctx.file
+  content <- handle (readFile f)
                     pure
-                    (\err : FSError => throw $ CantAccessTestFile file)
+                    (\err : FSError => throw $ CantAccessTestFile f)
   let Just json = parse content
         | Nothing => throw $ InvalidJSON []
   let Valid repl = jsonToReplica json

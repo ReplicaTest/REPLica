@@ -1,9 +1,10 @@
 module Replica.Command.Info
 
 import Replica.Help
+import Replica.Option.Filter
+import Replica.Option.Global
 import Replica.Option.Types
 import Replica.Other.Decorated
-import Replica.Other.Validation
 
 %default total
 
@@ -11,7 +12,8 @@ public export
 record InfoAction' (f : Type -> Type) where
   constructor MkInfo
   showExpectation : f Bool
-  file : f String
+  filter : Filter' f
+  global : Global' f
 
 public export
 InfoAction : Type
@@ -19,20 +21,16 @@ InfoAction = Done InfoAction'
 
 export
 TyMap InfoAction' where
-  tyMap func x = MkInfo (func x.showExpectation) (func x.file)
+  tyMap func x = MkInfo
+    (func x.showExpectation)
+    (tyMap func x.filter) (tyMap func x.global)
 
 export
 TyTraversable InfoAction' where
-  tyTraverse func x = [| MkInfo (func x.showExpectation) (func x.file) |]
-
-testFilePart : Part (Builder InfoAction') String
-testFilePart =
-  inj $ MkParam "JSON_FILE" Just go
-  where
-    go : String -> Builder InfoAction' -> Either String (Builder InfoAction')
-    go = one file
-             (\x => record {file = Right x})
-             (\x, y => "More than one test file were given: \{y}, \{x}")
+  tyTraverse func x = [| MkInfo
+      (func x.showExpectation)
+      (tyTraverse func x.filter) (tyTraverse func x.global)
+      |]
 
 showExpectationPart : Part (Builder InfoAction') Bool
 showExpectationPart = inj $ MkOption
@@ -49,10 +47,17 @@ showExpectationPart = inj $ MkOption
 
 
 optParseInfo : OptParse (Builder InfoAction') InfoAction
-optParseInfo = [|MkInfo (liftAp showExpectationPart) (liftAp testFilePart)|]
+optParseInfo = [|MkInfo
+  (liftAp showExpectationPart)
+  (embed filter (\x => record {filter = x}) optParseFilter)
+  (embed global (\x => record {global = x}) optParseGlobal)
+  |]
 
 defaultInfo : Default InfoAction'
-defaultInfo = MkInfo (defaultPart showExpectationPart) (defaultPart testFilePart)
+defaultInfo = MkInfo
+  (defaultPart showExpectationPart)
+  defaultFilter
+  defaultGlobal
 
 export
 parseInfo : List String -> Either String InfoAction
@@ -65,7 +70,9 @@ parseInfo ("info"::xs) =
 parseInfo _ = Left "Not an info action"
 
 export
-helpInfo : (global : List1 Help) -> Help
-helpInfo global =
-  commandHelp "info" "Display information about test suites" global
-    optParseInfo (prj testFilePart)
+helpInfo : Help
+helpInfo =
+  commandHelp {b = Builder InfoAction'}
+    "info" "Display information about test suites"
+    optParseInfo
+    (Just "JSON_TEST_FILE")

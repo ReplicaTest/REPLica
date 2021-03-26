@@ -13,10 +13,9 @@ export
 help : Help
 help = MkHelp
   "replica"
-  (Just "replica [GLOBAL_OPTIONS] COMMAND")
+  (Just "replica COMMAND [COMMAND_OPTIONS]")
   "Integration testing for command line interfaces"
-  [ ("Options", globalOptionsHelp)
-  , ("Commands", helpRun globalOptionsHelp ::: [helpInfo globalOptionsHelp])
+  [ ("Commands", helpRun ::: [helpInfo])
   ]
   (Just "Run 'replica help COMMAND' for more information on a command.")
 

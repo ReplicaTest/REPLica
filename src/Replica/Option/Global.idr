@@ -5,8 +5,7 @@ import Data.String
 
 import Replica.Help
 import Replica.Option.Types
-import public Replica.Other.Decorated
-import Replica.Other.Validation
+import Replica.Other.Decorated
 
 public export
 data LogLevel = Debug | Info | Warning | Critical
@@ -47,45 +46,48 @@ Ord LogLevel where
   compare = compare `on` levelToNat
 
 public export
-record GlobalOption' (f : Type -> Type) where
-  constructor MkGlobalOption
+record Global' (f : Type -> Type) where
+  constructor MkGlobal
   replicaDir : f String
   colour : f Bool
   ascii : f Bool
   logLevel : f (Maybe LogLevel)
   diff : f DiffCommand
+  file : f String
 
 public export
-GlobalOption : Type
-GlobalOption = Done GlobalOption'
+Global : Type
+Global = Done Global'
 
 export
-Show GlobalOption where
+Show Global where
   show x = unwords
-    [ "MkGlobalOption"
+    [ "MkGlobal"
     , show x.replicaDir
     , show x.colour
     , show x.ascii
     , show x.logLevel
     , show x.diff
+    , show x.file
     ]
 
 export
-TyMap GlobalOption' where
-  tyMap func x = MkGlobalOption
+TyMap Global' where
+  tyMap func x = MkGlobal
     (func x.replicaDir) (func x.colour)
     (func x.ascii) (func x.logLevel)
-    (func x.diff)
+    (func x.diff) (func x.file)
 
-TyTraversable GlobalOption' where
+export
+TyTraversable Global' where
   tyTraverse func x =
-    [| MkGlobalOption
+    [| MkGlobal
     (func x.replicaDir) (func x.colour)
     (func x.ascii) (func x.logLevel)
-    (func x.diff)
+    (func x.diff) (func x.file)
     |]
 
-replicaDirPart : Part (Builder GlobalOption') String
+replicaDirPart : Part (Builder Global') String
 replicaDirPart = inj $ MkOption
   (singleton $ MkMod (singleton "replica-dir") []
       (Right $ MkValue "DIR" Just)
@@ -93,11 +95,11 @@ replicaDirPart = inj $ MkOption
   ".replica"
   go
   where
-    go : String -> Builder GlobalOption' -> Either String (Builder GlobalOption')
+    go : String -> Builder Global' -> Either String (Builder Global')
     go = one replicaDir (\x => record {replicaDir = Right x})
                  (\x, y => "More than one replica dir were given: \{y}, \{x}")
 
-logLevelPart : Part (Builder GlobalOption') (Maybe LogLevel)
+logLevelPart : Part (Builder Global') (Maybe LogLevel)
 logLevelPart = inj $ MkOption
   (toList1
     [ MkMod (singleton "log") [] (Right logLevelValue)
@@ -121,11 +123,11 @@ logLevelPart = inj $ MkOption
         go "warning" = Just $ Just Warning
         go "critical" = Just $ Just Critical
         go _ = Nothing
-    go : Maybe LogLevel -> Builder GlobalOption' -> Either String (Builder GlobalOption')
+    go : Maybe LogLevel -> Builder Global' -> Either String (Builder Global')
     go = ifSame logLevel (\x => record {logLevel = Right $ x})
                          (const $ const "Contradictory log level")
 
-colourPart : Part (Builder GlobalOption') Bool
+colourPart : Part (Builder Global') Bool
 colourPart = inj $ MkOption
       (toList1
         [ MkMod (toList1 ["color", "colour"]) ['c'] (Left True)
@@ -136,11 +138,11 @@ colourPart = inj $ MkOption
       True
       go
     where
-    go : Bool -> Builder GlobalOption' -> Either String (Builder GlobalOption')
+    go : Bool -> Builder Global' -> Either String (Builder Global')
     go = ifSame colour (\x => record {colour = Right $ x})
                        (const $ const "Contradictory colour settings")
 
-asciiPart : Part (Builder GlobalOption') Bool
+asciiPart : Part (Builder Global') Bool
 asciiPart = inj $ MkOption
       (toList1
         [ MkMod (singleton "utf8") [] (Left False)
@@ -151,11 +153,11 @@ asciiPart = inj $ MkOption
       False
       go
       where
-      go : Bool -> Builder GlobalOption' -> Either String (Builder GlobalOption')
+      go : Bool -> Builder Global' -> Either String (Builder Global')
       go = ifSame ascii (\x => record {ascii = Right $ x})
                         (const $ const "Contradictory ascii settings")
 
-diffPart : Part (Builder GlobalOption') DiffCommand
+diffPart : Part (Builder Global') DiffCommand
 diffPart = inj $ MkOption
   (toList1 [ MkMod (singleton "diff") ['d'] (Right parseDiff)
      #"""
@@ -172,37 +174,51 @@ diffPart = inj $ MkOption
     go x = Custom x
     parseDiff : Value DiffCommand
     parseDiff = MkValue "CMD" (Just . go . toLower)
-    compose : DiffCommand -> Builder GlobalOption' -> Either String (Builder GlobalOption')
+    compose : DiffCommand -> Builder Global' -> Either String (Builder Global')
     compose = one diff (\x => record {diff = Right x})
                   (\x, y => "More than one diff command were given: \{show y}, \{show x}")
 
-optParseGlobal : OptParse (Builder GlobalOption') GlobalOption
+export
+fileParamPart : Part (Builder Global') String
+fileParamPart = inj $ MkParam "JSON_FILE" Just go
+  where
+    go : String -> Builder Global' -> Either String (Builder Global')
+    go = one file
+             (\x => record {file = Right x})
+             (\x, y => "More than one test file were given: \{y}, \{x}")
+
+
+export
+optParseGlobal : OptParse (Builder Global') Global
 optParseGlobal =
-  [| MkGlobalOption
+  [| MkGlobal
     (liftAp replicaDirPart)
     (liftAp colourPart)
     (liftAp asciiPart)
     (liftAp logLevelPart)
     (liftAp diffPart)
+    (liftAp fileParamPart)
   |]
 
-defaultGlobal : Default GlobalOption'
+export
+defaultGlobal : Default Global'
 defaultGlobal =
-  MkGlobalOption
+  MkGlobal
     (defaultPart replicaDirPart)
     (defaultPart colourPart)
     (defaultPart asciiPart)
     (defaultPart logLevelPart)
     (defaultPart diffPart)
+    (defaultPart fileParamPart)
 
 export
-parseGlobal : List String -> Either String (List String, GlobalOption)
+parseGlobal : List String -> Either String (List String, Global)
 parseGlobal xs = case parse' (initBuilder defaultGlobal) optParseGlobal xs of
                              InvalidOption ys x => MkPair (forget ys) <$> buildGlobal x
                              InvalidMix x => Left x
                              Done x => MkPair [] <$> buildGlobal x
   where
-    buildGlobal : Builder GlobalOption' -> Either String GlobalOption
+    buildGlobal : Builder Global' -> Either String Global
     buildGlobal x = maybe (Left "Missing mandatory parameter") Right $ build x
 
 export
