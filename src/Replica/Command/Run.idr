@@ -19,7 +19,6 @@ record RunAction' (f : Type -> Type) where
   threads : f Nat
   hideSuccess : f Bool
   punitive : f Bool
-  file : f String
   filter : Filter' f
   global : Global' f
 
@@ -35,7 +34,6 @@ TyMap RunAction' where
       (func x.threads)
       (func x.hideSuccess)
       (func x.punitive)
-      (func x.file)
       (tyMap func x.filter)
       (tyMap func x.global)
 
@@ -47,7 +45,6 @@ TyTraversable RunAction' where
       (func x.threads)
       (func x.hideSuccess)
       (func x.punitive)
-      (func x.file)
       (tyTraverse func x.filter)
       (tyTraverse func x.global)
       |]
@@ -61,18 +58,9 @@ Show RunAction where
     , show x.threads
     , show x.hideSuccess
     , show x.punitive
-    , show x.file
     , show x.filter
     , show x.global
     ]
-
-fileParamPart : Part (Builder RunAction') String
-fileParamPart = inj $ MkParam "JSON_FILE" Just go
-  where
-    go : String -> Builder RunAction' -> Either String (Builder RunAction')
-    go = one file
-             (\x => record {file = Right x})
-             (\x, y => "More than one test file were given: \{y}, \{x}")
 
 interactivePart : Part (Builder RunAction') Bool
 interactivePart = inj $ MkOption
@@ -103,8 +91,8 @@ workingDirPart = inj $ MkOption
 threadsPart : Part (Builder RunAction') Nat
 threadsPart = inj $ MkOption
       (singleton $ MkMod (singleton "threads") ['n']
-          (Right $ MkValue "n" parsePositive)
-          "max number of threads (default 1, 0 for no thread limit)")
+          (Right $ MkValue "N" parsePositive)
+          "max number of threads (default 1; 0 for no thread limit)")
       1
       go
   where
@@ -147,7 +135,6 @@ optParseRun =
        (liftAp threadsPart)
        (liftAp hideSuccessPart)
        (liftAp punitivePart)
-       (liftAp fileParamPart)
        (embed filter (\x => record {filter = x}) optParseFilter)
        (embed global (\x => record {global = x}) optParseGlobal)
     |]
@@ -159,7 +146,6 @@ defaultRun = MkRunAction
        (defaultPart threadsPart)
        (defaultPart hideSuccessPart)
        (defaultPart punitivePart)
-       (defaultPart fileParamPart)
        defaultFilter
        defaultGlobal
 
@@ -171,7 +157,8 @@ parseRun ("run"::xs) = do
 parseRun _ = Left "Not a run action"
 
 export
-helpRun : (global : List1 Help) -> Help
-helpRun global = commandHelp "run" "Run tests from a Replica JSON file" global
+helpRun : Help
+helpRun = commandHelp {b = Builder RunAction'}
+  "run" "Run tests from a Replica JSON file"
   optParseRun
-  (prj fileParamPart)
+  (Just "JSON_TEST_FILE")

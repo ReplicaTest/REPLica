@@ -53,6 +53,7 @@ record Global' (f : Type -> Type) where
   ascii : f Bool
   logLevel : f (Maybe LogLevel)
   diff : f DiffCommand
+  file : f String
 
 public export
 Global : Type
@@ -67,6 +68,7 @@ Show Global where
     , show x.ascii
     , show x.logLevel
     , show x.diff
+    , show x.file
     ]
 
 export
@@ -74,7 +76,7 @@ TyMap Global' where
   tyMap func x = MkGlobal
     (func x.replicaDir) (func x.colour)
     (func x.ascii) (func x.logLevel)
-    (func x.diff)
+    (func x.diff) (func x.file)
 
 export
 TyTraversable Global' where
@@ -82,7 +84,7 @@ TyTraversable Global' where
     [| MkGlobal
     (func x.replicaDir) (func x.colour)
     (func x.ascii) (func x.logLevel)
-    (func x.diff)
+    (func x.diff) (func x.file)
     |]
 
 replicaDirPart : Part (Builder Global') String
@@ -177,6 +179,16 @@ diffPart = inj $ MkOption
                   (\x, y => "More than one diff command were given: \{show y}, \{show x}")
 
 export
+fileParamPart : Part (Builder Global') String
+fileParamPart = inj $ MkParam "JSON_FILE" Just go
+  where
+    go : String -> Builder Global' -> Either String (Builder Global')
+    go = one file
+             (\x => record {file = Right x})
+             (\x, y => "More than one test file were given: \{y}, \{x}")
+
+
+export
 optParseGlobal : OptParse (Builder Global') Global
 optParseGlobal =
   [| MkGlobal
@@ -185,6 +197,7 @@ optParseGlobal =
     (liftAp asciiPart)
     (liftAp logLevelPart)
     (liftAp diffPart)
+    (liftAp fileParamPart)
   |]
 
 export
@@ -196,6 +209,7 @@ defaultGlobal =
     (defaultPart asciiPart)
     (defaultPart logLevelPart)
     (defaultPart diffPart)
+    (defaultPart fileParamPart)
 
 export
 parseGlobal : List String -> Either String (List String, Global)

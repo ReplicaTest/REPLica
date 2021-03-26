@@ -69,7 +69,7 @@ infoReplica :
     , Console
     ] e => App e ()
 infoReplica = do
-  repl <- getReplica InfoContext file
+  repl <- getReplica
   debug $ show !(get GlobalConfig)
   putStrLn ""
   traverse_ (\t => new t displayTests) repl.tests

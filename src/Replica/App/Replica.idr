@@ -86,15 +86,15 @@ getExpectedFile = do
 
 export
 getReplica :
-  FileSystem (FSError :: e) => (0 ident : Type) ->
-  Has [ State ident t
-      , Exception ReplicaError ] e => (t -> String) -> App e Replica
-getReplica ident toFile = do
-  ctx <- get ident
-  let file = toFile ctx
-  content <- handle (readFile file)
+  FileSystem (FSError :: e) =>
+  Has [ State GlobalConfig Global
+      , Exception ReplicaError ] e => App e Replica
+getReplica = do
+  ctx <- get GlobalConfig
+  let f = ctx.file
+  content <- handle (readFile f)
                     pure
-                    (\err : FSError => throw $ CantAccessTestFile file)
+                    (\err : FSError => throw $ CantAccessTestFile f)
   let Just json = parse content
         | Nothing => throw $ InvalidJSON []
   let Valid repl = jsonToReplica json

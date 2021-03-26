@@ -347,25 +347,12 @@ filterTests : FileSystem (FSError :: e) =>
       , State GlobalConfig Global
       , Exception ReplicaError
       , Console
-      ] e => (s, r : List Test) ->App e TestPlan
+      ] e => (s, r : List Test) -> App e TestPlan
 filterTests s r = do
-  selectedTests <- (.filter.only) <$> get RunContext
-  excludedTests <- (.filter.exclude)<$> get RunContext
-  selectedTags <- (.filter.onlyTags) <$> get RunContext
-  excludedTags <- (.filter.excludeTags) <$> get RunContext
-  debug $ "Tags: \{show selectedTags}"
-  debug $ "Names: \{show selectedTests}"
-  let (selected, rejected) =
-    partition (go selectedTags selectedTests excludedTags excludedTests) s
+  f <- filter <$> get RunContext
+  debug $ "Filters: \{show f}"
+  let (selected, rejected) = partition (keepTest f) s
   pure $ foldl (\p, t => validate t.name p) (buildPlan selected) (r ++ rejected)
-  where
-    go : (tags, names, negTags, negNames : List String) -> Test -> Bool
-    go tags names negTags negNames t =
-      (null tags || not (null $ intersect t.tags tags))
-      && (null names || (t.name `elem` names))
-      && (null negTags || (null $ intersect t.tags negTags))
-      && (null negNames || (not $ t.name `elem` negNames))
-
 
 getLastFailures : FileSystem (FSError :: e) =>
   Has [ State RunContext RunAction
@@ -374,7 +361,7 @@ getLastFailures : FileSystem (FSError :: e) =>
       , Console
       ] e => App e (List Test, List Test)
 getLastFailures = do
-  repl <- getReplica RunContext file
+  repl <- getReplica
   logFile <- lastRunLog <$> getReplicaDir
   lastLog <- catchNew (readFile logFile)
     (\err : FSError => throw $ CantAccessTestFile logFile)
@@ -398,7 +385,7 @@ defineActiveTests = do
      if !((.filter.lastFailures) <$> get RunContext)
         then getLastFailures
         else do
-          repl <- getReplica RunContext file
+          repl <- getReplica
           pure (repl.tests, [])
   uncurry filterTests last
 

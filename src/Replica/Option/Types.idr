@@ -193,18 +193,17 @@ namespace Help
   export
   commandHelp :
     (name : String) -> (description : String) ->
-    (global : List1 Help) -> (options : OptParse b c) ->
-    (param : Maybe (Param b a)) -> Help
-  commandHelp name description global options param = MkHelp
+    (options : OptParse b c) ->
+    (param : Maybe String) -> Help
+  commandHelp name description options param = MkHelp
     name
-    (Just "replica [GLOBAL_OPTIONS] \{name} [OPTIONS] \{paramExt}")
+    (Just "replica \{name} [OPTIONS]\{paramExt param}")
     description
     ( catMaybes
-       [ map (MkPair "Specific options") $
-           toList1' $ runApM (\p => partHelp p) options
-       , Just $ MkPair "Global options" global
+       [ map (MkPair "Options") $
+           toList1' $ reverse $ runApM (\p => partHelp p) options
        ])
     Nothing
     where
-      paramExt : String
-      paramExt = maybe "" (.name) param
+      paramExt : Maybe String -> String
+      paramExt = maybe "" (" "<+>)

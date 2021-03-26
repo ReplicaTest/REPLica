@@ -3,6 +3,7 @@ module Replica.Option.Filter
 import Data.List
 import Data.String
 
+import Replica.Core
 import Replica.Option.Types
 import Replica.Other.Decorated
 
@@ -127,7 +128,7 @@ export
 optParseFilter : OptParse (Builder Filter') (Done Filter')
 optParseFilter = [|MkFilter
   (liftAp onlyPart) (liftAp excludePart)
-  (liftAp onlyTagsPart) (liftAp excludeTagsPart) 
+  (liftAp onlyTagsPart) (liftAp excludeTagsPart)
   (liftAp lastFailuresPart) |]
 
 export
@@ -136,3 +137,9 @@ defaultFilter = MkFilter (defaultPart onlyPart) (defaultPart excludePart)
   (defaultPart onlyTagsPart) (defaultPart excludeTagsPart)
   (defaultPart lastFailuresPart)
 
+export
+keepTest : Filter -> Test -> Bool
+keepTest x y = (null x.only        || (y.name `elem` x.only))
+            && (null x.exclude     || not (y.name `elem` x.exclude))
+            && (null x.onlyTags    || not (null $ y.tags `intersect` x.onlyTags))
+            && (null x.excludeTags || null (y.tags `intersect` x.excludeTags))
