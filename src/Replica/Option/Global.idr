@@ -212,16 +212,6 @@ defaultGlobal =
     (defaultPart fileParamPart)
 
 export
-parseGlobal : List String -> Either String (List String, Global)
-parseGlobal xs = case parse' (initBuilder defaultGlobal) optParseGlobal xs of
-                             InvalidOption ys x => MkPair (forget ys) <$> buildGlobal x
-                             InvalidMix x => Left x
-                             Done x => MkPair [] <$> buildGlobal x
-  where
-    buildGlobal : Builder Global' -> Either String Global
-    buildGlobal x = maybe (Left "Missing mandatory parameter") Right $ build x
-
-export
 globalOptionsHelp : List1 Help
 globalOptionsHelp = toList1 {ok = ?trustMe}
   $ runApM (\p => partHelp p) optParseGlobal

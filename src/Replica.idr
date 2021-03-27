@@ -3,6 +3,7 @@ module Replica
 import Data.So
 import Data.String
 import Data.List.AtIndex
+import Data.List
 import Data.List1
 import Data.OpenUnion
 
@@ -12,6 +13,7 @@ import System
 import Replica.App
 import Replica.Core
 import Replica.Command
+import Replica.Option.Types
 import Replica.Other.Decorated
 import Replica.Other.Validation
 
@@ -46,17 +48,19 @@ main : IO ()
 main = do
   (cmd::args) <- getArgs
     | _ => putStrLn "Error"
-  let x = parseArgs args
+  let Just args' = toList1' args
+    | Nothing => runHelp help
+  let x = parseArgs args'
   case x of
-       Error [] => do
+       InvalidMix e => do
+         putStrLn e
          runHelp help
          exitWith $ ExitFailure 254
-       Error es => do
-         putStrLn "Can't parse command arguments:"
-         putStrLn $ unlines es
+       InvalidOption ys => do
+         putStrLn "Invalid command"
          runHelp help
          exitWith $ ExitFailure 254
-       Valid cmd => do
+       Done cmd => do
          exitCode <- runCommand cmd
          exitWith $ case choose (exitCode == 0) of
            Right x => ExitFailure exitCode
