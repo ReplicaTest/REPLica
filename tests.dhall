@@ -1,6 +1,8 @@
 let Replica = ./dhall/replica.dhall
 let Meta = ./dhall/meta.dhall
 
+let parsing_errors = ./tests/parsing_errors.dhall
+
 let tests : Replica.Replica = [
    { mapKey = "simplest_success"
    , mapValue =
@@ -107,7 +109,6 @@ let tests : Replica.Replica = [
         with description = Some "Dependencies that aren't included in the selected tests are ignored"
         with succeed = Some True
         with tags = ["meta", "require", "run"]
-
    },
    { mapKey = "testPunitive"
    , mapValue =
@@ -117,7 +118,6 @@ let tests : Replica.Replica = [
         with description = Some "Test the punitive mode"
         with succeed = Some False
         with tags = ["punitive", "meta", "run"]
-
    },
    { mapKey = "testBeforeTestFailImpact"
    , mapValue =
@@ -125,6 +125,7 @@ let tests : Replica.Replica = [
                                     , testFile = "tests.json"})
         with description = Some "we should be able to fallback to a normal behaviour after a failure of beforeTest"
         with tags = ["beforeTest"]
-   }]
+   }
+   ]
 
-in tests
+in tests # parsing_errors

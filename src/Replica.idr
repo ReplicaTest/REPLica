@@ -57,7 +57,7 @@ main = do
          runHelp help
          exitWith $ ExitFailure 254
        InvalidOption ys => do
-         putStrLn "Invalid command"
+         putStrLn "Invalid command : \{ys.head}"
          runHelp help
          exitWith $ ExitFailure 254
        Done cmd => do
