@@ -366,7 +366,7 @@ getLastFailures = do
   lastLog <- catchNew (readFile logFile)
     (\err : FSError => throw $ CantAccessTestFile logFile)
   let Just json = parse lastLog
-    | Nothing => throw $ InvalidJSON []
+    | Nothing => throw $ InvalidJSON ["Can't parse JSON (invalid syntax)"]
   let Valid report = parseReport json
     | Error err => throw $ InvalidJSON err
   let notWorking = fst <$> filter (not . isSuccess . snd) report

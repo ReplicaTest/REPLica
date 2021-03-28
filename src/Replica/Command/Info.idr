@@ -60,14 +60,12 @@ defaultInfo = MkInfo
   defaultGlobal
 
 export
-parseInfo : List String -> Either String InfoAction
-parseInfo ("info"::xs) =
-  either (\x => Left "Unknown option \{x}") buildInfo
-  $ parse (initBuilder defaultInfo) optParseInfo xs
-  where
-    buildInfo : Builder InfoAction' -> Either String InfoAction
-    buildInfo = maybe (Left "File is not set") pure . build
-parseInfo _ = Left "Not an info action"
+parseInfo : List1 String -> ParseResult InfoAction
+parseInfo ("info":::xs) = case parse (initBuilder defaultInfo) optParseInfo xs of
+  InvalidMix reason => InvalidMix reason
+  InvalidOption ys => InvalidMix "Unknown option: \{ys.head}"
+  Done x => maybe (InvalidMix "File is not set") Done $ build x
+parseInfo xs = InvalidOption xs
 
 export
 helpInfo : Help

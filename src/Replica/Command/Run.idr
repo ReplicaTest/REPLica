@@ -150,11 +150,13 @@ defaultRun = MkRunAction
        defaultGlobal
 
 export
-parseRun : List String -> Either String RunAction
-parseRun ("run"::xs) = do
-    builder <- parse (initBuilder defaultRun) optParseRun xs
-    maybe (Left "Some mandatory settings are missing") Right $ build builder
-parseRun _ = Left "Not a run action"
+parseRun : List1 String -> ParseResult RunAction
+parseRun ("run":::xs) = do
+    case parse (initBuilder defaultRun) optParseRun xs of
+         InvalidMix reason => InvalidMix reason
+         InvalidOption ys  => InvalidMix $ "Unknown option: " ++ ys.head
+         Done builder      => maybe (InvalidMix "No test file given") Done $ build builder
+parseRun xs = InvalidOption xs
 
 export
 helpRun : Help
