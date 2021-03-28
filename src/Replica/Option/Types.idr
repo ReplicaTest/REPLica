@@ -128,30 +128,29 @@ namespace Parser
 
   public export
   data ParseResult a
-    = InvalidOption (List1 String) a
+    = InvalidOption (List1 String)
     | InvalidMix String -- reason
     | Done a
 
   export
-  parse' : b ->
-    OptParse b a ->
-    List String ->
-    ParseResult b
-  parse' acc o [] = Done acc
-  parse' acc o (x::xs) = let
-    Just (xs', f) = runApM (\p => partParser p (x::xs)) o
-      | Nothing => InvalidOption (x:::xs) acc
-    in either
-         InvalidMix
-         (\y => parse' y o $ assert_smaller (x::xs) xs')
-         (f acc)
+  Functor ParseResult where
+    map func (InvalidOption xs) = InvalidOption xs
+    map func (InvalidMix x) = InvalidMix x
+    map func (Done x) = Done (func x)
 
   export
-  parse : a -> OptParse a b -> List String -> Either String a
-  parse init opt xs = case parse' init opt xs of
-    InvalidOption ys x => Left "Unknown option \{head ys}"
-    InvalidMix x => Left "Invalid ocmmand \{x}"
-    Done x => Right x
+  parse : a ->
+    OptParse a b ->
+    List String ->
+    ParseResult a
+  parse acc o [] = Done acc
+  parse acc o (x::xs) = let
+    Just (xs', f) = runApM (\p => partParser p (x::xs)) o
+      | Nothing => InvalidOption (x:::xs)
+    in either
+         InvalidMix
+         (\y => parse y o $ assert_smaller (x::xs) xs')
+         (f acc)
 
 namespace Default
 
