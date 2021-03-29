@@ -117,7 +117,7 @@ infoReplica :
     ] e => App e ()
 infoReplica = do
   debug $ "Info: \{show !(get InfoContext)}"
-  repl <- getReplica
   debug $ show !(get GlobalConfig)
   putStrLn ""
-  traverse_ (\t => new t displayTests) repl.tests
+  tests <- defineActiveTests
+  traverse_ (\t => new t displayTests) tests
