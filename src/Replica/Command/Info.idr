@@ -1,5 +1,7 @@
 module Replica.Command.Info
 
+import Data.String
+
 import Replica.Help
 import Replica.Option.Filter
 import Replica.Option.Global
@@ -31,6 +33,13 @@ TyTraversable InfoAction' where
       (func x.showExpectation)
       (tyTraverse func x.filter) (tyTraverse func x.global)
       |]
+
+export
+Show InfoAction where
+  show i = unwords [ "MkInfo"
+                   , show i.showExpectation
+                   , show i.filter
+                   , show i.global]
 
 showExpectationPart : Part (Builder InfoAction') Bool
 showExpectationPart = inj $ MkOption

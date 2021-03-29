@@ -1,5 +1,5 @@
 let Replica = ./dhall/replica.dhall
-let Meta = ./dhall/meta.dhall
+let Meta = ./tests/meta.dhall
 
 let parsing_errors = ./tests/parsing_errors.dhall
 

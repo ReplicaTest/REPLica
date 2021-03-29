@@ -1,5 +1,5 @@
 let Replica = ../dhall/replica.dhall
-let Meta = ../dhall/meta.dhall
+let Meta = ./meta.dhall
 
 let tests : Replica.Replica = [
   { mapKey = "unknown_command"
@@ -10,6 +10,7 @@ let tests : Replica.Replica = [
                         , testFile = "tests.json"
                         })
       with description = Some "Unknown commands are rejected, showing help"
+      with tags = ["meta","parser"]
   },
   { mapKey = "unknown_parameter"
   , mapValue =
@@ -18,6 +19,7 @@ let tests : Replica.Replica = [
                                   , testFile = "tests.json"
                                   })
       with description = Some "If a parameter doesn't exist, display an error message and the help"
+      with tags = ["meta","parser"]
   },
   { mapKey = "opposite_include_exclude"
   , mapValue =
@@ -26,6 +28,7 @@ let tests : Replica.Replica = [
                                   , testFile = "tests.json"
                                   })
       with description = Some "If a test is both included and rejected, the command fails"
+      with tags = ["meta","parser"]
   },
   { mapKey = "opposite_include_exclude_tags"
   , mapValue =
@@ -34,6 +37,7 @@ let tests : Replica.Replica = [
                                   , testFile = "tests.json"
                                   })
       with description = Some "If a tag is both included and rejected, the command fails"
+      with tags = ["meta","parser"]
   }
   ]
 

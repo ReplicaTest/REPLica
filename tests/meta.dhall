@@ -1,4 +1,4 @@
-let Replica = ./replica.dhall
+let Replica = ../dhall/replica.dhall
 
 let concatSep = https://prelude.dhall-lang.org/v20.1.0/Text/concatSep
 

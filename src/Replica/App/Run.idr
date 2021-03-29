@@ -355,8 +355,7 @@ filterTests s r = do
   pure $ foldl (\p, t => validate t.name p) (buildPlan selected) (r ++ rejected)
 
 getLastFailures : FileSystem (FSError :: e) =>
-  Has [ State RunContext RunAction
-      , State GlobalConfig Global
+  Has [ State GlobalConfig Global
       , Exception ReplicaError
       , Console
       ] e => App e (List Test, List Test)
@@ -381,8 +380,7 @@ defineActiveTests : FileSystem (FSError :: e) =>
       , Console
       ] e => App e TestPlan
 defineActiveTests = do
-  last <- the (App e (List Test, List Test)) $
-     if !((.filter.lastFailures) <$> get RunContext)
+  last <- if !((.filter.lastFailures) <$> get RunContext)
         then getLastFailures
         else do
           repl <- getReplica
@@ -401,7 +399,7 @@ runReplica : SystemIO (SystemError :: TestError :: e) =>
       , Console
       ] e => App e Stats
 runReplica = do
-  debug $ "Command: \{show !(get RunContext)}"
+  debug $ "Run: \{show !(get RunContext)}"
   rDir <- prepareReplicaDir
   plan <- defineActiveTests
   log $ displayPlan plan
