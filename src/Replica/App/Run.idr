@@ -187,6 +187,19 @@ getExpected given = do
         MissingFile _ => pure Nothing
         err => throw $ FileSystemError "Cannot read expectation")
 
+generateInput : FileSystem (FSError :: e) =>
+      State CurrentTest Test e =>
+      Exception TestError e =>
+      App e (Maybe String)
+generateInput = do
+  Just input <- input <$> get CurrentTest
+    | _ => pure Nothing
+  f <- defaultInput <$> get CurrentTest
+  catchNew (writeFile f input)
+    (\e : FSError => throw $
+          FileSystemError "Can't write input file \{f}")
+  pure (Just f)
+
 testCore : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
@@ -198,7 +211,8 @@ testCore : SystemIO (SystemError :: e) =>
 testCore = do
   t <- get CurrentTest
   outputFile <- getOutputFile
-  exitStatus <- handle (system $ "(\{t.command}) > \"\{outputFile}\"")
+  inputFile <- generateInput
+  exitStatus <- handle (system $ "(\{t.command}) \{maybe "" ("< " ++ )inputFile}> \"\{outputFile}\"")
     (const $ pure 0)
     (\(Err n) => pure n)
   output <- catchNew (readFile $ outputFile)

@@ -8,6 +8,7 @@ let Test : Type =
   , beforeTest : List Text
   , afterTest : List Text
   , command : Text
+  , input : Optional Text
   , succeed : Optional Bool
   }
 
@@ -20,6 +21,7 @@ let Minimal =
     , tags = [] : List Text
     , beforeTest = [] : List Text
     , afterTest = [] : List Text
+    , input = None Text
     , succeed = None Bool
     }
   }

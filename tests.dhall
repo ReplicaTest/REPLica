@@ -125,6 +125,11 @@ let tests : Replica.Replica = [
                                     , testFile = "tests.json"})
         with description = Some "we should be able to fallback to a normal behaviour after a failure of beforeTest"
         with tags = ["beforeTest"]
+   },
+   { mapKey = "testInput"
+   , mapValue =
+       Replica.Success::{command = "wc", input = Some "hello, world"}
+        with description = Some "pass input to the command"
    }
    ]
 
