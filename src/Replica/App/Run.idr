@@ -188,13 +188,14 @@ getExpected given = do
         err => throw $ FileSystemError "Cannot read expectation")
 
 generateInput : FileSystem (FSError :: e) =>
-      State CurrentTest Test e =>
-      Exception TestError e =>
+      Has [ State CurrentTest Test
+          , State GlobalConfig Global
+          , Exception TestError ] e =>
       App e (Maybe String)
 generateInput = do
   Just input <- input <$> get CurrentTest
     | _ => pure Nothing
-  f <- defaultInput <$> get CurrentTest
+  f <- getInputFile
   catchNew (writeFile f input)
     (\e : FSError => throw $
           FileSystemError "Can't write input file \{f}")
