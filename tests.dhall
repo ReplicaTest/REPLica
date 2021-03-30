@@ -2,6 +2,7 @@ let Replica = ./dhall/replica.dhall
 let Meta = ./tests/meta.dhall
 
 let parsing_errors = ./tests/parsing_errors.dhall
+let idris = ./tests/idris.dhall
 
 let tests : Replica.Replica = [
    { mapKey = "simplest_success"
@@ -133,4 +134,4 @@ let tests : Replica.Replica = [
    }
    ]
 
-in tests # parsing_errors
+in tests # parsing_errors # idris
