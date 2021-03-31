@@ -129,7 +129,7 @@ let tests : Replica.Replica = [
    },
    { mapKey = "testInput"
    , mapValue =
-       Replica.Success::{command = "wc", input = Some "hello, world"}
+       Replica.Success::{command = "cat", input = Some "hello, world"}
         with description = Some "pass input to the command"
    }
    ]
