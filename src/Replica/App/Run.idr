@@ -187,6 +187,20 @@ getExpected given = do
         MissingFile _ => pure Nothing
         err => throw $ FileSystemError "Cannot read expectation")
 
+generateInput : FileSystem (FSError :: e) =>
+      Has [ State CurrentTest Test
+          , State GlobalConfig Global
+          , Exception TestError ] e =>
+      App e (Maybe String)
+generateInput = do
+  Just input <- input <$> get CurrentTest
+    | _ => pure Nothing
+  f <- getInputFile
+  catchNew (writeFile f input)
+    (\e : FSError => throw $
+          FileSystemError "Can't write input file \{f}")
+  pure (Just f)
+
 testCore : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
@@ -198,7 +212,10 @@ testCore : SystemIO (SystemError :: e) =>
 testCore = do
   t <- get CurrentTest
   outputFile <- getOutputFile
-  exitStatus <- handle (system $ "(\{t.command}) > \"\{outputFile}\"")
+  inputFile <- generateInput
+  let cmd = "(\{t.command}) \{maybe "" ("< " ++ )inputFile} > \"\{outputFile}\""
+  log $ withOffset 2 "Running command: \{cmd}"
+  exitStatus <- handle (system cmd)
     (const $ pure 0)
     (\(Err n) => pure n)
   output <- catchNew (readFile $ outputFile)
@@ -218,7 +235,6 @@ performTest : SystemIO (SystemError :: e) =>
 performTest = do
   t <- get CurrentTest
   runAll (Just "Before") InitializationFailed t.beforeTest
-  log $ withOffset 2 "Running command: \{t.command}"
   res <- testCore
   runAll (Just "After") (WrapUpFailed res) t.afterTest
   pure res

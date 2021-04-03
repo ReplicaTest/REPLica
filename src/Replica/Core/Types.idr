@@ -17,6 +17,7 @@ record Test where
   afterTest : List String
   -- env: Map String String
   command: String
+  input : Maybe String
   mustSucceed : Maybe Bool
 
 export
@@ -31,6 +32,7 @@ Show Test where
     , show x.beforeTest
     , show x.afterTest
     , show x.command
+    , show x.input
     , show x.mustSucceed
     ]
 
@@ -41,6 +43,11 @@ defaultExpected t = "\{t.name}.expected"
 export
 defaultOutput : Test -> String
 defaultOutput t = "\{t.name}.output"
+
+export
+defaultInput : Test -> String
+defaultInput t = "\{t.name}.input"
+
 
 
 public export
@@ -57,14 +64,6 @@ public export
 data FailReason : Type where
   WrongStatus : (expectSuccess : Bool) -> FailReason
   WrongOutput : OutputError -> FailReason
-
-{-
-export
-Show FailReason where
-  show (WrongStatus True) = "Fails while it should pass"
-  show (WrongStatus False) = "Pass but it should fail"
-  show (WrongOutput x) = "WrongOutput"
-  -}
 
 export
 displayFailReason : FailReason -> String

@@ -69,6 +69,11 @@ validateCommand (Just (JString str)) = Valid str
 validateCommand Nothing = Error ["command is missing"]
 validateCommand (Just x) = Error ["Command must be a string, found \{show x}"]
 
+validateInput : Maybe JSON -> Validation (List String) (Maybe String)
+validateInput (Just (JString str)) = Valid (Just str)
+validateInput Nothing = Valid Nothing
+validateInput (Just x) = Error ["input must be a string, found \{show x}"]
+
 validateStatus : Maybe JSON -> Validation (List String) (Maybe Bool)
 validateStatus Nothing = Valid empty
 validateStatus (Just JNull) = Valid empty
@@ -86,6 +91,7 @@ jsonToTest str (JObject xs) =
   (validateBefore $ lookup "beforeTest" xs)
   (validateAfter $ lookup "afterTest" xs)
   (validateCommand $ lookup "command" xs)
+  (validateInput $ lookup "input" xs)
   (validateStatus $ lookup "succeed" xs)
   |]
 jsonToTest str json =
