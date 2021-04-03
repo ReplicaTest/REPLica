@@ -1,4 +1,4 @@
-let Replica = ./replica.dhall
+let Replica = https://raw.githubusercontent.com/berewt/REPLica/main/dhall/replica.dhall
 
 let fold =
       https://prelude.dhall-lang.org/v20.1.0/Optional/fold.dhall
