@@ -213,7 +213,9 @@ testCore = do
   t <- get CurrentTest
   outputFile <- getOutputFile
   inputFile <- generateInput
-  exitStatus <- handle (system $ "(\{t.command}) \{maybe "" ("< " ++ )inputFile}> \"\{outputFile}\"")
+  let cmd = "(\{t.command}) \{maybe "" ("< " ++ )inputFile} > \"\{outputFile}\""
+  log $ withOffset 2 "Running command: \{cmd}"
+  exitStatus <- handle (system cmd)
     (const $ pure 0)
     (\(Err n) => pure n)
   output <- catchNew (readFile $ outputFile)
@@ -233,7 +235,6 @@ performTest : SystemIO (SystemError :: e) =>
 performTest = do
   t <- get CurrentTest
   runAll (Just "Before") InitializationFailed t.beforeTest
-  log $ withOffset 2 "Running command: \{t.command}"
   res <- testCore
   runAll (Just "After") (WrapUpFailed res) t.afterTest
   pure res

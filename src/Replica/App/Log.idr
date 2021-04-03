@@ -34,6 +34,6 @@ Console e => State GlobalConfig Global e => Log e where
   logWithLevel lvl content = do
     Just threshold <- map logLevel $ get GlobalConfig
       | Nothing => pure ()
-    if lvl <= threshold
+    if lvl >= threshold
        then putStrLn content
        else pure ()

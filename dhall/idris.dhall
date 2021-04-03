@@ -1,5 +1,8 @@
 let Replica = ./replica.dhall
 
+let fold =
+      https://prelude.dhall-lang.org/v20.1.0/Optional/fold.dhall
+
 let concatSep =
       https://prelude.dhall-lang.org/v20.1.0/Text/concatSep.dhall sha256:e4401d69918c61b92a4c0288f7d60a6560ca99726138ed8ebc58dca2cd205e58
 
@@ -8,41 +11,69 @@ let show =
 
 let idris2_exe = env:IDRIS2 as Text ? "idris2"
 
-let commonOptions = [ "--no-color", "--console-width 0", "--no-banner" ]
-
 let Context
     : Type
-    = < AutoPackage | Package : Text | File : Text | None >
-
-let Input = < OneLiner : Text | MultiLine : Text >
+    = < Package : Text | File : Text | None >
 
 let contextParam =
       \(c : Context) ->
         merge
-          { AutoPackage = "--find-ipkg"
-          , Package = \(str : Text) -> "--repl " ++ str
-          , File = \(str : Text) -> str
-          , None = ""
+          { Package = \(str : Text) -> ["--repl ", str]
+          , File = \(str : Text) -> [str]
+          , None = [] : List Text
           }
           c
 
+let OneLineContent =
+      { source : Optional Text, input : Text, extraOptions : List Text }
+
+let MultiLineContent =
+      { context : Context, input : Text, extraOptions : List Text }
+
 let Test
     : Type
-    = { context : Context, input : Input, extraOptions : List Text }
+    = < OneLine : OneLineContent | MultiLine : MultiLineContent >
 
-let Minimal = { Type = Test, default.extraOptions = [] : List Text }
+let getContext
+    : Test -> Context
+    = \(t : Test) ->
+    merge
+      { OneLine = \(x : OneLineContent) ->
+          (fold Text x.source Context (\(f : Text) -> Context.File f) Context.None)
+      , MultiLine = \(x : MultiLineContent) -> x.context
+      }
+      t
+
+let getInput
+    : Test -> Optional Text
+    = \(t : Test) ->
+    merge
+      { OneLine   = \(x : OneLineContent) -> None Text
+      , MultiLine = \(x : MultiLineContent) -> Some x.input
+      }
+      t
+
+let buildOneLineCommand
+    : OneLineContent -> List Text
+    = \(t : OneLineContent) ->
+        [idris2_exe] # t.extraOptions #
+        (fold Text t.source (List Text) (\(file : Text) -> [file]) ([] : List Text)) #
+        ["--client ${show t.input}"]
+
+let buildMultiLineCommand
+    : MultiLineContent -> List Text
+    = \(t : MultiLineContent) ->
+        [idris2_exe] # t.extraOptions #
+        (contextParam t.context)
+
 
 let buildCommand =
       \(t : Test) ->
-            "${idris2_exe} ${concatSep
-                               " "
-                               (commonOptions # t.extraOptions)} ${contextParam
-                                                                     t.context}"
-        ++  merge
-              { OneLiner = \(str : Text) -> " --client ${show str}"
-              , MultiLine = \(str : Text) -> ""
+            concatSep " " (merge
+              { OneLine = buildOneLineCommand
+              , MultiLine = buildMultiLineCommand
               }
-              t.input
+              t)
 
 let clean = "rm -rf build"
 
@@ -51,20 +82,22 @@ let build
     = \(t : Test) ->
         Replica.Minimal::{
         , command = buildCommand t
-        , input =
-            merge
-              { OneLiner = \(str : Text) -> None Text
-              , MultiLine = \(str : Text) -> Some str
-              }
-              t.input
+        , input = getInput t
         , afterTest =
             merge
-              { AutoPackage = [ clean ]
-              , Package = \(str : Text) -> [ clean ]
+              { Package = \(str : Text) -> [ clean ]
               , File = \(str : Text) -> [ clean ]
               , None = [] : List Text
               }
-              t.context
+              (getContext t)
         }
 
-in  { build, Test, Context, Input, Minimal }
+let oneLineTest
+    : OneLineContent -> Replica.Test
+    = \(content : OneLineContent) -> build (Test.OneLine content)
+
+let multiLineTest
+    : MultiLineContent -> Replica.Test
+    = \(content : MultiLineContent) -> build (Test.MultiLine content)
+
+in  { build, Test, Context, OneLineContent, MultiLineContent, oneLineTest, multiLineTest }
