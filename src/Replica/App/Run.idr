@@ -150,8 +150,10 @@ checkOutput mustSucceed status expectedOutput output
     ctx <- get RunContext
     let Fail err = checkExpectation
       | Success => pure $ checkStatus
+      | Skipped => pure $ Skipped
     let Success = checkStatus
       | Fail err2 => pure $ Fail $ err ++ err2
+      | Skipped => pure $ Skipped
     if ctx.interactive
        then askForNewGolden expectedOutput output
        else pure $ Fail err
@@ -276,6 +278,8 @@ testOutput :
 testOutput name (Left y) = do
   putStr (withOffset 2 $ (!yellow "\{!err} \{name}: "))
   putStrLn (displayTestError y)
+testOutput name (Right Skipped) =
+   putStrLn $ withOffset 2 "\{!pending} \{name}"
 testOutput name (Right Success) = do
   if !(hideSuccess <$> get RunContext)
      then pure ()
@@ -306,7 +310,10 @@ runAllTests plan = do
   where
     processTest : Test -> App e (String, Either TestError TestResult)
     processTest x = do
+
       rdir <- getReplicaDir
+      let False = x.pending
+        | True => pure (x.name, Right Skipped)
       r <- handle
              (new x runTest)
              (pure . MkPair x.name . Right)
@@ -355,6 +362,8 @@ report x = do
         withOffset 2 "\{!ko} (Failure): \{show x.failures} / \{show nb}"
     , guard (x.errors > 0) $>
         withOffset 2 "\{!err}  (Errors): \{show x.errors} / \{show nb}"
+    , guard (x.skipped > 0) $>
+        withOffset 2 "\{!pending}  (Pending): \{show x.skipped} / \{show nb}"
     ]
 
 

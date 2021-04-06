@@ -9,6 +9,7 @@ public export
 record Test where
   constructor MkTest
   name: String
+  pending : Bool
   description: Maybe String
   require : List String
   workingDir : Maybe String
@@ -25,6 +26,7 @@ Show Test where
   show x = unwords
     [ "MkTest"
     , show x.name
+    , show x.pending
     , show x.description
     , show x.require
     , show x.workingDir
@@ -87,6 +89,7 @@ public export
 data TestResult
   = Success
   | Fail (List FailReason)
+  | Skipped
 
 namespace TestResult
 
@@ -94,6 +97,7 @@ namespace TestResult
   toJSON : TestResult -> JSON
   toJSON Success = JString "Success"
   toJSON (Fail xs) = JObject [("Fail", JArray $ map toJSON xs)]
+  toJSON Skipped = JString "Skipped"
 
 
 public export
@@ -138,6 +142,7 @@ record Stats where
   successes : Nat
   failures  : Nat
   errors    : Nat
+  skipped   : Nat
 
 export
 Semigroup Stats where
@@ -145,10 +150,11 @@ Semigroup Stats where
     (x.successes + y.successes)
     (x.failures + y.failures)
     (x.errors + y.errors)
+    (x.skipped + y.skipped)
 
 export
 Monoid Stats where
-  neutral = MkStats 0 0 0
+  neutral = MkStats 0 0 0 0
 
 export
 asStats : List (Either TestError TestResult) -> Stats
@@ -158,10 +164,11 @@ asStats = foldMap go
     go (Left x) = record {errors = 1} neutral
     go (Right Success) = record {successes = 1} neutral
     go (Right (Fail xs)) = record {failures = 1} neutral
+    go (Right Skipped) = record {skipped = 1} neutral
 
 export
 countTests : Stats -> Nat
-countTests x = x.successes + x.failures + x.errors
+countTests x = x.successes + x.failures + x.errors + x.skipped
 
 export
 resultToJSON : Either TestError TestResult -> JSON

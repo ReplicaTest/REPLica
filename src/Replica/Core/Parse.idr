@@ -8,6 +8,11 @@ import Language.JSON
 
 %default total
 
+validatePending : Maybe JSON -> Validation (List String) Bool
+validatePending Nothing = Valid False
+validatePending (Just (JBoolean x)) = Valid x
+validatePending x = Error ["PendingA must be a boolean, found: \{show x}"]
+
 validateDesc : Maybe JSON -> Validation (List String) (Maybe String)
 validateDesc Nothing = Valid empty
 validateDesc (Just JNull) = Valid empty
@@ -84,6 +89,7 @@ jsonToTest : String -> JSON -> Validation (List String) Test
 jsonToTest str (JObject xs) =
   [| MkTest
   (pure str)
+  (validatePending $ lookup "pending" xs)
   (validateDesc $ lookup "description" xs)
   (validateRequireList $ lookup "require" xs)
   (validateWD $ lookup "workingDir" xs)
@@ -140,6 +146,7 @@ parseFailReason json =
 parseTestResult : JSON -> Validation (List String) TestResult
 parseTestResult (JObject [("Fail", JArray cause)]) = map Fail $ traverse parseFailReason cause
 parseTestResult (JString "Success") = Valid Success
+parseTestResult (JString "Scekipped") = Valid Skipped
 parseTestResult x = Error ["\{show x} can't be a valid result"]
 
 parseTestError : JSON -> Validation (List String) TestError

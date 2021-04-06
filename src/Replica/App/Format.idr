@@ -27,6 +27,12 @@ err = do
   pure $ if ascii then "ERR" else "⚠️ "
 
 export
+pending : State GlobalConfig Global e => App e String
+pending = do
+  ascii <- map ascii $ get GlobalConfig
+  pure $ if ascii then "ZzZ" else "💤"
+
+export
 qmark : State GlobalConfig Global e => App e String
 qmark = do
   ascii <- map ascii $ get GlobalConfig

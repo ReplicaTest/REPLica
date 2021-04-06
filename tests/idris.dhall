@@ -1,7 +1,7 @@
 let Replica = ../dhall/replica.dhall
 let Idris = ../dhall/idris.dhall
 
-in [
+let tests : Replica.Replica = [
   { mapKey = "nothingButALine"
   , mapValue = (Idris.oneLineTest { source = None Text
                                   , input = "Just \"Work\""
@@ -33,3 +33,5 @@ in [
      with tags = ["idris", "inline", "idris-file"]
   }
   ]
+
+in tests

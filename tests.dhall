@@ -120,6 +120,14 @@ let tests : Replica.Replica = [
         with succeed = Some False
         with tags = ["punitive", "meta", "run"]
    },
+   { mapKey = "testPending"
+   , mapValue =
+        (Meta.replicaTest Meta.Run::{ directory = "tests/replica/onePending"
+                                    , testFile = "tests.json"})
+        with description = Some "Test that pending tests aren't processed"
+        with succeed = Some True
+        with tags = ["pending", "meta", "run"]
+   },
    { mapKey = "testBeforeTestFailImpact"
    , mapValue =
         (Meta.replicaTest Meta.Run::{ directory = "tests/replica/beforeFailed"
