@@ -12,8 +12,8 @@ import Replica.Other.Decorated
 %default total
 
 public export
-record RunAction' (f : Type -> Type) where
-  constructor MkRunAction
+record RunCommand' (f : Type -> Type) where
+  constructor MkRunCommand
   workingDir : f String
   interactive : f Bool
   threads : f Nat
@@ -23,12 +23,12 @@ record RunAction' (f : Type -> Type) where
   global : Global' f
 
 public export
-RunAction : Type
-RunAction = Done RunAction'
+RunCommand : Type
+RunCommand = Done RunCommand'
 
-TyMap RunAction' where
+TyMap RunCommand' where
   tyMap func x =
-    MkRunAction
+    MkRunCommand
       (func x.workingDir)
       (func x.interactive)
       (func x.threads)
@@ -37,9 +37,9 @@ TyMap RunAction' where
       (tyMap func x.filter)
       (tyMap func x.global)
 
-TyTraversable RunAction' where
+TyTraversable RunCommand' where
   tyTraverse func x = [|
-    MkRunAction
+    MkRunCommand
       (func x.workingDir)
       (func x.interactive)
       (func x.threads)
@@ -50,9 +50,9 @@ TyTraversable RunAction' where
       |]
 
 export
-Show RunAction where
+Show RunCommand where
   show x = unwords
-    [ "MkRunAction"
+    [ "MkRunCommand"
     , show x.workingDir
     , show x.interactive
     , show x.threads
@@ -62,19 +62,19 @@ Show RunAction where
     , show x.global
     ]
 
-interactivePart : Part (Builder RunAction') Bool
+interactivePart : Part (Builder RunCommand') Bool
 interactivePart = inj $ MkOption
       (singleton $ MkMod (singleton "interactive") ['i'] (Left True)
             "(re)generate golden number if different/missing")
       False
       go
   where
-    go : Bool -> Builder RunAction' -> Either String (Builder RunAction')
+    go : Bool -> Builder RunCommand' -> Either String (Builder RunCommand')
     go = ifSame interactive
                 (\x => record {interactive = Right x})
                 (const $ const "Contradictory values for interactive")
 
-workingDirPart : Part (Builder RunAction') String
+workingDirPart : Part (Builder RunCommand') String
 workingDirPart = inj $ MkOption
       (singleton $ MkMod ("working-dir" ::: ["wdir"]) ['w']
           (Right $ MkValue "DIR" Just)
@@ -82,13 +82,13 @@ workingDirPart = inj $ MkOption
       "."
       go
   where
-    go : String -> Builder RunAction' -> Either String (Builder RunAction')
+    go : String -> Builder RunCommand' -> Either String (Builder RunCommand')
     go = one workingDir
              (\x => record {workingDir = Right x})
              (\x, y => "More than one working directony were given: \{y}, \{x}")
 
 
-threadsPart : Part (Builder RunAction') Nat
+threadsPart : Part (Builder RunCommand') Nat
 threadsPart = inj $ MkOption
       (singleton $ MkMod (singleton "threads") ['n']
           (Right $ MkValue "N" parsePositive)
@@ -96,12 +96,12 @@ threadsPart = inj $ MkOption
       1
       go
   where
-    go : Nat -> Builder RunAction' -> Either String (Builder RunAction')
+    go : Nat -> Builder RunCommand' -> Either String (Builder RunCommand')
     go = one threads
              (\x => record {threads = Right x})
              (\x, y => "More than one threads values were given: \{show y}, \{show x}")
 
-punitivePart : Part (Builder RunAction') Bool
+punitivePart : Part (Builder RunCommand') Bool
 punitivePart = inj $ MkOption
       (singleton $ MkMod ("punitive" ::: ["fail-fast"]) ['p']
           (Left True)
@@ -109,12 +109,12 @@ punitivePart = inj $ MkOption
       False
       go
       where
-        go : Bool -> Builder RunAction' -> Either String (Builder RunAction')
+        go : Bool -> Builder RunCommand' -> Either String (Builder RunCommand')
         go = ifSame punitive
                     (\x => record {punitive = Right x})
                     (const $ const "Contradictory values for punitive mode")
 
-hideSuccessPart : Part (Builder RunAction') Bool
+hideSuccessPart : Part (Builder RunCommand') Bool
 hideSuccessPart = inj $ MkOption
       (singleton $ MkMod (toList1 ["hide-success", "fail-only"]) []
           (Left True)
@@ -122,14 +122,14 @@ hideSuccessPart = inj $ MkOption
       False
       go
       where
-        go : Bool -> Builder RunAction' -> Either String (Builder RunAction')
+        go : Bool -> Builder RunCommand' -> Either String (Builder RunCommand')
         go = ifSame hideSuccess
                     (\x => record {hideSuccess = Right x})
                     (const $ const "Contradictory values for hide success mode")
 
-optParseRun : OptParse (Builder RunAction') RunAction
+optParseRun : OptParse (Builder RunCommand') RunCommand
 optParseRun =
-    [| MkRunAction
+    [| MkRunCommand
        (liftAp workingDirPart)
        (liftAp interactivePart)
        (liftAp threadsPart)
@@ -139,8 +139,8 @@ optParseRun =
        (embed global (\x => record {global = x}) optParseGlobal)
     |]
 
-defaultRun : Default RunAction'
-defaultRun = MkRunAction
+defaultRun : Default RunCommand'
+defaultRun = MkRunCommand
        (defaultPart workingDirPart)
        (defaultPart interactivePart)
        (defaultPart threadsPart)
@@ -150,7 +150,7 @@ defaultRun = MkRunAction
        defaultGlobal
 
 export
-parseRun : List1 String -> ParseResult RunAction
+parseRun : List1 String -> ParseResult RunCommand
 parseRun ("run":::xs) = do
     case parse (initBuilder defaultRun) optParseRun xs of
          InvalidMix reason => InvalidMix reason
@@ -160,7 +160,7 @@ parseRun xs = InvalidOption xs
 
 export
 helpRun : Help
-helpRun = commandHelp {b = Builder RunAction'}
+helpRun = commandHelp {b = Builder RunCommand'}
   "run" "Run tests from a Replica JSON file"
   optParseRun
   (Just "JSON_TEST_FILE")

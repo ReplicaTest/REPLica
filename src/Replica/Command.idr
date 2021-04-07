@@ -14,18 +14,18 @@ import public Replica.Command.Run
 import public Replica.Command.Help
 
 public export
-Actions : Type
-Actions = Union Prelude.id [RunAction, InfoAction, Help]
+Commands : Type
+Commands = Union Prelude.id [RunCommand, InfoCommand, Help]
 
 export
-parseArgs : List1 String -> ParseResult Actions
+parseArgs : List1 String -> ParseResult Commands
 parseArgs xs = foldl1 go $ toList1 $ map (flip apply xs)
   [ map inj . parseRun
   , map inj . parseInfo
   , map inj . parseHelp
   ]
   where
-    go : ParseResult Actions -> ParseResult Actions -> ParseResult Actions
+    go : ParseResult Commands -> ParseResult Commands -> ParseResult Commands
     go (Done x) _ = Done x
     go _ (Done x) = Done x
     go (InvalidMix x) y = InvalidMix x

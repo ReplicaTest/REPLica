@@ -20,13 +20,13 @@ import Replica.Other.Validation
 %default total
 
 covering
-runRun : RunAction -> IO Int
+runRun : RunCommand -> IO Int
 runRun ctx = run $ new ctx.global $ new ctx $ handle runReplica
     (\stats => pure (cast $ stats.failures + stats.errors))
     (\err : ReplicaError => putStrLn (show err) >> pure 253)
 
 covering
-runInfo : InfoAction -> IO Int
+runInfo : InfoCommand -> IO Int
 runInfo info = run $ new info.global $ new info $ handle infoReplica
     (const $ pure 0)
     (\err : ReplicaError => putStrLn (show err) >> pure 253)
@@ -35,7 +35,7 @@ runHelp : Help -> IO ()
 runHelp = putStrLn . display
 
 covering
-runCommand : Actions -> IO Int
+runCommand : Commands -> IO Int
 runCommand a0 = let
   Left a1 = decomp a0
     | Right cmd => runRun cmd

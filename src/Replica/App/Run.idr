@@ -35,7 +35,7 @@ data RunContext : Type where
 
 prepareReplicaDir : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
-  Has [ State RunContext RunAction
+  Has [ State RunContext RunCommand
       , State GlobalConfig Global
       , Exception ReplicaError
       , Console
@@ -139,7 +139,7 @@ checkOutput :  SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
       , State GlobalConfig Global
-      , State RunContext RunAction
+      , State RunContext RunCommand
       , Exception TestError
       , Console ] e =>
   (mustSucceed : Maybe Bool) -> (status : Int) ->
@@ -176,7 +176,7 @@ checkOutput mustSucceed status expectedOutput output
 getExpected : FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
       , State GlobalConfig Global
-      , State RunContext RunAction
+      , State RunContext RunCommand
       , Exception TestError
       , Console
       ] e => String -> App e (Maybe String)
@@ -207,7 +207,7 @@ testCore : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
       , State GlobalConfig Global
-      , State RunContext RunAction
+      , State RunContext RunCommand
       , Exception TestError
       , Console
       ] e => App e TestResult
@@ -230,7 +230,7 @@ performTest : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
       , State GlobalConfig Global
-      , State RunContext RunAction
+      , State RunContext RunCommand
       , Exception TestError
       , Console
       ] e => App e TestResult
@@ -244,7 +244,7 @@ performTest = do
 runTest : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
-      , State RunContext RunAction
+      , State RunContext RunCommand
       , State GlobalConfig Global
       , Exception TestError
       , Console
@@ -271,7 +271,7 @@ runTest = do
       pure res
 
 testOutput :
-  Has [ State RunContext RunAction
+  Has [ State RunContext RunCommand
       , State GlobalConfig Global
       , Console
       ] e => String -> Either TestError TestResult -> App e ()
@@ -299,7 +299,7 @@ runAllTests : SystemIO (SystemError :: TestError :: e) =>
   SystemIO (SystemError :: e) =>
   FileSystem (FSError :: TestError :: e) =>
   Console (TestError :: e) =>
-  Has [ State RunContext RunAction
+  Has [ State RunContext RunCommand
       , State GlobalConfig Global
       , Console
       ] e =>  TestPlan -> App e (List (String, Either TestError TestResult))
@@ -368,7 +368,7 @@ report x = do
 
 
 filterTests : FileSystem (FSError :: e) =>
-  Has [ State RunContext RunAction
+  Has [ State RunContext RunCommand
       , State GlobalConfig Global
       , Exception ReplicaError
       , Console
@@ -399,7 +399,7 @@ getLastFailures = do
   pure (selected, rejected)
 
 defineActiveTests : FileSystem (FSError :: e) =>
-  Has [ State RunContext RunAction
+  Has [ State RunContext RunCommand
       , State GlobalConfig Global
       , Exception ReplicaError
       , Console
@@ -418,7 +418,7 @@ runReplica : SystemIO (SystemError :: TestError :: e) =>
   FileSystem (FSError :: TestError :: e) =>
   FileSystem (FSError :: e) =>
   Console (TestError :: e) =>
-  Has [ State RunContext RunAction
+  Has [ State RunContext RunCommand
       , State GlobalConfig Global
       , Exception ReplicaError
       , Console
