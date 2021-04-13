@@ -11,37 +11,37 @@ import Replica.Other.Decorated
 %default total
 
 public export
-record InfoAction' (f : Type -> Type) where
+record InfoCommand' (f : Type -> Type) where
   constructor MkInfo
   showExpectation : f Bool
   filter : Filter' f
   global : Global' f
 
 public export
-InfoAction : Type
-InfoAction = Done InfoAction'
+InfoCommand : Type
+InfoCommand = Done InfoCommand'
 
 export
-TyMap InfoAction' where
+TyMap InfoCommand' where
   tyMap func x = MkInfo
     (func x.showExpectation)
     (tyMap func x.filter) (tyMap func x.global)
 
 export
-TyTraversable InfoAction' where
+TyTraversable InfoCommand' where
   tyTraverse func x = [| MkInfo
       (func x.showExpectation)
       (tyTraverse func x.filter) (tyTraverse func x.global)
       |]
 
 export
-Show InfoAction where
+Show InfoCommand where
   show i = unwords [ "MkInfo"
                    , show i.showExpectation
                    , show i.filter
                    , show i.global]
 
-showExpectationPart : Part (Builder InfoAction') Bool
+showExpectationPart : Part (Builder InfoCommand') Bool
 showExpectationPart = inj $ MkOption
       ( singleton
         $ MkMod (singleton "expectations") ['e'] (Left True)
@@ -49,27 +49,27 @@ showExpectationPart = inj $ MkOption
       False
       go
   where
-    go : Bool -> Builder InfoAction' -> Either String (Builder InfoAction')
+    go : Bool -> Builder InfoCommand' -> Either String (Builder InfoCommand')
     go = ifSame showExpectation
                 (\x => record {showExpectation = Right x})
                 (const $ const "Contradictory values for expectations")
 
 
-optParseInfo : OptParse (Builder InfoAction') InfoAction
+optParseInfo : OptParse (Builder InfoCommand') InfoCommand
 optParseInfo = [|MkInfo
   (liftAp showExpectationPart)
   (embed filter (\x => record {filter = x}) optParseFilter)
   (embed global (\x => record {global = x}) optParseGlobal)
   |]
 
-defaultInfo : Default InfoAction'
+defaultInfo : Default InfoCommand'
 defaultInfo = MkInfo
   (defaultPart showExpectationPart)
   defaultFilter
   defaultGlobal
 
 export
-parseInfo : List1 String -> ParseResult InfoAction
+parseInfo : List1 String -> ParseResult InfoCommand
 parseInfo ("info":::xs) = case parse (initBuilder defaultInfo) optParseInfo xs of
   InvalidMix reason => InvalidMix reason
   InvalidOption ys => InvalidMix "Unknown option: \{ys.head}"
@@ -79,7 +79,7 @@ parseInfo xs = InvalidOption xs
 export
 helpInfo : Help
 helpInfo =
-  commandHelp {b = Builder InfoAction'}
+  commandHelp {b = Builder InfoCommand'}
     "info" "Display information about test suites"
     optParseInfo
     (Just "JSON_TEST_FILE")

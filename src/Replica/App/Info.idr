@@ -30,7 +30,7 @@ displayTestName : Console e =>
 displayTestName x = putStrLn $ "\{!qmark} " ++ (!bold "\{x}:")
 
 displayExpectation : FileSystem (FSError :: e) =>
-  Has [ State InfoContext InfoAction
+  Has [ State InfoContext InfoCommand
       , State GlobalConfig Global
       , State CurrentTest Test
       , Console] e => App e ()
@@ -46,7 +46,7 @@ displayExpectation = do
       pure . unlines . map (!blue . withOffset 6) . forget $ lines o
 
 filterTests : FileSystem (FSError :: e) =>
-  Has [ State InfoContext InfoAction
+  Has [ State InfoContext InfoCommand
       , State GlobalConfig Global
       , Exception ReplicaError
       , Console
@@ -74,7 +74,7 @@ getLastFailures = do
   pure $ filter (flip elem notWorking . name) repl.tests
 
 defineActiveTests : FileSystem (FSError :: e) =>
-  Has [ State InfoContext InfoAction
+  Has [ State InfoContext InfoCommand
       , State GlobalConfig Global
       , Exception ReplicaError
       , Console
@@ -88,7 +88,7 @@ defineActiveTests = do
   filterTests last
 
 displayTests : FileSystem (FSError :: e) =>
-  Has [ State InfoContext InfoAction
+  Has [ State InfoContext InfoCommand
       , State GlobalConfig Global
       , State CurrentTest Test
       , Console] e =>
@@ -110,7 +110,7 @@ export
 infoReplica :
   FileSystem (FSError :: e) =>
   Has
-    [ State InfoContext InfoAction
+    [ State InfoContext InfoCommand
     , State GlobalConfig Global
     , Exception ReplicaError
     , Console
