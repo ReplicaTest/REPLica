@@ -127,7 +127,7 @@ Supposed you have a `hello.dhall` file with this content, you can then do:
 
 ```
 # translate it to json
-dhall-to-json hello.dhall -o hello.json
+dhall-to-json --file hello.dhall -o hello.json
 # run the test
 replica run hello.json
 ```
