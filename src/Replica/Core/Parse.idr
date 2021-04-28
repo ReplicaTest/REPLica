@@ -24,6 +24,10 @@ validateRequire : JSON -> Validation (List String) String
 validateRequire (JString x) = Valid x
 validateRequire x = Error ["A requirement must be a testname, found: \{show x}"]
 
+validateExpectation : JSON -> Validation (List String) String
+validateExpectation (JString x) = Valid x
+validateExpectation x = Error ["An expectation must be a string, found: \{show x}"]
+
 validateRequireList : Maybe JSON -> Validation (List String) (List String)
 validateRequireList Nothing = Valid empty
 validateRequireList (Just JNull) = Valid empty
@@ -99,6 +103,7 @@ jsonToTest str (JObject xs) =
   (validateCommand $ lookup "command" xs)
   (validateInput $ lookup "input" xs)
   (validateStatus $ lookup "succeed" xs)
+  (traverse validateExpectation $ lookup "expectation" xs)
   |]
 jsonToTest str json =
   Error ["Expecting a JSON object for test '\{str}' and got: \{show json}"]

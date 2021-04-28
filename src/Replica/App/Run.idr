@@ -226,7 +226,7 @@ testCore = do
   output <- catchNew (readFile $ outputFile)
     (\e : FSError => throw $
           FileSystemError "Can't read output file \{outputFile}")
-  expected <- getExpected output
+  expected <- maybe (getExpected output) (pure . Just) t.expectation
   checkOutput t.mustSucceed exitStatus expected output
 
 -- the whole test execution, including pre and post operation

@@ -20,6 +20,7 @@ record Test where
   command: String
   input : Maybe String
   mustSucceed : Maybe Bool
+  expectation : Maybe String
 
 export
 Show Test where

@@ -11,6 +11,7 @@ let Test
       , command : Text
       , input : Optional Text
       , succeed : Optional Bool
+      , expectation : Optional Text
       , pending : Bool
       }
 
@@ -25,6 +26,7 @@ let Minimal =
         , afterTest = [] : List Text
         , input = None Text
         , succeed = None Bool
+        , expectation = None Text
         , pending = False
         }
       }

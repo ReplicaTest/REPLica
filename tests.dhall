@@ -20,6 +20,11 @@ let tests : Replica.Replica = [
         Replica.Failure::{command = "false"}
         with description = Some "Test a non null exit code"
    },
+   { mapKey = "test_given_expectation"
+   , mapValue = Replica.Success::{command = "echo \"Hello, world!\""}
+        with description = Some "We use the given expectation field if it exists"
+        with expectation = Some "Hello, world!\n"
+   },
    { mapKey = "testWorkingDir"
    , mapValue =
         Replica.Success::{command = "./run.sh"}
