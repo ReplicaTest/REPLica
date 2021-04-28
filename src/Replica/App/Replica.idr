@@ -67,13 +67,23 @@ setAbsoluteReplicaDir = do
        modify GlobalConfig (record {replicaDir = pwd </> rdir})
 
 export
+getSingleTestDir : Has
+  [ State CurrentTest Test
+  , State GlobalConfig Global ] e => App e String
+getSingleTestDir = do
+  d <- map replicaDir $ get GlobalConfig
+  t <- get CurrentTest
+  pure $ testDir d </> t.name
+
+
+export
 getInputFile : Has
   [ State CurrentTest Test
   , State GlobalConfig Global ] e => App e String
 getInputFile = do
   d <- map replicaDir $ get GlobalConfig
-  t <- get CurrentTest
-  pure $ testDir d </> defaultInput t
+  t <- getSingleTestDir
+  pure $ t </> defaultInput
 
 export
 getOutputFile : Has
@@ -81,8 +91,8 @@ getOutputFile : Has
   , State GlobalConfig Global ] e => App e String
 getOutputFile = do
   d <- map replicaDir $ get GlobalConfig
-  t <- get CurrentTest
-  pure $ testDir d </> defaultOutput t
+  t <- getSingleTestDir
+  pure $ t </> defaultOutput
 
 export
 getExpectedFile : Has
@@ -90,8 +100,8 @@ getExpectedFile : Has
   , State GlobalConfig Global ] e => App e String
 getExpectedFile = do
   d <- map replicaDir $ get GlobalConfig
-  t <- get CurrentTest
-  pure $ testDir d </> defaultExpected t
+  t <- getSingleTestDir
+  pure $ t </> defaultExpected
 
 export
 getReplica :

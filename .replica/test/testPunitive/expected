@@ -1,0 +1,7 @@
+------------------------------------------------------------
+[1mRunning tests...[0m
+  ✅  theChosen
+  [38;5;1m❌  unfortunate1: [Missing Golden] [Fails while it should pass][0m
+------------------------------------------------------------
+[1mSummary:[0m
+  ❌  (Failure): 1 / 1

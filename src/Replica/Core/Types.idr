@@ -39,16 +39,16 @@ Show Test where
     ]
 
 export
-defaultExpected : Test -> String
-defaultExpected t = "\{t.name}.expected"
+defaultExpected : String
+defaultExpected = "expected"
 
 export
-defaultOutput : Test -> String
-defaultOutput t = "\{t.name}.output"
+defaultOutput : String
+defaultOutput = "output"
 
 export
-defaultInput : Test -> String
-defaultInput t = "\{t.name}.input"
+defaultInput : String
+defaultInput = "input"
 
 
 

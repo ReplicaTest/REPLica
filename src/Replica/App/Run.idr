@@ -33,6 +33,7 @@ import Replica.Other.Validation
 
 data RunContext : Type where
 
+-- Create the folders needed by Replica (usually ./.replica/test and ./.replica/log)
 prepareReplicaDir : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State RunContext RunCommand
@@ -80,6 +81,7 @@ nativeShow : State GlobalConfig Global e =>
 nativeShow expected given =
   putStrLn $ unlines !(expectedvsGiven 0 expected given)
 
+-- Provide different ways to show the difference between expectations and givens
 showDiff : SystemIO (SystemError :: e) =>
   State GlobalConfig Global e =>
   State CurrentTest Test e =>
@@ -101,12 +103,13 @@ expectedVsGiven : SystemIO (SystemError :: e) =>
   Console e => Maybe String -> String -> App e ()
 expectedVsGiven old given = do
   let Just str = old
-        | Nothing => do
-    putStrLn "Expected: Nothing Found"
-    putStrLn "Given:"
-    putStrLn given
+    | Nothing => do
+      putStrLn "Expected: Nothing Found"
+      putStrLn "Given:"
+      putStrLn given
   showDiff !(diff <$> get GlobalConfig) str given
 
+-- on mismatch, check if we should replace the golden value
 askForNewGolden : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
@@ -226,6 +229,7 @@ testCore = do
   expected <- getExpected output
   checkOutput t.mustSucceed exitStatus expected output
 
+-- the whole test execution, including pre and post operation
 performTest : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
@@ -241,6 +245,7 @@ performTest = do
   runAll (Just "After") (WrapUpFailed res) t.afterTest
   pure res
 
+-- move to the right directory and perform the test
 runTest : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
@@ -252,6 +257,8 @@ runTest : SystemIO (SystemError :: e) =>
 runTest = do
   ctx <- get RunContext
   t <- get CurrentTest
+  testDir <- getSingleTestDir
+  catchNew (createDir testDir) continueIfExists
   let wd = fromMaybe ctx.workingDir t.workingDir
   log "Executing \{t.name}"
   debug $ withOffset 2 $ show t
@@ -269,6 +276,10 @@ runTest = do
         | Left err => changeDir pwd >> lift (throw err)
       changeDir pwd
       pure res
+    continueIfExists : FSError -> App e ()
+    continueIfExists (FileExists _) = pure ()
+    continueIfExists _ = throw $ FileSystemError "Cant't create or accesse test directory"
+
 
 testOutput :
   Has [ State RunContext RunCommand
