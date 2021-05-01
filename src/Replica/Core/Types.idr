@@ -21,6 +21,7 @@ record Test where
   input : Maybe String
   mustSucceed : Maybe Bool
   expectation : Maybe String
+  file : Maybe String
 
 export
 Show Test where
@@ -37,11 +38,17 @@ Show Test where
     , show x.command
     , show x.input
     , show x.mustSucceed
+    , show x.expectation
+    , show x.file
     ]
 
 export
 defaultExpected : String
 defaultExpected = "expected"
+
+export
+defaultFile : String
+defaultFile = "file"
 
 export
 defaultOutput : String
@@ -60,20 +67,26 @@ record Replica where
 
 public export
 data OutputError
-  = GoldenIsMissing
+  = GoldenIsMissing String
   | DifferentOutput String String
 
 public export
 data FailReason : Type where
   WrongStatus : (expectSuccess : Bool) -> FailReason
-  WrongOutput : OutputError -> FailReason
+  WrongOutput : Maybe String -> OutputError -> FailReason
+  ExpectedFileNotFound : String -> FailReason
+
+displaySource : Maybe String -> String
+displaySource Nothing = "output"
+displaySource (Just x) = "file \{x}"
 
 export
 displayFailReason : FailReason -> String
 displayFailReason (WrongStatus True) = "[Fails while it should pass]"
 displayFailReason (WrongStatus False) = "[Pass but it should fail]"
-displayFailReason (WrongOutput GoldenIsMissing) = "[Missing Golden]"
-displayFailReason (WrongOutput x) = "[WrongOutput]"
+displayFailReason (WrongOutput src (GoldenIsMissing _)) = "[Missing Golden for \{displaySource src}]"
+displayFailReason (WrongOutput src x) = "[Unexpected content for \{displaySource src}]"
+displayFailReason (ExpectedFileNotFound src) = "[Missing expected file \"\{src}\"]"
 
 namespace FailReason
 
@@ -81,10 +94,14 @@ namespace FailReason
   toJSON : FailReason -> JSON
   toJSON (WrongStatus e) = JObject
     [("type", JString "status"), ("expected", JBoolean e), ("given", JBoolean $ not e)]
-  toJSON (WrongOutput GoldenIsMissing) = JObject
-    [("type", JString "output"), ("reason", JString "Missing")]
-  toJSON (WrongOutput (DifferentOutput x y)) = JObject
-    [("type", JString "output"), ("expected", JString x), ("given", JString y)]
+  toJSON (WrongOutput src (GoldenIsMissing x)) = JObject $
+    maybe id ((::) . MkPair "file" . JString) src
+      [("type", JString "output"), ("reason", JString "Missing"), ("given", JString x)]
+  toJSON (WrongOutput src (DifferentOutput x y)) = JObject $
+    maybe id ((::) . MkPair "file" . JString) src
+      [("type", JString "output"), ("expected", JString x), ("given", JString y)]
+  toJSON (ExpectedFileNotFound src) = JObject
+      [("type", JString "missing"), ("expected", JString src)]
 
 public export
 data TestResult
@@ -100,6 +117,10 @@ namespace TestResult
   toJSON (Fail xs) = JObject [("Fail", JArray $ map toJSON xs)]
   toJSON Skipped = JString "Skipped"
 
+  export
+  isSuccess : TestResult -> Bool
+  isSuccess Success = True
+  isSuccess _ = False
 
 public export
 data TestError
@@ -133,9 +154,9 @@ displayTestError (RequirementsFailed x) = "Test rely on test \{x}, which failed"
 displayTestError Inaccessible = "Test rely on other tests that weren't run"
 
 export
-isSuccess : Either TestError TestResult -> Bool
-isSuccess (Right Success) = True
-isSuccess _ = False
+isFullSuccess : Either TestError TestResult -> Bool
+isFullSuccess (Right Success) = True
+isFullSuccess _ = False
 
 public export
 record Stats where

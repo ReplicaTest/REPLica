@@ -107,7 +107,7 @@ let tests : Replica.Replica = [
         with tags = ["meta", "require", "run"]
 
    },
-   { mapKey = "testSkipExculdedDependencies"
+   { mapKey = "testSkipExcludedDependencies"
    , mapValue =
         (Meta.replicaTest Meta.Run::{ directory = "tests/replica/require1"
                                     , parameters = ["--only depends_failed"]
@@ -143,6 +143,13 @@ let tests : Replica.Replica = [
    { mapKey = "testInput"
    , mapValue =
        Replica.Success::{command = "cat", input = Some "hello, world"}
+        with description = Some "pass input to the command"
+   },
+   { mapKey = "check_file"
+   , mapValue =
+       Replica.Success::{command = "echo \"hello, world\" > test.blurb"}
+        with outputFile = Some "test.blurb"
+        with afterTest = ["rm test.blurb"]
         with description = Some "pass input to the command"
    }
    ]

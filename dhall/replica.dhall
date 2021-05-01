@@ -12,6 +12,7 @@ let Test
       , input : Optional Text
       , succeed : Optional Bool
       , expectation : Optional Text
+      , outputFile : Optional Text
       , pending : Bool
       }
 
@@ -27,6 +28,7 @@ let Minimal =
         , input = None Text
         , succeed = None Bool
         , expectation = None Text
+        , outputFile = None Text
         , pending = False
         }
       }

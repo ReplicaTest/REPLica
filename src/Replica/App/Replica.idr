@@ -95,13 +95,22 @@ getOutputFile = do
   pure $ t </> defaultOutput
 
 export
+getExpectedOutput : Has
+  [ State CurrentTest Test
+  , State GlobalConfig Global ] e => App e String
+getExpectedOutput = do
+  d <- map replicaDir $ get GlobalConfig
+  t <- getSingleTestDir
+  pure $ t </> defaultExpected
+
+export
 getExpectedFile : Has
   [ State CurrentTest Test
   , State GlobalConfig Global ] e => App e String
 getExpectedFile = do
   d <- map replicaDir $ get GlobalConfig
   t <- getSingleTestDir
-  pure $ t </> defaultExpected
+  pure $ t </> defaultFile
 
 export
 getReplica :

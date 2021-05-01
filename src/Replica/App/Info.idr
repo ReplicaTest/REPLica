@@ -70,7 +70,7 @@ getLastFailures = do
     | Nothing => throw $ InvalidJSON []
   let Valid report = parseReport json
     | Error err => throw $ InvalidJSON err
-  let notWorking = fst <$> filter (not . isSuccess . snd) report
+  let notWorking = fst <$> filter (not . isFullSuccess . snd) report
   pure $ filter (flip elem notWorking . name) repl.tests
 
 defineActiveTests : FileSystem (FSError :: e) =>
