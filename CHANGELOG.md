@@ -3,6 +3,8 @@
 ## since 0.2.0
 
 - Can mark tests as _pending_
+- Can set `expected` in json and dhall to specify expected output directly
+- Can check the content of a generated file using `outputFile`
 
 ## version 0.2.0
 
