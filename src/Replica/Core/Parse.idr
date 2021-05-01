@@ -11,7 +11,7 @@ import Language.JSON
 validatePending : Maybe JSON -> Validation (List String) Bool
 validatePending Nothing = Valid False
 validatePending (Just (JBoolean x)) = Valid x
-validatePending x = Error ["PendingA must be a boolean, found: \{show x}"]
+validatePending x = Error ["Pending must be a boolean, found: \{show x}"]
 
 validateDesc : Maybe JSON -> Validation (List String) (Maybe String)
 validateDesc Nothing = Valid empty
@@ -23,6 +23,10 @@ validateDesc (Just x)
 validateRequire : JSON -> Validation (List String) String
 validateRequire (JString x) = Valid x
 validateRequire x = Error ["A requirement must be a testname, found: \{show x}"]
+
+validateExpectation : JSON -> Validation (List String) String
+validateExpectation (JString x) = Valid x
+validateExpectation x = Error ["An expectation must be a string, found: \{show x}"]
 
 validateRequireList : Maybe JSON -> Validation (List String) (List String)
 validateRequireList Nothing = Valid empty
@@ -74,16 +78,23 @@ validateCommand (Just (JString str)) = Valid str
 validateCommand Nothing = Error ["command is missing"]
 validateCommand (Just x) = Error ["Command must be a string, found \{show x}"]
 
-validateInput : Maybe JSON -> Validation (List String) (Maybe String)
-validateInput (Just (JString str)) = Valid (Just str)
-validateInput Nothing = Valid Nothing
-validateInput (Just x) = Error ["input must be a string, found \{show x}"]
+validateInput : JSON -> Validation (List String) String
+validateInput (JString str) = Valid str
+validateInput x = Error ["input must be a string, found \{show x}"]
 
 validateStatus : Maybe JSON -> Validation (List String) (Maybe Bool)
 validateStatus Nothing = Valid empty
 validateStatus (Just JNull) = Valid empty
 validateStatus (Just (JBoolean x)) = Valid $ Just x
 validateStatus (Just x) = Error ["Status should be a boolean, found: \{show x}"]
+
+isString : JSON -> Validation (List String) String
+isString (JString str) = Valid str
+isString x = Error ["oututFiles content should be a list of string, found: \{show x}"]
+
+validateFile : Maybe JSON -> Validation (List String) (Maybe String)
+validateFile Nothing = Valid empty
+validateFile (Just json) = Just <$> isString json
 
 jsonToTest : String -> JSON -> Validation (List String) Test
 jsonToTest str (JObject xs) =
@@ -97,8 +108,10 @@ jsonToTest str (JObject xs) =
   (validateBefore $ lookup "beforeTest" xs)
   (validateAfter $ lookup "afterTest" xs)
   (validateCommand $ lookup "command" xs)
-  (validateInput $ lookup "input" xs)
+  (traverse validateInput $ lookup "input" xs)
   (validateStatus $ lookup "succeed" xs)
+  (traverse validateExpectation $ lookup "expectation" xs)
+  (validateFile $ lookup "outputFile" xs)
   |]
 jsonToTest str json =
   Error ["Expecting a JSON object for test '\{str}' and got: \{show json}"]
@@ -109,19 +122,21 @@ jsonToReplica (JObject xs) = [| MkReplica $ traverse (uncurry jsonToTest) xs |]
 jsonToReplica _ = Error ["Replica test file must be a JSON object"]
 
 
-parseMissingGolden : List (String, JSON) -> Maybe FailReason
-parseMissingGolden xs = do
+parseMissingGolden : Maybe String -> List (String, JSON) -> Maybe FailReason
+parseMissingGolden src xs = do
   JString "Missing" <- lookup "reason" xs
     | _ => Nothing
-  pure $ WrongOutput GoldenIsMissing
+  JString given <- lookup "given" xs
+    | _ => Nothing
+  pure $ WrongOutput src $ GoldenIsMissing given
 
-parseWrongOutput : List (String, JSON) -> Lazy (Maybe FailReason)
-parseWrongOutput xs = do
+parseWrongOutput : Maybe String -> List (String, JSON) -> Lazy (Maybe FailReason)
+parseWrongOutput src xs = do
   JString exp <- lookup "expected" xs
     | _ => Nothing
   JString given <- lookup "given" xs
     | _ => Nothing
-  pure $ WrongOutput $ DifferentOutput exp given
+  pure $ WrongOutput src $ DifferentOutput exp given
 
 parseWrongStatus : List (String, JSON) -> Maybe FailReason
 parseWrongStatus xs = do
@@ -129,17 +144,33 @@ parseWrongStatus xs = do
     | _ => Nothing
   pure $ WrongStatus exp
 
+parseExpectedNotFound : List (String, JSON) -> Maybe FailReason
+parseExpectedNotFound xs = do
+  JString exp <- lookup "expected" xs
+    | _ => Nothing
+  pure $ ExpectedFileNotFound exp
+
 parseFailReason : JSON -> Validation (List String) FailReason
-parseFailReason (JObject xs) = case lookup "type" xs of
-  Just (JString "output") => maybe
-    (Error ["Invalid Wrong output content"])
-    Valid
-    (parseMissingGolden xs <|> parseWrongOutput xs)
-  Just (JString "status") => maybe
-    (Error ["Invalid Wrong output content"])
-    Valid
-    (parseWrongStatus xs)
-  pat => Error ["Invalid object content for a fail reason: \{show xs}"]
+parseFailReason (JObject xs) = do
+  let Just src = case lookup "file" xs of
+                 Nothing => Just Nothing
+                 Just (JString str) => Just $ Just str
+                 _ => Nothing
+    | _ => Error ["Unexpected file value"]
+  case lookup "type" xs of
+    Just (JString "ouTput") => maybe
+      (Error ["Invalid Wrong output content"])
+      Valid
+      (parseMissingGolden src xs <|> parseWrongOutput src xs)
+    Just (JString "status") => maybe
+      (Error ["Invalid Wrong output content"])
+      Valid
+      (parseWrongStatus xs)
+    Just (JString "missing") => maybe
+      (Error ["Invalid Wrong expected file not found content"])
+      Valid
+      (parseExpectedNotFound xs)
+    pat => Error ["Invalid object content for a fail reason: \{show xs}"]
 parseFailReason json =
   Error ["Expecting a JSON object for a fail reason, got: \{show json}"]
 

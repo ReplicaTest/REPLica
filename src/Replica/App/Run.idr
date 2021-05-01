@@ -33,6 +33,19 @@ import Replica.Other.Validation
 
 data RunContext : Type where
 
+record TestPart where
+  constructor MkTestPart
+  source : Maybe String
+  expected : Maybe String
+  given : String
+
+record TestsResultParts where
+  constructor ResultParts
+  statusResult : Maybe FailReason
+  expectationResult : Maybe FailReason
+  fileResult : Maybe FailReason
+
+-- Create the folders needed by Replica (usually ./.replica/test and ./.replica/log)
 prepareReplicaDir : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State RunContext RunCommand
@@ -69,71 +82,77 @@ runAll phase liftError (x :: xs) = do
     (const $ runAll phase liftError xs)
     (\err : SystemError => throw $ liftError x)
 
-expectedvsGiven : State GlobalConfig Global e =>
+expectedVsGiven : State GlobalConfig Global e =>
   Nat -> String -> String -> App e (List String)
-expectedvsGiven k expected given = pure $ map (withOffset k) $
+expectedVsGiven k expected given = pure $ map (withOffset k) $
   ( "Expected:" :: map !red (forget $ lines expected)) ++
   ( "Given:" :: map !green (forget $ lines given))
 
 nativeShow : State GlobalConfig Global e =>
   Console e => String -> String -> App e ()
 nativeShow expected given =
-  putStrLn $ unlines !(expectedvsGiven 0 expected given)
+  putStrLn $ unlines !(expectedVsGiven 0 expected given)
 
+-- Provide different ways to show the difference between expectations and givens
 showDiff : SystemIO (SystemError :: e) =>
   State GlobalConfig Global e =>
   State CurrentTest Test e =>
   Console e => DiffCommand -> String -> String -> App e ()
 showDiff Native expected given = nativeShow expected given
 showDiff Diff x y = catchNew
-  (system $ "git diff --minimal --word-diff=color --no-index -- \{!getExpectedFile} \{!getOutputFile}")
+  (system $ "git diff --minimal --word-diff=color --no-index -- \{!getExpectedOutput} \{!getOutputFile}")
   (\err : SystemError => nativeShow x y)
 showDiff GitDiff x y = catchNew
-  (system $ "git diff --minimal --word-diff=color --no-index -- \{!getExpectedFile} \{!getOutputFile}")
+  (system $ "git diff --minimal --word-diff=color --no-index -- \{!getExpectedOutput} \{!getOutputFile}")
   (\err : SystemError => nativeShow x y)
 showDiff (Custom z) x y = catchNew
-  (system $ "\{z} \{!getExpectedFile} \{!getOutputFile}")
+  (system $ "\{z} \{!getExpectedOutput} \{!getOutputFile}")
   (\err : SystemError => nativeShow x y)
 
-expectedVsGiven : SystemIO (SystemError :: e) =>
-  State CurrentTest Test e =>
-  State GlobalConfig Global e =>
-  Console e => Maybe String -> String -> App e ()
-expectedVsGiven old given = do
-  let Just str = old
-        | Nothing => do
-    putStrLn "Expected: Nothing Found"
-    putStrLn "Given:"
-    putStrLn given
-  showDiff !(diff <$> get GlobalConfig) str given
-
+-- on mismatch, check if we should replace the golden value
 askForNewGolden : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
       , State GlobalConfig Global
       , Exception TestError
       , Console
-      ] e => Maybe String -> String -> App e TestResult
-askForNewGolden old given = do
+      ] e => TestPart -> App e (Maybe FailReason)
+askForNewGolden part = do
   t <- get CurrentTest
-  putStrLn $ "\{t.name}: Golden value mismatch"
-  expectedVsGiven old given
-  putStrLn $ "Do you want to \{maybe "set" (const "replace") old} the golden value? [N/y]"
+  putStrLn $ "\{t.name}: Golden value mismatch for \{maybe "standard output" ("file " ++) part.source}"
+  showExpectedAndGiven part.expected part.given
+  putStrLn $ "Do you want to \{maybe "set" (const "replace") part.expected} the golden value? [N/y]"
   if !readAnswer
      then do
-       expectedFile <- catchNew getExpectedFile
-          (\err : FSError => throw $ FileSystemError "Can't resolve expectation file")
-       handle (writeFile expectedFile given)
-         (const $ pure Success)
+       f <- expectedFile
+       handle (writeFile f  part.given)
+         (const $ pure Nothing)
          (\err : FSError => throw $ FileSystemError "Cannot write golden value")
-     else pure $ maybe (Fail [WrongOutput GoldenIsMissing])
-                       (Fail . pure . WrongOutput . flip DifferentOutput given)
-                       old
+     else pure . Just $ maybe
+       (WrongOutput part.source (GoldenIsMissing part.given))
+       (WrongOutput part.source . flip DifferentOutput part.given)
+       part.expected
   where
+
+    expectedFile : App e String
+    expectedFile = maybe getExpectedOutput (const getExpectedFile) part.source
+
     readAnswer : App e Bool
     readAnswer = do
       answer <- getLine
       pure $ toLower answer `elem` ["y", "yes"]
+
+    showExpectedAndGiven : Maybe String -> String -> App e ()
+    showExpectedAndGiven old given = do
+      let Just str = old
+        | Nothing => do
+          putStrLn "Expected: Nothing Found"
+          putStrLn "Given:"
+          putStrLn given
+      showDiff !(diff <$> get GlobalConfig) str given
+
+allParts : TestsResultParts ->  List (Maybe FailReason)
+allParts x = [x.statusResult, x.expectationResult, x.fileResult]
 
 checkOutput :  SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
@@ -142,48 +161,64 @@ checkOutput :  SystemIO (SystemError :: e) =>
       , State RunContext RunCommand
       , Exception TestError
       , Console ] e =>
-  (mustSucceed : Maybe Bool) -> (status : Int) ->
-  (expectedOutput : Maybe String) -> (output : String) ->
+  (status : Int) ->
+  (outputPart : TestPart) ->
+  (filePart : Maybe TestPart) ->
   App e TestResult
-checkOutput mustSucceed status expectedOutput output
+checkOutput status outputPart filePart
   = do
+    log $ withOffset 2 "Checking result"
     ctx <- get RunContext
-    let Fail err = checkExpectation
-      | Success => pure $ checkStatus
-      | Skipped => pure $ Skipped
-    let Success = checkStatus
-      | Fail err2 => pure $ Fail $ err ++ err2
-      | Skipped => pure $ Skipped
-    if ctx.interactive
-       then askForNewGolden expectedOutput output
-       else pure $ Fail err
+    t <- get CurrentTest
+    let results
+      = ResultParts
+          (checkStatus t.mustSucceed)
+          (checkExpectation outputPart)
+          (maybe Nothing checkExpectation filePart)
+    debug $ withOffset 4 "Check skip"
+    let False = t.pending
+      | True => pure Skipped
+    debug $ withOffset 4 "Check success"
+    let (x::xs) = catMaybes $ allParts results
+      | [] => pure Success
+    debug $ withOffset 4
+          "Check interactive: \{show $ isNothing results.statusResult} \{show ctx.interactive}"
+    let (Nothing, True) = (results.statusResult, ctx.interactive)
+      | _ =>  pure $ Fail $ x :: xs
+    debug $ withOffset 4 "Ask for new golden"
+    debug $ withOffset 6 "Ask for new golden for std: \{show $ isJust results.expectationResult}"
+    eRes <- maybe (pure Nothing)
+                  (const $ askForNewGolden outputPart)
+                  results.expectationResult
+    debug $ withOffset 6 "Ask for new golden for file: \{show $ isJust results.fileResult}"
+    fRes <- maybe (pure Nothing)
+                  (\p => maybe (pure Nothing)
+                               (const $ askForNewGolden p)
+                               results.fileResult
+                  )
+                  filePart
+    let [] = catMaybes [results.statusResult, eRes, fRes]
+      | xs => pure $ Fail xs
+    pure Success
     where
-      checkStatus : TestResult
-      checkStatus =
-        let Just s = mustSucceed
-              | Nothing => Success
-        in if (s && status == 0) || (not s && status /= 0)
-              then Success
-              else Fail [WrongStatus s]
-      checkExpectation : TestResult
-      checkExpectation =
-        let Just exp = expectedOutput
-              | Nothing => Fail [WrongOutput GoldenIsMissing]
-        in if exp == output
-              then Success
-              else Fail [WrongOutput $ DifferentOutput exp output]
+      checkStatus : Maybe Bool -> Maybe FailReason
+      checkStatus m = do
+        s <- m
+        guard ((not s && status == 0) || (s && status /= 0)) $> WrongStatus s
+      checkExpectation : TestPart -> Maybe FailReason
+      checkExpectation part =
+        let Just exp = part.expected
+              | Nothing => Just (WrongOutput part.source (GoldenIsMissing part.given))
+        in guard (exp /= part.given) $> WrongOutput part.source (DifferentOutput exp part.given)
+
 
 getExpected : FileSystem (FSError :: e) =>
-  Has [ State CurrentTest Test
-      , State GlobalConfig Global
-      , State RunContext RunCommand
+  Has [ State RunContext RunCommand
       , Exception TestError
       , Console
       ] e => String -> App e (Maybe String)
-getExpected given = do
-  t <- get CurrentTest
-  expectedFile <- getExpectedFile
-  handle (readFile expectedFile)
+getExpected src= do
+  handle (readFile src)
     (pure . Just)
     (\err : FSError => case err of
         MissingFile _ => pure Nothing
@@ -199,8 +234,7 @@ generateInput = do
     | _ => pure Nothing
   f <- getInputFile
   catchNew (writeFile f input)
-    (\e : FSError => throw $
-          FileSystemError "Can't write input file \{f}")
+    (\e : FSError => throw $ FileSystemError "Can't write input file \{f}")
   pure (Just f)
 
 testCore : SystemIO (SystemError :: e) =>
@@ -223,9 +257,17 @@ testCore = do
   output <- catchNew (readFile $ outputFile)
     (\e : FSError => throw $
           FileSystemError "Can't read output file \{outputFile}")
-  expected <- getExpected output
-  checkOutput t.mustSucceed exitStatus expected output
+  let outputPart = MkTestPart Nothing
+       (t.expectation <|> !(getExpected !getExpectedOutput))
+       output
+  let Just f = t.file
+    | Nothing => checkOutput exitStatus outputPart Nothing
+  Just fileContent <- catchNew (Just <$> readFile f) (\err : FSError => pure Nothing)
+    | Nothing => pure $ Fail [ExpectedFileNotFound f]
+  let filePart = MkTestPart (Just f) !(getExpected !getExpectedFile) fileContent
+  checkOutput exitStatus outputPart (Just filePart)
 
+-- the whole test execution, including pre and post operation
 performTest : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
@@ -241,6 +283,7 @@ performTest = do
   runAll (Just "After") (WrapUpFailed res) t.afterTest
   pure res
 
+-- move to the right directory and perform the test
 runTest : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
@@ -252,6 +295,8 @@ runTest : SystemIO (SystemError :: e) =>
 runTest = do
   ctx <- get RunContext
   t <- get CurrentTest
+  testDir <- getSingleTestDir
+  catchNew (createDir testDir) continueIfExists
   let wd = fromMaybe ctx.workingDir t.workingDir
   log "Executing \{t.name}"
   debug $ withOffset 2 $ show t
@@ -269,6 +314,10 @@ runTest = do
         | Left err => changeDir pwd >> lift (throw err)
       changeDir pwd
       pure res
+    continueIfExists : FSError -> App e ()
+    continueIfExists (FileExists _) = pure ()
+    continueIfExists _ = throw $ FileSystemError "Cant't create or accesse test directory"
+
 
 testOutput :
   Has [ State RunContext RunCommand
@@ -288,11 +337,11 @@ testOutput name (Right (Fail xs)) = do
   putStrLn $ withOffset 2 $ !red "\{!ko} \{name}: \{unwords $ map displayFailReason xs}"
   let Just (expected, given) = getContentMismatch xs
     | Nothing => pure ()
-  putStrLn $ unlines !(expectedvsGiven 6 expected given)
+  putStrLn $ unlines !(expectedVsGiven 6 expected given)
   where
     getContentMismatch : List FailReason -> Maybe (String, String)
     getContentMismatch [] = Nothing
-    getContentMismatch (WrongOutput (DifferentOutput x y) :: _) = Just (x, y)
+    getContentMismatch (WrongOutput src (DifferentOutput x y) :: _) = Just (x, y)
     getContentMismatch (_ :: xs) = getContentMismatch xs
 
 runAllTests : SystemIO (SystemError :: TestError :: e) =>
@@ -304,7 +353,7 @@ runAllTests : SystemIO (SystemError :: TestError :: e) =>
       , Console
       ] e =>  TestPlan -> App e (List (String, Either TestError TestResult))
 runAllTests plan = do
-  putStrLn $ separator 60
+  putStrLn $ separator 80
   putStrLn $ !bold "Running tests..."
   batchTests [] plan
   where
@@ -341,7 +390,7 @@ runAllTests plan = do
              when (not !(interactive <$> get RunContext))
                (traverse_ (uncurry testOutput) res)
              p <- punitive <$> get RunContext
-             if p && any (not . isSuccess . snd) res
+             if p && any (not . isFullSuccess . snd) res
                 then pure res
                 else do
                    let plan' = record {now = nextBatches} plan
@@ -350,7 +399,7 @@ runAllTests plan = do
 
 report : Console e => State GlobalConfig Global e => Stats -> App e ()
 report x = do
-  putStrLn $ separator 60
+  putStrLn $ separator 80
   putStrLn $ !bold "Summary:"
   let nb = countTests x
   if nb == 0
@@ -393,7 +442,7 @@ getLastFailures = do
     | Nothing => throw $ InvalidJSON ["Can't parse JSON (invalid syntax)"]
   let Valid report = parseReport json
     | Error err => throw $ InvalidJSON err
-  let notWorking = fst <$> filter (not . isSuccess . snd) report
+  let notWorking = fst <$> filter (not . isFullSuccess . snd) report
   let (selected, rejected) = partition (flip elem notWorking . name) repl.tests
   debug $ "Previous invalid tests: \{show selected}"
   pure (selected, rejected)
@@ -433,7 +482,7 @@ runReplica = do
   catchNew (writeFile logFile (show $ reportToJSON result))
     (\err : FSError => throw $ CantAccessTestFile logFile)
   when !(interactive <$> get RunContext)
-    (do putStrLn $ separator 60
+    (do putStrLn $ separator 80
         putStrLn $ !bold "Test results:"
         traverse_ (uncurry testOutput) result)
   let stats = asStats $ snd <$> result
