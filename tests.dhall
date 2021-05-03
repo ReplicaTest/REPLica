@@ -151,6 +151,16 @@ let tests : Replica.Replica = [
         with outputFile = Some "test.blurb"
         with afterTest = ["rm test.blurb"]
         with description = Some "pass input to the command"
+   },
+   { mapKey = "no_golden_with_inlined_expectation"
+   , mapValue =
+        (Meta.replicaTest Meta.Run::{ directory = "tests/replica/inlineMismatch"
+                                    , parameters = [ "--interactive" ]
+                                    , testFile = "tests.json"})
+        with description = Some "No interaction for mismatch when a value is given"
+        with require = [ "testOutputMismatch" ]
+        with succeed = Some False
+        with tags = ["meta", "run"]
    }
    ]
 

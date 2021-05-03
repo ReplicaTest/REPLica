@@ -1,0 +1,12 @@
+{
+  "mismatch": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "echo \"one\"",
+    "description": "Expectation is different than one",
+    "expectation": "two\n",
+    "pending": false,
+    "require": [],
+    "tags": []
+  }
+}
