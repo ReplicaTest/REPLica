@@ -187,9 +187,11 @@ checkOutput status outputPart filePart
       | _ =>  pure $ Fail $ x :: xs
     debug $ withOffset 4 "Ask for new golden"
     debug $ withOffset 6 "Ask for new golden for std: \{show $ isJust results.expectationResult}"
-    eRes <- maybe (pure Nothing)
+    eRes <- if isNothing t.expectation
+               then maybe (pure Nothing)
                   (const $ askForNewGolden outputPart)
                   results.expectationResult
+               else pure results.expectationResult
     debug $ withOffset 6 "Ask for new golden for file: \{show $ isJust results.fileResult}"
     fRes <- maybe (pure Nothing)
                   (\p => maybe (pure Nothing)
