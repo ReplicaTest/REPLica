@@ -23,7 +23,7 @@ let tests : Replica.Replica = [
    { mapKey = "test_given_expectation"
    , mapValue = Replica.Success::{command = "echo \"Hello, world!\""}
         with description = Some "We use the given expectation field if it exists"
-        with expectation = Some "Hello, world!\n"
+        with expectation = Some  (Replica.Exact "Hello, world!\n")
    },
    { mapKey = "testWorkingDir"
    , mapValue =
@@ -161,6 +161,28 @@ let tests : Replica.Replica = [
         with require = [ "testOutputMismatch" ]
         with succeed = Some False
         with tags = ["meta", "run"]
+   },
+   { mapKey = "ordered_partial_expectation_match"
+   , mapValue =
+       Replica.Success::{command = "echo \"Hello, World!\""}
+         with description = Some "check a partial expectation that succeeds"
+         with expectation = Some (Replica.Partial True ["Hello", "World"])
+         with tags = ["expectation", "run", "partial"]
+   },
+   { mapKey = "whatever_partial_expectation_match"
+   , mapValue =
+       Replica.Success::{command = "echo \"Hello, World!\""}
+         with description = Some "check a not ordered partial expectation that succeeds"
+         with expectation = Some (Replica.Partial False ["World", "Hello"])
+         with tags = ["expectation", "run", "partial"]
+   },
+   { mapKey = "ordered_partial_expectation_mismatch"
+   , mapValue =
+       (Meta.replicaTest Meta.Run::{ directory = "tests/replica/orderedPartialFail"
+                                   , testFile = "tests.json"})
+         with description = Some "check an ordered partial expectation that fails"
+         with succeed = Some False
+         with tags = ["expectation", "run", "partial"]
    }
    ]
 

@@ -6,6 +6,26 @@ import Language.JSON
 %default total
 
 public export
+data OrderSensitive = Ordered | Whatever
+
+export
+Show OrderSensitive where
+  show Ordered = "Ordered"
+  show Whatever = "Whatever"
+
+public export
+data Expectation
+   = Exact String
+   | Partial OrderSensitive (List String)
+   | Generated
+
+export
+Show Expectation where
+  show (Exact x) = "Exact \{show x}"
+  show (Partial x xs) = "Partial \{show Ordered} \{show xs}"
+  show Generated = "Generated"
+
+public export
 record Test where
   constructor MkTest
   name: String
@@ -20,7 +40,8 @@ record Test where
   command: String
   input : Maybe String
   mustSucceed : Maybe Bool
-  expectation : Maybe String
+  spaceSensitive : Bool
+  expectation : Expectation
   file : Maybe String
 
 export
@@ -38,6 +59,7 @@ Show Test where
     , show x.command
     , show x.input
     , show x.mustSucceed
+    , show x.spaceSensitive
     , show x.expectation
     , show x.file
     ]
@@ -69,6 +91,7 @@ public export
 data OutputError
   = GoldenIsMissing String
   | DifferentOutput String String
+  | PartialOutputMismatch OrderSensitive (List String) String
 
 public export
 data FailReason : Type where
@@ -100,6 +123,14 @@ namespace FailReason
   toJSON (WrongOutput src (DifferentOutput x y)) = JObject $
     maybe id ((::) . MkPair "file" . JString) src
       [("type", JString "output"), ("expected", JString x), ("given", JString y)]
+  toJSON (WrongOutput src (PartialOutputMismatch o x y)) = JObject $
+    maybe id ((::) . MkPair "file" . JString) src
+      [ ("type", JString "output")
+      , ("ordered", JBoolean $ case o of
+          Ordered => True
+          Whatever => False)
+      , ("missingParts", JArray $ map JString x)
+      , ("given", JString y)]
   toJSON (ExpectedFileNotFound src) = JObject
       [("type", JString "missing"), ("expected", JString src)]
 

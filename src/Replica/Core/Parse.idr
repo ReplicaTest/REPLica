@@ -8,6 +8,11 @@ import Language.JSON
 
 %default total
 
+allString : List JSON -> Validation (List String) (List String)
+allString =  traverse \j => case j of
+  JString str => Valid str
+  _ => Error ["Invalid expectation part: \{show j}"]
+
 validatePending : Maybe JSON -> Validation (List String) Bool
 validatePending Nothing = Valid False
 validatePending (Just (JBoolean x)) = Valid x
@@ -24,9 +29,24 @@ validateRequire : JSON -> Validation (List String) String
 validateRequire (JString x) = Valid x
 validateRequire x = Error ["A requirement must be a testname, found: \{show x}"]
 
-validateExpectation : JSON -> Validation (List String) String
-validateExpectation (JString x) = Valid x
-validateExpectation x = Error ["An expectation must be a string, found: \{show x}"]
+validatOrderSensitive : Maybe JSON -> Validation (List String) OrderSensitive
+validatOrderSensitive Nothing = Valid Ordered
+validatOrderSensitive (Just (JBoolean x)) = Valid $ if x then Ordered else Whatever
+validatOrderSensitive (Just x) = Error
+  ["OrderSensitive must be a boolean, found \{show x}"]
+
+validateExpectation : Maybe JSON -> Validation (List String) Expectation
+validateExpectation Nothing = Valid Generated
+validateExpectation (Just (JString x)) = Valid (Exact x)
+validateExpectation (Just (JArray xs)) = Partial Ordered <$> allString xs
+validateExpectation (Just (JObject o)) =
+  let Just (JArray parts) = lookup "parts" o
+      | other => Error $ maybe ["missing parts"] (const ["invalid parts"]) other
+  in [| Partial
+     (validatOrderSensitive $ lookup "ordered" o)
+     (allString parts)
+     |]
+validateExpectation x = Error ["An expectation must be an expectation, found: \{show x}"]
 
 validateRequireList : Maybe JSON -> Validation (List String) (List String)
 validateRequireList Nothing = Valid empty
@@ -88,6 +108,11 @@ validateStatus (Just JNull) = Valid empty
 validateStatus (Just (JBoolean x)) = Valid $ Just x
 validateStatus (Just x) = Error ["Status should be a boolean, found: \{show x}"]
 
+validateSpaceSensitive : Maybe JSON -> Validation (List String) Bool
+validateSpaceSensitive Nothing = Valid True
+validateSpaceSensitive (Just (JBoolean x)) = Valid x
+validateSpaceSensitive x = Error ["Pending must be a boolean, found: \{show x}"]
+
 isString : JSON -> Validation (List String) String
 isString (JString str) = Valid str
 isString x = Error ["oututFiles content should be a list of string, found: \{show x}"]
@@ -110,7 +135,8 @@ jsonToTest str (JObject xs) =
   (validateCommand $ lookup "command" xs)
   (traverse validateInput $ lookup "input" xs)
   (validateStatus $ lookup "succeed" xs)
-  (traverse validateExpectation $ lookup "expectation" xs)
+  (validateSpaceSensitive $ lookup "spaceSensitive" xs)
+  (validateExpectation $ lookup "expectation" xs)
   (validateFile $ lookup "outputFile" xs)
   |]
 jsonToTest str json =
@@ -138,6 +164,22 @@ parseWrongOutput src xs = do
     | _ => Nothing
   pure $ WrongOutput src $ DifferentOutput exp given
 
+parsePartialOutputMsimatch : Maybe String -> List (String, JSON) -> Maybe FailReason
+parsePartialOutputMsimatch src xs = do
+  JBoolean o<- lookup "ordered" xs
+    | _ => Nothing
+  JArray missing <- lookup "missingParts" xs
+    | _ => Nothing
+  let Just m = the (Maybe (List String)) $ traverse go missing
+    | _ => Nothing
+  JString given <- lookup "given" xs
+    | _ => Nothing
+  pure $ WrongOutput src $ PartialOutputMismatch (if o then Ordered else Whatever) m given
+  where
+    go : JSON -> Maybe String
+    go (JString str) = Just str
+    go _ = Nothing
+
 parseWrongStatus : List (String, JSON) -> Maybe FailReason
 parseWrongStatus xs = do
   JBoolean exp <- lookup "expected" xs
@@ -158,10 +200,10 @@ parseFailReason (JObject xs) = do
                  _ => Nothing
     | _ => Error ["Unexpected file value"]
   case lookup "type" xs of
-    Just (JString "ouTput") => maybe
+    Just (JString "output") => maybe
       (Error ["Invalid Wrong output content"])
       Valid
-      (parseMissingGolden src xs <|> parseWrongOutput src xs)
+      (parseMissingGolden src xs <|> parseWrongOutput src xs <|> parsePartialOutputMsimatch src xs)
     Just (JString "status") => maybe
       (Error ["Invalid Wrong output content"])
       Valid
