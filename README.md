@@ -34,6 +34,16 @@ Requirements:
 - [git](https://git-scm.com)
 - preferably, [dhall][] and [dhall-to-json][]
 
+**Regarding idris2 version:**
+
+As idris is in active development,
+REPLica try to stay compatible with the latest snapshots of idris2.
+
+A consequence is that, unfortunately, REPLica is not compatible with idris2 0.3.0, which
+is usually provided by `brew` and `nix`.
+
+You must either build `idris2` [from source][idris_repo] or use [docker][idris_docker]
+
 Steps:
 
 ```shell
@@ -143,6 +153,8 @@ You can also explore the tool options with `replica help`.
 [dhall]: https://dhall-lang.org
 [dhall-to-json]: https://github.com/dhall-lang/dhall-haskell/blob/master/dhall-json/README.md
 [idris tests]: https://github.com/idris-lang/Idris2/tree/master/tests
+[idris_repo]: https://github.com/idris-lang/Idris2
+[idris_docker]: https://hub.docker.com/r/snazzybucket/idris2
 [golden]: https://ro-che.info/articles/2017-12-04-golden-tests
 [test file]: https://github.com/berewt/REPLica/blob/main/tests.dhall
 [gitlab ci]: https://docs.gitlab.com/ee/ci/README.html
