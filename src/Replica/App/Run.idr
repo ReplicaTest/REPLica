@@ -41,6 +41,9 @@ record TestOutput where
   std : String
   file : Maybe String
 
+normalize : String -> String
+normalize = unlines . map unwords . filter (not . force . null) . map (assert_total words) . forget . lines
+
 -- Create the folders needed by Replica (usually ./.replica/test and ./.replica/log)
 prepareReplicaDir : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
@@ -197,15 +200,23 @@ checkOutput source given = do
   t <- get CurrentTest
   let Generated = maybe t.expectation (const Generated) source
        | Exact expected => noInteractionOnFailure $
-                             guard (expected /= given) $>
-                             WrongOutput source (DifferentOutput expected given)
-       | Partial x xs => noInteractionOnFailure $ checkPartial x xs given
+                             checkExact t.spaceSensitive expected given
+       | Partial x xs => noInteractionOnFailure $ checkPartial' t.spaceSensitive x xs given
   Just expected <- getExpected $ maybe !getExpectedOutput (const !getExpectedFile) source
     | Nothing => interactiveFailure Nothing $ Just $ WrongOutput source (GoldenIsMissing given)
-  interactiveFailure (Just expected) $
-    guard (expected /= given) $>
-    WrongOutput source (DifferentOutput expected given)
+  interactiveFailure (Just expected) $ checkExact t.spaceSensitive expected given
   where
+    checkExact : (spaceSensitive : Bool) -> (expected, given : String) -> Maybe FailReason
+    checkExact spaceSensitive expected given = let
+      e : String = if spaceSensitive then expected else normalize expected
+      g : String = if spaceSensitive then given else normalize given
+      in guard (e /= g) $> WrongOutput source (DifferentOutput expected given)
+    checkPartial' : (spaceSensitive : Bool) -> (o : OrderSensitive) ->
+                    (expected : List String) -> (given : String) -> Maybe FailReason
+    checkPartial' spaceSensitive o expected given = let
+      e : List String = if spaceSensitive then expected else map normalize expected
+      g : String = if spaceSensitive then given else normalize given
+      in checkPartial o e g
     noInteractionOnFailure : Maybe FailReason ->
       App e (Maybe (FailReason, Maybe (App e (Maybe FailReason))))
     noInteractionOnFailure = pure . map (flip MkPair Nothing)

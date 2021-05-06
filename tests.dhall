@@ -183,6 +183,14 @@ let tests : Replica.Replica = [
          with description = Some "check an ordered partial expectation that fails"
          with succeed = Some False
          with tags = ["expectation", "run", "partial"]
+   },
+   { mapKey = "space_unsensitive_ordered_partial_expectation_match"
+   , mapValue =
+       Replica.Success::{command = "echo \"Hello, World!\""}
+         with spaceSensitive = False
+         with description = Some "check a space unsensitive partial expectation that succeeds"
+         with expectation = Some (Replica.Partial True ["Hello ", " World "])
+         with tags = ["expectation", "run", "partial", "space"]
    }
    ]
 

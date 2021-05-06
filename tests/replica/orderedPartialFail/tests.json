@@ -1,0 +1,20 @@
+{
+  "ordered_partial_expectation_mismatch": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "echo \"Hello, World!\"",
+    "description": "check an ordered partial expectation that fails",
+    "expectation": {
+      "ordered": true,
+      "parts": [
+        "World",
+        "Hello"
+      ]
+    },
+    "pending": false,
+    "require": [],
+    "spaceSensitive": true,
+    "succeed": true,
+    "tags": []
+  }
+}
