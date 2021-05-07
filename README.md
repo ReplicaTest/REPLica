@@ -25,10 +25,12 @@ tool to generate tests.
 - Check exit status (0 or non 0 only)
 - Multi-threads
 - Run only selected tests/tags
+- Partial expectation
+- Test output file if any
 
 ## Install
 
-Requirements:
+### Requirements
 
 - [idris2](https://idris-lang.org)
 - [git](https://git-scm.com)
@@ -42,9 +44,11 @@ REPLica try to stay compatible with the latest snapshots of idris2.
 A consequence is that, unfortunately, REPLica is not compatible with idris2 0.3.0, which
 is usually provided by `brew` and `nix`.
 
-You must either build `idris2` [from source][idris_repo] or use [docker][idris_docker]
+The plan in the future is to stabilise the code on the next major idris2 release.
 
-Steps:
+You must either build `idris2` [from source][idris_repo] or use [docker][idris_docker].
+
+### Steps
 
 ```shell
 # clone repo
@@ -146,6 +150,11 @@ replica run hello.json
 
 REPLica is tested with itelf, you can check the [test file][] to have an overview of the
 possibilities.
+
+The [documentation](./documentation) folder also contain useful pieces of information:
+
+- The [tests specification](./documentation/TestSpecification.md) in JSON and Dhall.
+- A description of the [tests execution workplan](./documentation/TestExecution.md).
 
 You can also explore the tool options with `replica help`.
 
