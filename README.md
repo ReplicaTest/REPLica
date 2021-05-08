@@ -18,7 +18,27 @@ Its approach is similar to the one proposed by CI/CD tools like [github actions]
 a tests suite is described in a json (or more preferably [dhall][]) file that is processed by the
 tool to generate tests.
 
-## Feature
+### Why REPLica?
+
+There are few frameworks that are dedicated to CLI tests.
+None of them, to my knowledge, mix of a structured document to document the test
+and of interactive golden value generation to specify the expectation.
+
+This approach ease the modification of the CLI output in the early development phases and
+provide a clear syntax for test development and maintenance.
+
+Other CLI testing frameworks
+
+- [Idris2 test package][idres tests]: REPLica's daddy. REPLica was created with the idea to provide
+  a more structured way to write tests (the JSON/Dhall specification) and to develop the
+  functionalities (see the [features])
+- [Pester](https://github.com/pester/Pester): By far more mature than REPLica, thought for
+  powershell, it includes test coverage, test discovery, complex expectations DSL and so on.
+  Pester doesn't, however, provides a way to generate expectation from previous run.
+- [shelltestrunner](https://hackage.haskell.org/package/shelltestrunner): another minimal tool to
+  test CLI, but without golden value generation or test tags.
+
+### Features
 
 - Test tags
 - Test dependencies (test are run only if other tests succeed)
@@ -158,6 +178,18 @@ The [documentation](./documentation) folder also contain useful pieces of inform
 
 You can also explore the tool options with `replica help`.
 
+## Roadmap
+
+I keep track of the things I want to implement in a
+[dedicated project](https://github.com/berewt/REPLica/projects/3).
+If you think that something is missing, don't hesitate to submit a feature request.
+
+
+## Help and support
+
+PR are welcome.
+If you use the tool, I'd be happy to know about it, drop me a line on
+[twitter](https://twitter.com/berewt).
 
 [dhall]: https://dhall-lang.org
 [dhall-to-json]: https://github.com/dhall-lang/dhall-haskell/blob/master/dhall-json/README.md
