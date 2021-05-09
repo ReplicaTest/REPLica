@@ -8,8 +8,7 @@ DEST=${HOME}/.local/bin
 build:
 	idris2 --build replica.ipkg
 
-install:
-	idris2 --install replica.ipkg
+install: build
 	mkdir -p ${DEST}
 	cp -r build/exec/* ${DEST}
 
