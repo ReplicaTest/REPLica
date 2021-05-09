@@ -29,7 +29,7 @@ provide a clear syntax for test development and maintenance.
 
 Other CLI testing frameworks
 
-- [Idris2 test package][idres tests]: REPLica's daddy. REPLica was created with the idea to provide
+- [Idris2 test package][idris tests]: REPLica's daddy. REPLica was created with the idea to provide
   a more structured way to write tests (the JSON/Dhall specification) and to develop the
   functionalities (see the [features])
 - [Pester](https://github.com/pester/Pester): By far more mature than REPLica, thought for
