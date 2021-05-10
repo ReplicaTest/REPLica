@@ -20,4 +20,5 @@ COPY --from=builder /opt/replica/build/exec /opt/replica/exec
 
 ENV PATH="/opt/replica/exec:${PATH}"
 
-ENTRYPOINT /opt/replica/exec/replica
+ENTRYPOINT ["replica"]
+CMD ["help"]
