@@ -89,6 +89,7 @@ jobs:
     needs: build-idris2-nightly
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
       - uses: actions/checkout@v2
       - name: Download Idris2 Artifact
         uses: actions/download-artifact@v2
