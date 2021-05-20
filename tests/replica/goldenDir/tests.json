@@ -3,7 +3,7 @@
     "afterTest": [],
     "beforeTest": [],
     "command": "echo \"one\"",
-    "description": "Expectation is different than one",
+    "description": "Simple expectations",
     "pending": false,
     "require": [],
     "spaceSensitive": true,

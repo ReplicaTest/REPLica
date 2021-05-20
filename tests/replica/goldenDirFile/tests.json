@@ -1,0 +1,16 @@
+{
+  "valid": {
+    "afterTest": [
+      "rm one.txt"
+    ],
+    "beforeTest": [],
+    "command": "echo \"one\" > one.txt",
+    "description": "Expectation of a file on a custom directory",
+    "outputFile": "one.txt",
+    "pending": false,
+    "require": [],
+    "spaceSensitive": true,
+    "succeed": true,
+    "tags": []
+  }
+}
