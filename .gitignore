@@ -1,4 +1,5 @@
-*.output
+**/.replica/**/output
 **/.replica/log
+examples/.replica
 /tests.json
 /.history
