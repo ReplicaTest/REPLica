@@ -64,6 +64,11 @@ prepareReplicaDir = do
   debug "Creating log directory: \{testDir rDir}"
   catchNew (system "mkdir -p \{show (logDir rDir)}")
     (\err : SystemError => throw $ CantAccessTestFile "\{show (logDir rDir)}")
+  Just gd <- goldenDir <$> get GlobalConfig
+    | Nothing => pure rDir
+  debug "Creating golden-value directory: \{gd}"
+  catchNew (system "mkdir -p \{show gd}")
+    (\err : SystemError => throw $ CantAccessTestFile "\{show gd}")
   pure rDir
 
 runAll :
@@ -97,6 +102,7 @@ showDiff : SystemIO (SystemError :: e) =>
   State GlobalConfig Global e =>
   State CurrentTest Test e =>
   Console e => DiffCommand -> String -> String -> App e ()
+showDiff None expected given = pure ()
 showDiff Native expected given = nativeShow expected given
 showDiff Diff x y = catchNew
   (system $ "git diff --minimal --word-diff=color --no-index -- \{!getExpectedOutput} \{!getOutputFile}")
@@ -130,7 +136,7 @@ interactiveGolden source given expected = do
        f <- expectedFile
        handle (writeFile f given)
          (const $ pure Nothing)
-         (\err : FSError => throw $ FileSystemError "Cannot write golden value")
+         (\err : FSError => throw $ FileSystemError "Cannot write golden value in: \{f}")
      else pure . Just $ maybe
        (WrongOutput source (GoldenIsMissing given))
        (WrongOutput source . flip DifferentOutput given)
@@ -152,7 +158,10 @@ interactiveGolden source given expected = do
           putStrLn "Expected: Nothing Found"
           putStrLn "Given:"
           putStrLn given
-      showDiff !(diff <$> get GlobalConfig) str given
+      let d = case !(diff <$> get GlobalConfig) of
+                   None => Native
+                   d' => d'
+      showDiff d str given
 
 getExpected : FileSystem (FSError :: e) =>
   Has [ State RunContext RunCommand
@@ -357,6 +366,7 @@ runTest = do
   ctx <- get RunContext
   t <- get CurrentTest
   createTestDir
+  createGoldenDir
   let wd = fromMaybe ctx.workingDir t.workingDir
   log "Executing \{t.name}"
   debug $ withOffset 2 $ show t
@@ -381,6 +391,10 @@ runTest = do
     createTestDir = do
       testDir <- getSingleTestDir
       catchNew (createDir testDir) continueIfExists
+    createGoldenDir : App e ()
+    createGoldenDir = do
+      goldenDir <- getSingleTestGoldenDir
+      catchNew (createDir goldenDir) continueIfExists
 
 
 testOutput :

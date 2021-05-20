@@ -1,0 +1,12 @@
+{
+  "valid": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "echo \"one\"",
+    "description": "Expectation is different than one",
+    "pending": false,
+    "require": [],
+    "spaceSensitive": true,
+    "tags": []
+  }
+}

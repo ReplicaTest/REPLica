@@ -25,13 +25,15 @@ levelToNat Critical = 3
 
 public export
 data DiffCommand
-  = Native
+  = None
+  | Native
   | Diff
   | GitDiff
   | Custom String
 
 export
 Show DiffCommand where
+  show None = "None"
   show Native = "Native"
   show Diff = "Diff"
   show GitDiff = "GitDiff"
@@ -49,6 +51,7 @@ public export
 record Global' (f : Type -> Type) where
   constructor MkGlobal
   replicaDir : f String
+  goldenDir : f (Maybe String)
   colour : f Bool
   ascii : f Bool
   logLevel : f (Maybe LogLevel)
@@ -64,6 +67,7 @@ Show Global where
   show x = unwords
     [ "MkGlobal"
     , show x.replicaDir
+    , show x.goldenDir
     , show x.colour
     , show x.ascii
     , show x.logLevel
@@ -74,16 +78,18 @@ Show Global where
 export
 TyMap Global' where
   tyMap func x = MkGlobal
-    (func x.replicaDir) (func x.colour)
-    (func x.ascii) (func x.logLevel)
+    (func x.replicaDir) (func x.goldenDir)
+    (func x.colour) (func x.ascii)
+    (func x.logLevel)
     (func x.diff) (func x.file)
 
 export
 TyTraversable Global' where
   tyTraverse func x =
     [| MkGlobal
-    (func x.replicaDir) (func x.colour)
-    (func x.ascii) (func x.logLevel)
+    (func x.replicaDir) (func x.goldenDir)
+    (func x.colour) (func x.ascii)
+    (func x.logLevel)
     (func x.diff) (func x.file)
     |]
 
@@ -98,6 +104,18 @@ replicaDirPart = inj $ MkOption
     go : String -> Builder Global' -> Either String (Builder Global')
     go = one replicaDir (\x => record {replicaDir = Right x})
                  (\x, y => "More than one replica dir were given: \{y}, \{x}")
+
+goldenDirPart : Part (Builder Global') (Maybe String)
+goldenDirPart = inj $ MkOption
+  (singleton $ MkMod (singleton "golden-dir") []
+      (Right $ MkValue "DIR" (Just . Just))
+      "set the location of golden values (default: \"REPLICA_DIR/test\")")
+  Nothing
+  go
+  where
+    go : Maybe String -> Builder Global' -> Either String (Builder Global')
+    go = one goldenDir (\x => record {goldenDir = Right x})
+                 (\x, y => "More than one replica dir were given: \{show y}, \{show x}")
 
 logLevelPart : Part (Builder Global') (Maybe LogLevel)
 logLevelPart = inj $ MkOption
@@ -159,15 +177,20 @@ asciiPart = inj $ MkOption
 
 diffPart : Part (Builder Global') DiffCommand
 diffPart = inj $ MkOption
-  (toList1 [ MkMod (singleton "diff") ['d'] (Right parseDiff)
-     #"""
-     diff command use to display difference between the given and the golden one
-     available values: <git|diff|native|custom_command> (default : native)
-     """#])
+  (toList1
+    [ MkMod (singleton "diff") ['d'] (Right parseDiff)
+      #"""
+      diff command use to display difference between the given and the golden one
+      available values: <git|diff|native|custom_command> (default : native)
+      """#
+    , MkMod (singleton "no-diff") [] (Left None)
+      "remove all diff from the output, equivalent of `--diff none`"
+    ])
   Native
   compose
   where
     go : String -> DiffCommand
+    go "none" = None
     go "native" = Native
     go "git" = GitDiff
     go "diff" = Diff
@@ -193,6 +216,7 @@ optParseGlobal : OptParse (Builder Global') Global
 optParseGlobal =
   [| MkGlobal
     (liftAp replicaDirPart)
+    (liftAp goldenDirPart)
     (liftAp colourPart)
     (liftAp asciiPart)
     (liftAp logLevelPart)
@@ -205,6 +229,7 @@ defaultGlobal : Default Global'
 defaultGlobal =
   MkGlobal
     (defaultPart replicaDirPart)
+    (defaultPart goldenDirPart)
     (defaultPart colourPart)
     (defaultPart asciiPart)
     (defaultPart logLevelPart)

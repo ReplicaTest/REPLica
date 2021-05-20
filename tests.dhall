@@ -184,6 +184,15 @@ let tests : Replica.Replica = [
          with succeed = Some False
          with tags = ["expectation", "run", "partial"]
    },
+   { mapKey = "custom_golden_dir"
+   , mapValue =
+       (Meta.replicaTest Meta.Run::{ directory = "tests/replica/goldenDir"
+                                   , parameters = ["--golden-dir golden"]
+                                   , testFile = "tests.json"})
+         with description = Some "test --goldenDir"
+         with succeed = Some True
+         with tags = ["config", "golden"]
+   },
    { mapKey = "space_unsensitive_ordered_partial_expectation_match"
    , mapValue =
        Replica.Success::{command = "echo \"Hello, World!\""}

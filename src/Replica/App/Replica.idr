@@ -54,7 +54,13 @@ lastRunLog rdir = logDir rdir </> "last.json"
 
 export
 getReplicaDir : State GlobalConfig Global e => App e String
-getReplicaDir = map replicaDir $ get GlobalConfig
+getReplicaDir = replicaDir <$> get GlobalConfig
+
+export
+getGoldenDir : State GlobalConfig Global e => App e String
+getGoldenDir = do
+  gd <- goldenDir <$> get GlobalConfig
+  maybe (testDir <$> getReplicaDir) pure gd
 
 export
 setAbsoluteReplicaDir : Has [State GlobalConfig Global, FileSystem] e => App e ()
@@ -71,9 +77,19 @@ getSingleTestDir : Has
   [ State CurrentTest Test
   , State GlobalConfig Global ] e => App e String
 getSingleTestDir = do
-  d <- map replicaDir $ get GlobalConfig
+  d <- getReplicaDir
   t <- get CurrentTest
   pure $ testDir d </> t.name
+
+export
+getSingleTestGoldenDir : Has
+  [ State CurrentTest Test
+  , State GlobalConfig Global ] e => App e String
+getSingleTestGoldenDir = do
+  d <- getGoldenDir
+  t <- get CurrentTest
+  pure $ d </> t.name
+
 
 
 export
@@ -81,7 +97,6 @@ getInputFile : Has
   [ State CurrentTest Test
   , State GlobalConfig Global ] e => App e String
 getInputFile = do
-  d <- map replicaDir $ get GlobalConfig
   t <- getSingleTestDir
   pure $ t </> defaultInput
 
@@ -90,7 +105,6 @@ getOutputFile : Has
   [ State CurrentTest Test
   , State GlobalConfig Global ] e => App e String
 getOutputFile = do
-  d <- map replicaDir $ get GlobalConfig
   t <- getSingleTestDir
   pure $ t </> defaultOutput
 
@@ -99,8 +113,7 @@ getExpectedOutput : Has
   [ State CurrentTest Test
   , State GlobalConfig Global ] e => App e String
 getExpectedOutput = do
-  d <- map replicaDir $ get GlobalConfig
-  t <- getSingleTestDir
+  t <- getSingleTestGoldenDir
   pure $ t </> defaultExpected
 
 export
@@ -108,8 +121,7 @@ getExpectedFile : Has
   [ State CurrentTest Test
   , State GlobalConfig Global ] e => App e String
 getExpectedFile = do
-  d <- map replicaDir $ get GlobalConfig
-  t <- getSingleTestDir
+  t <- getSingleTestGoldenDir
   pure $ t </> defaultFile
 
 export
