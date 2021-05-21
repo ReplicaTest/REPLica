@@ -1,6 +1,7 @@
 module Replica.Option.Global
 
 import Data.List
+import Data.Maybe
 import Data.String
 
 import Replica.Help
@@ -93,12 +94,16 @@ TyTraversable Global' where
     (func x.diff) (func x.file)
     |]
 
+export
+replicaDefaultDir : String
+replicaDefaultDir = ".replica"
+
 replicaDirPart : Part (Builder Global') String
 replicaDirPart = inj $ MkOption
   (singleton $ MkMod (singleton "replica-dir") []
       (Right $ MkValue "DIR" Just)
       "set the location of replica store (default: \".replica\")")
-  ".replica"
+  replicaDefaultDir
   go
   where
     go : String -> Builder Global' -> Either String (Builder Global')
@@ -117,6 +122,18 @@ goldenDirPart = inj $ MkOption
     go = one goldenDir (\x => record {goldenDir = Right x})
                  (\x, y => "More than one replica dir were given: \{show y}, \{show x}")
 
+export
+readLogLevel : String -> Maybe (Maybe LogLevel)
+readLogLevel = readLogLevel' . toLower
+  where
+    readLogLevel' : String -> Maybe (Maybe LogLevel)
+    readLogLevel' "none" = Just Nothing
+    readLogLevel' "debug" = Just $ Just Debug
+    readLogLevel' "info" = Just $ Just Info
+    readLogLevel' "warning" = Just $ Just Warning
+    readLogLevel' "critical" = Just $ Just Critical
+    readLogLevel' _ = Nothing
+
 logLevelPart : Part (Builder Global') (Maybe LogLevel)
 logLevelPart = inj $ MkOption
   (toList1
@@ -132,15 +149,7 @@ logLevelPart = inj $ MkOption
   go
   where
     logLevelValue : Value (Maybe LogLevel)
-    logLevelValue = MkValue "logLevel" (go . toLower)
-      where
-        go : String -> Maybe (Maybe LogLevel)
-        go "none" = Just Nothing
-        go "debug" = Just $ Just Debug
-        go "info" = Just $ Just Info
-        go "warning" = Just $ Just Warning
-        go "critical" = Just $ Just Critical
-        go _ = Nothing
+    logLevelValue = MkValue "logLevel" (readLogLevel . toLower)
     go : Maybe LogLevel -> Builder Global' -> Either String (Builder Global')
     go = ifSame logLevel (\x => record {logLevel = Right $ x})
                          (const $ const "Contradictory log level")
@@ -175,6 +184,17 @@ asciiPart = inj $ MkOption
       go = ifSame ascii (\x => record {ascii = Right $ x})
                         (const $ const "Contradictory ascii settings")
 
+export
+readDiffCommand : String -> DiffCommand
+readDiffCommand x = fromMaybe (Custom x) $ go $ toLower x
+  where
+    go : String -> Maybe DiffCommand
+    go "none" = Just None
+    go "native" = Just Native
+    go "git" = Just GitDiff
+    go "diff" = Just Diff
+    go x = Nothing
+
 diffPart : Part (Builder Global') DiffCommand
 diffPart = inj $ MkOption
   (toList1
@@ -189,14 +209,8 @@ diffPart = inj $ MkOption
   Native
   compose
   where
-    go : String -> DiffCommand
-    go "none" = None
-    go "native" = Native
-    go "git" = GitDiff
-    go "diff" = Diff
-    go x = Custom x
     parseDiff : Value DiffCommand
-    parseDiff = MkValue "CMD" (Just . go . toLower)
+    parseDiff = MkValue "CMD" (Just . readDiffCommand)
     compose : DiffCommand -> Builder Global' -> Either String (Builder Global')
     compose = one diff (\x => record {diff = Right x})
                   (\x, y => "More than one diff command were given: \{show y}, \{show x}")
@@ -240,3 +254,18 @@ export
 globalOptionsHelp : List1 Help
 globalOptionsHelp = toList1 {ok = ?trustMe}
   $ runApM (\p => partHelp p) optParseGlobal
+
+export
+Alternative m => Semigroup (Global' m) where
+  x <+> y = MkGlobal
+    (x.replicaDir <|> y.replicaDir)
+    (x.goldenDir <|> y.goldenDir)
+    (x.colour <|> y.colour)
+    (x.ascii <|> y.ascii)
+    (x.logLevel <|> y.logLevel)
+    (x.diff <|> y.diff)
+    (x.file <|> y.file)
+
+export
+Alternative m => Monoid (Global' m) where
+  neutral = MkGlobal empty empty empty empty empty empty empty
