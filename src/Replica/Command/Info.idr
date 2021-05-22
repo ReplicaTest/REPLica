@@ -69,12 +69,16 @@ defaultInfo = MkInfo
   defaultGlobal
 
 export
-parseInfo : List1 String -> ParseResult InfoCommand
-parseInfo ("info":::xs) = case parse (initBuilder defaultInfo) optParseInfo xs of
+withGivenGlobal : Default InfoCommand' -> Default Global' -> Default InfoCommand'
+withGivenGlobal x g = record {global = g <+> defaultGlobal} x
+
+export
+parseInfo : Default Global' ->  List1 String -> ParseResult InfoCommand
+parseInfo g ("info":::xs) = case parse (initBuilder $ defaultInfo `withGivenGlobal` g) optParseInfo xs of
   InvalidMix reason => InvalidMix reason
   InvalidOption ys => InvalidMix "Unknown option: \{ys.head}"
   Done x => maybe (InvalidMix "File is not set") Done $ build x
-parseInfo xs = InvalidOption xs
+parseInfo _ xs = InvalidOption xs
 
 export
 helpInfo : Help

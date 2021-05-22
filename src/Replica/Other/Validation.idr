@@ -30,3 +30,8 @@ export
 export
 fromEither : Applicative f =>  Either err a -> Validation (f err) a
 fromEither = either (Error . pure) Valid
+
+export
+toMaybe : Validation _ a -> Maybe a
+toMaybe (Valid x) = Just x
+toMaybe (Error e) = Nothing

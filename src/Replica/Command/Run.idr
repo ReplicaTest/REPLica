@@ -149,14 +149,17 @@ defaultRun = MkRunCommand
        defaultFilter
        defaultGlobal
 
+withGivenGlobal : Default RunCommand' -> Default Global' -> Default RunCommand'
+withGivenGlobal x g = record {global = g <+> defaultGlobal} x
+
 export
-parseRun : List1 String -> ParseResult RunCommand
-parseRun ("run":::xs) = do
-    case parse (initBuilder defaultRun) optParseRun xs of
+parseRun : Default Global' -> List1 String -> ParseResult RunCommand
+parseRun g ("run":::xs) = do
+    case parse (initBuilder $ defaultRun `withGivenGlobal` g) optParseRun xs of
          InvalidMix reason => InvalidMix reason
          InvalidOption ys  => InvalidMix $ "Unknown option: " ++ ys.head
          Done builder      => maybe (InvalidMix "No test file given") Done $ build builder
-parseRun xs = InvalidOption xs
+parseRun _ xs = InvalidOption xs
 
 export
 helpRun : Help

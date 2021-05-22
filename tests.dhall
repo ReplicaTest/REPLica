@@ -210,6 +210,15 @@ let tests : Replica.Replica = [
          with description = Some "check a space unsensitive partial expectation that succeeds"
          with expectation = Some (Replica.Partial True ["Hello ", " World "])
          with tags = ["expectation", "run", "partial", "space"]
+   },
+   { mapKey = "local_config"
+   , mapValue =
+       (Meta.replicaTest Meta.Run::{ directory = "tests/replica/localConfig"
+                                   , testFile = "tests.json"})
+         with require = [ "check_file" ]
+         with description = Some "test --goldenDir for files"
+         with succeed = Some True
+         with tags = ["config", "golden", "meta"]
    }
    ]
 

@@ -13,6 +13,7 @@ import System
 import Replica.App
 import Replica.Core
 import Replica.Command
+import Replica.Option.Parse
 import Replica.Option.Types
 import Replica.Other.Decorated
 import Replica.Other.Validation
@@ -50,7 +51,8 @@ main = do
     | _ => putStrLn "Error"
   let Just args' = toList1' args
     | Nothing => runHelp help
-  let x = parseArgs args'
+  gc <- givenConfig
+  let x = parseArgs gc args'
   case x of
        InvalidMix e => do
          putStrLn e

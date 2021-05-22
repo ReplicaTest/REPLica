@@ -18,10 +18,10 @@ Commands : Type
 Commands = Union Prelude.id [RunCommand, InfoCommand, Help]
 
 export
-parseArgs : List1 String -> ParseResult Commands
-parseArgs xs = foldl1 go $ toList1 $ map (flip apply xs)
-  [ map inj . parseRun
-  , map inj . parseInfo
+parseArgs : Default Global' -> List1 String -> ParseResult Commands
+parseArgs g xs = foldl1 go $ toList1 $ map (flip apply xs)
+  [ map inj . parseRun g
+  , map inj . parseInfo g
   , map inj . parseHelp
   ]
   where

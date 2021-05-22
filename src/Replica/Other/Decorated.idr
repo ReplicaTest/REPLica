@@ -51,3 +51,9 @@ ifSame get set errMsg x y = case get y of
   Right z => if x /= z
                 then Left $ errMsg x z
                 else Right y
+
+export
+first : (get : b -> Either c a) -> (set : a -> b -> b) -> a -> b -> b
+first get set x y = case get y of
+  Left _ => set x y
+  Right _ => y
