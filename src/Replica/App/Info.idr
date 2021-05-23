@@ -36,14 +36,24 @@ displayExpectation : FileSystem (FSError :: e) =>
       , Console] e => App e ()
 displayExpectation = do
   t <- get CurrentTest
-  handle (readFile !getExpectedFile)
-    (\o => do putStrLn $ withOffset 4 $ "Expected:"
-              putStrLn !(expectation o))
+  let Generated = t.expectation
+    | Exact expected => printExpectation expected
+    | Partial x xs => do
+        putStrLn $ withOffset 4 $ case x of
+          Ordered => "Expect these parts (ordered):"
+          Whatever => "Expect these parts (in any order):"
+        traverse_ putStrLn (map partialExpectation xs)
+  handle (readFile !getExpectedOutput)
+    printExpectation
     (\err : FSError => putStrLn "No expectation yet.")
   where
-    expectation : String -> App e String
-    expectation o =
-      pure . unlines . map (!blue . withOffset 6) . forget $ lines o
+    printExpectation : String -> App e ()
+    printExpectation o = do
+      putStrLn $ withOffset 4 $ "Expect exactly as output:"
+      putStrLn $ unlines $ map (withOffset 6) $ forget $ lines o
+    partialExpectation : String -> String
+    partialExpectation x = case lines x of
+      (head ::: tail) => unlines $ withOffset 4 ("- " ++ head) :: (withOffset 6 <$> tail)
 
 filterTests : FileSystem (FSError :: e) =>
   Has [ State InfoContext InfoCommand

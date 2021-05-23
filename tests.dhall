@@ -215,10 +215,10 @@ let tests : Replica.Replica = [
    , mapValue =
        (Meta.replicaTest Meta.Run::{ directory = "tests/replica/localConfig"
                                    , testFile = "tests.json"})
-         with require = [ "check_file" ]
-         with description = Some "test --goldenDir for files"
+         with require = [ "custom_golden_dir" ]
+         with description = Some "test localConfig"
          with succeed = Some True
-         with tags = ["config", "golden", "meta"]
+         with tags = ["config", "local", "meta"]
    }
    ]
 
