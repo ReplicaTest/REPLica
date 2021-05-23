@@ -222,4 +222,4 @@ let tests : Replica.Replica = [
    }
    ]
 
-in tests # parsing_errors # idriS
+in tests # parsing_errors # idris
