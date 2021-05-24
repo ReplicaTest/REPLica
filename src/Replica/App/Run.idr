@@ -1,3 +1,4 @@
+||| Application of a `replica run` command
 module Replica.App.Run
 
 import Control.ANSI
@@ -71,6 +72,7 @@ prepareReplicaDir = do
     (\err : SystemError => throw $ CantAccessTestFile "\{show gd}")
   pure rDir
 
+-- helper for the execution of the pre/post commands
 runAll :
   SystemIO (SystemError :: e) =>
   State GlobalConfig Global e =>
@@ -86,6 +88,7 @@ runAll phase liftError (x :: xs) = do
     (const $ runAll phase liftError xs)
     (\err : SystemError => throw $ liftError x)
 
+-- native way to display expectations
 expectedVsGiven : State GlobalConfig Global e =>
   Nat -> String -> String -> App e (List String)
 expectedVsGiven k expected given = pure $ map (withOffset k) $
@@ -93,26 +96,26 @@ expectedVsGiven k expected given = pure $ map (withOffset k) $
   ( "Given:" :: map !green (forget $ lines given))
 
 nativeShow : State GlobalConfig Global e =>
-  Console e => String -> String -> App e ()
-nativeShow expected given =
-  putStrLn $ unlines !(expectedVsGiven 0 expected given)
+  Console e => Nat -> String -> String -> App e ()
+nativeShow n expected given =
+  traverse_ putStrLn !(expectedVsGiven n expected given)
 
 -- Provide different ways to show the difference between expectations and givens
 showDiff : SystemIO (SystemError :: e) =>
   State GlobalConfig Global e =>
   State CurrentTest Test e =>
-  Console e => DiffCommand -> String -> String -> App e ()
-showDiff None expected given = pure ()
-showDiff Native expected given = nativeShow expected given
-showDiff Diff x y = catchNew
+  Console e => DiffCommand -> Nat -> String -> String -> App e ()
+showDiff None n expected given = pure ()
+showDiff Native n expected given = nativeShow n expected given
+showDiff Diff n x y = catchNew
+  (system $ "diff --minimal \{!getExpectedOutput} \{!getOutputFile}")
+  (\err : SystemError => pure ())
+showDiff GitDiff n x y = catchNew
   (system $ "git diff --minimal --word-diff=color --no-index -- \{!getExpectedOutput} \{!getOutputFile}")
-  (\err : SystemError => nativeShow x y)
-showDiff GitDiff x y = catchNew
-  (system $ "git diff --minimal --word-diff=color --no-index -- \{!getExpectedOutput} \{!getOutputFile}")
-  (\err : SystemError => nativeShow x y)
-showDiff (Custom z) x y = catchNew
+  (\err : SystemError => pure ())
+showDiff (Custom z) n x y = catchNew
   (system $ "\{z} \{!getExpectedOutput} \{!getOutputFile}")
-  (\err : SystemError => nativeShow x y)
+  (\err : SystemError => pure ())
 
 -- on mismatch, check if we should replace the golden value
 interactiveGolden : SystemIO (SystemError :: e) =>
@@ -161,7 +164,7 @@ interactiveGolden source given expected = do
       let d = case !(diff <$> get GlobalConfig) of
                    None => Native
                    d' => d'
-      showDiff d str given
+      showDiff d 0 str given
 
 getExpected : FileSystem (FSError :: e) =>
   Has [ State RunContext RunCommand
@@ -175,6 +178,8 @@ getExpected src= do
         MissingFile _ => pure Nothing
         err => throw $ FileSystemError "Cannot read expectation")
 
+
+-- check partial expectations
 checkPartial : (ordered : OrderSensitive) -> (xs : List String) ->
                (given : String) ->
                Maybe FailReason
@@ -187,8 +192,6 @@ checkPartial Ordered (x :: xs) given = do
        (_, str) => if isPrefixOf x str
                       then checkPartial Ordered xs (assert_smaller given $ drop (length x) str)
                       else checkPartial Ordered (x::xs) (assert_smaller given $ drop 1 str)
-
-
 checkPartial Whatever xs given = let
   errors = catMaybes $ map (\exp => guard (not $ isInfixOf exp given) $> exp) xs
   in case errors of
@@ -278,6 +281,7 @@ checkExpectations outputs = do
     | _ => pure Success
   pure $ Fail (x :: xs)
 
+-- if an input is given for a test, write it in a file to pass it to the command
 generateInput : FileSystem (FSError :: e) =>
       Has [ State CurrentTest Test
           , State GlobalConfig Global
@@ -291,6 +295,7 @@ generateInput = do
     (\e : FSError => throw $ FileSystemError "Can't write input file \{f}")
   pure (Just f)
 
+-- run the tested commands and gather the outputs (standard output and file output, if provided)
 collectOutputs : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
@@ -332,7 +337,6 @@ testCore : SystemIO (SystemError :: e) =>
       , Console
       ] e => App e TestResult
 testCore = do
-  
   Right outputs <- collectOutputs
     | Left res => pure res
   checkExpectations outputs
@@ -397,29 +401,42 @@ runTest = do
       catchNew (createDir goldenDir) continueIfExists
 
 
-testOutput :
+testOutput : SystemIO (SystemError :: e) =>
   Has [ State RunContext RunCommand
       , State GlobalConfig Global
+      , State CurrentTest Test
       , Console
-      ] e => String -> Either TestError TestResult -> App e ()
-testOutput name (Left y) = do
-  putStr (withOffset 2 $ (!yellow "\{!err} \{name}: "))
+      ] e => Either TestError TestResult -> App e ()
+testOutput (Left y) = do
+  t <- get CurrentTest
+  putStr (withOffset 2 $ (!yellow "\{!err} \{t.name}: "))
   putStrLn (displayTestError y)
-testOutput name (Right Skipped) =
-   putStrLn $ withOffset 2 "\{!pending} \{name}"
-testOutput name (Right Success) = do
+testOutput (Right Skipped) = do
+  t <- get CurrentTest
+  putStrLn $ withOffset 2 "\{!pending} \{t.name}"
+testOutput (Right Success) = do
+  t <- get CurrentTest
   if !(hideSuccess <$> get RunContext)
      then pure ()
-     else putStrLn $ withOffset 2 "\{!ok} \{name}"
-testOutput name (Right (Fail xs)) = do
-  putStrLn $ withOffset 2 $ !red "\{!ko} \{name}: \{unwords $ map displayFailReason xs}"
-  let Just (expected, given) = getContentMismatch xs
-    | Nothing => pure ()
-  putStrLn $ unlines !(expectedVsGiven 6 expected given)
+     else putStrLn $ withOffset 2 "\{!ok} \{t.name}"
+testOutput (Right (Fail xs)) = do
+  t <- get CurrentTest
+  putStrLn $ withOffset 2 $ !red "\{!ko} \{t.name}: \{unwords $ map displayFailReason xs}"
+  getContentMismatch xs
   where
-    getContentMismatch : List FailReason -> Maybe (String, String)
-    getContentMismatch [] = Nothing
-    getContentMismatch (WrongOutput src (DifferentOutput x y) :: _) = Just (x, y)
+    partialExpectation : String -> String
+    partialExpectation x = case lines x of
+      (head ::: tail) => unlines $ withOffset 6 ("- " ++ head) :: (withOffset 8 <$> tail)
+    getContentMismatch : List FailReason -> App e ()
+    getContentMismatch [] = pure ()
+    getContentMismatch (WrongOutput src (DifferentOutput x y) :: _) =
+      let d = case !(diff <$> get GlobalConfig) of
+                   None => Native
+                   d' => d'
+      in showDiff d 6 x y
+    getContentMismatch (WrongOutput src (PartialOutputMismatch order  xs ys) :: _) = do
+      putStrLn $ withOffset 6 $ "Unmatched expectations:"
+      traverse_ (putStrLn . partialExpectation) xs
     getContentMismatch (_ :: xs) = getContentMismatch xs
 
 runAllTests : SystemIO (SystemError :: TestError :: e) =>
@@ -429,44 +446,44 @@ runAllTests : SystemIO (SystemError :: TestError :: e) =>
   Has [ State RunContext RunCommand
       , State GlobalConfig Global
       , Console
-      ] e =>  TestPlan -> App e (List (String, Either TestError TestResult))
+      ] e =>  TestPlan -> App e (List (Test, Either TestError TestResult))
 runAllTests plan = do
   putStrLn $ separator 80
   putStrLn $ !bold "Running tests..."
   batchTests [] plan
   where
-    processTest : Test -> App e (String, Either TestError TestResult)
+    processTest : Test -> App e (Test, Either TestError TestResult)
     processTest x = do
 
       rdir <- getReplicaDir
       let False = x.pending
-        | True => pure (x.name, Right Skipped)
+        | True => pure (x, Right Skipped)
       r <- handle
              (new x runTest)
-             (pure . MkPair x.name . Right)
-             (\err : TestError => pure (x.name, Left err))
+             (pure . MkPair x . Right)
+             (\err : TestError => pure (x, Left err))
       pure r
     prepareBatch : Nat -> TestPlan -> (List Test, List Test)
     prepareBatch n plan = if n == 0
                              then (plan.now, Prelude.Nil)
                              else splitAt n plan.now
-    processResult : TestPlan -> (String, Either TestError TestResult) -> TestPlan
-    processResult plan (tName, Right Success) = validate tName plan
-    processResult plan (tName, _) = fail tName plan
-    batchTests : List (String, Either TestError TestResult) ->
-                 TestPlan -> App e (List (String, Either TestError TestResult))
+    processResult : TestPlan -> (Test, Either TestError TestResult) -> TestPlan
+    processResult plan (t, Right Success) = validate t.name plan
+    processResult plan (t, _) = fail t.name plan
+    batchTests : List (Test, Either TestError TestResult) ->
+                 TestPlan -> App e (List (Test, Either TestError TestResult))
     batchTests acc plan = do
       n <- threads <$> get RunContext
       case prepareBatch n plan of
            ([], later) => pure $ join
               [ acc
-              , map (\t => (t.name, Left Inaccessible)) plan.later
-              , map (\(reason, t) => (t.name, Left $ RequirementsFailed reason)) plan.skipped
+              , map (\t => (t, Left Inaccessible)) plan.later
+              , map (\(reason, t) => (t, Left $ RequirementsFailed reason)) plan.skipped
               ]
            (now, nextBatches) => do
              res <- map await <$> traverse (map (fork . delay) . processTest) now
              when (not !(interactive <$> get RunContext))
-               (traverse_ (uncurry testOutput) res)
+               (traverse_ (\(t, r) => new t (testOutput r)) res)
              p <- punitive <$> get RunContext
              if p && any (not . isFullSuccess . snd) res
                 then pure res
@@ -557,12 +574,12 @@ runReplica = do
   log $ displayPlan plan
   result <- runAllTests plan
   let logFile = lastRunLog rDir
-  catchNew (writeFile logFile (show $ reportToJSON result))
+  catchNew (writeFile logFile (show $ reportToJSON $ map (\x => ((fst x).name, snd x)) result))
     (\err : FSError => throw $ CantAccessTestFile logFile)
   when !(interactive <$> get RunContext)
     (do putStrLn $ separator 80
         putStrLn $ !bold "Test results:"
-        traverse_ (uncurry testOutput) result)
+        traverse_ (uncurry (\t, r => new t (testOutput r))) result)
   let stats = asStats $ snd <$> result
   report $ stats
   pure stats
