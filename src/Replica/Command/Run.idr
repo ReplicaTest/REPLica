@@ -1,3 +1,4 @@
+||| Parser for command line argument of a `replica run command`
 module Replica.Command.Run
 
 import Data.List

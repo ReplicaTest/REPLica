@@ -30,10 +30,23 @@ covering
 runInfo : InfoCommand -> IO Int
 runInfo info = run $ new info.global $ new info $ handle infoReplica
     (const $ pure 0)
-    (\err : ReplicaError => putStrLn (show err) >> pure 253)
+    (\err : ReplicaError => putStrLn (show err) >> pure 252)
 
 runHelp : Help -> IO ()
 runHelp = putStrLn . display
+
+covering
+runSet : SetCommand -> IO Int
+runSet x = do
+  home <- getEnv "HOME"
+  let Just gb = noGlobal
+    | Nothing => putStrLn "Can't init env" >> pure 128
+  run $ new x $ new gb $ new home $ handle setReplica
+    (const $ pure 0)
+    (\err : ReplicaError => putStrLn (show err) >> pure 251)
+  where
+    noGlobal : Maybe Global
+    noGlobal = build $ initBuilder (record {file = Just ""} defaultGlobal)
 
 covering
 runCommand : Commands -> IO Int
@@ -42,7 +55,9 @@ runCommand a0 = let
     | Right cmd => runRun cmd
   Left a2 = decomp a1
     | Right cmd => runInfo cmd
-  in runHelp (decomp0 a2) $> 0
+  Left a3 = decomp a2
+    | Right cmd => runSet cmd
+  in runHelp (decomp0 a3) $> 0
 
 covering
 main : IO ()

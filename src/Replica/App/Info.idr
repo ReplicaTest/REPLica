@@ -1,6 +1,5 @@
 module Replica.App.Info
 
-import Control.ANSI
 import Control.App
 import Control.App.Console
 
@@ -126,7 +125,7 @@ infoReplica :
     , Console
     ] e => App e ()
 infoReplica = do
-  debug $ "Info: \{show !(get InfoContext)}"
+  debug "Info: \{show !(get InfoContext)}"
   debug $ show !(get GlobalConfig)
   putStrLn ""
   tests <- defineActiveTests

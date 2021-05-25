@@ -7,5 +7,6 @@ Integration testing for command line interfaces
 Commands:
   run   Run tests from a Replica JSON file
   info  Display information about test suites
+  set   Set a global configuration for replica commands
 
 Run 'replica help COMMAND' for more information on a command.

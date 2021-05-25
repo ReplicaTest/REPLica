@@ -311,7 +311,7 @@ collectOutputs = do
     | True => pure $ Left Skipped
   outputFile <- getOutputFile
   exitStatus <- runCommand outputFile
-  output <- catchNew (readFile $ outputFile)
+  output <- catchNew (readFile outputFile)
     (\e : FSError => throw $
           FileSystemError "Can't read output file \{outputFile}")
   let Just f = t.file
@@ -574,7 +574,7 @@ runReplica = do
   log $ displayPlan plan
   result <- runAllTests plan
   let logFile = lastRunLog rDir
-  catchNew (writeFile logFile (show $ reportToJSON $ map (\x => ((fst x).name, snd x)) result))
+  catchNew (writeFile logFile (show $ reportToJSON $ map (mapFst name)  result))
     (\err : FSError => throw $ CantAccessTestFile logFile)
   when !(interactive <$> get RunContext)
     (do putStrLn $ separator 80
