@@ -121,7 +121,27 @@ parseSet xs = InvalidOption xs
 
 export
 helpSet : Help
-helpSet = commandHelp {b = Builder SetCommand'}
-  "set" "Set a global configuration for replica commands"
-  (optParseSet)
-  (Just "KEY=VALUE")
+helpSet = record {lastWords = Just footer} baseCommand
+  where
+    baseCommand : Help
+    baseCommand = commandHelp {b = Builder SetCommand'}
+      "set" "Set a global configuration for replica commands"
+      (optParseSet)
+      (Just "KEY=VALUE")
+    footer : String
+    footer =
+      #"""
+       Available keys, and description:
+         replicaDir (or replica-dir, rDir) where replica stores internal information (default `./.replica`)
+         globalDir  (or global-dir, gDir) where replica stores golden values (default `./.replica/tests`)
+         colour     (or color) do we used colored output or not? (true or false, default `true`)
+         ascii      do we keep away emojis or not? (true or false, default `false`)
+         diff       command used to display diff
+                    (known value: diff, git, native, other strings are considered as custom command)
+                    (default: `native`)
+         log        log level (default: `none`)
+                    (known value: debug, info, warning, critical)
+         testFile   (or jsonFile, test) the path of the test file to use (prefer a relative path)
+                    (no default)
+       """#
+
