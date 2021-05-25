@@ -574,7 +574,7 @@ runReplica = do
   log $ displayPlan plan
   result <- runAllTests plan
   let logFile = lastRunLog rDir
-  catchNew (writeFile logFile (show $ reportToJSON $ map (\x => ((fst x).name, snd x)) result))
+  catchNew (writeFile logFile (show $ reportToJSON $ map (mapFst name)  result))
     (\err : FSError => throw $ CantAccessTestFile logFile)
   when !(interactive <$> get RunContext)
     (do putStrLn $ separator 80

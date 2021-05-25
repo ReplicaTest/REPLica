@@ -42,6 +42,12 @@ validateDiff : JSON -> Validation (List String) DiffCommand
 validateDiff (JString x) = Valid $ readDiffCommand x
 validateDiff x = Error ["Diff should be a string"]
 
+validateFile : JSON -> Validation (List String) String
+validateFile (JString x) = Valid x
+validateFile x = Error ["File should be a string"]
+
+
+
 jsonConfig : JSON -> Default Global'
 jsonConfig (JObject xs) = MkGlobal
   ((lookup "replica-dir" xs <|> lookup "replicaDir" xs) >>= toMaybe . validateReplicaDir)
@@ -50,7 +56,7 @@ jsonConfig (JObject xs) = MkGlobal
   ((lookup "ascii" xs) >>= toMaybe . validateAscii)
   ((lookup "log-level" xs <|> lookup "logLevel" xs) >>= toMaybe . validateLogLevel)
   ((lookup "diff" xs) >>= toMaybe . validateDiff)
-  Nothing
+  ((lookup "testFile" xs) >>= toMaybe . validateFile)
 jsonConfig json = neutral
 
 export
