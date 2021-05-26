@@ -1,6 +1,6 @@
 name: ci
 
-on: [push, workflow_dispatch]
+on: [push, pull_request]
 
 env:
   IDRIS2_VERSION: 0.3.0
@@ -89,7 +89,8 @@ jobs:
     needs: build-idris2-nightly
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
       - name: Download Idris2 Artifact
         uses: actions/download-artifact@v2
         with:
