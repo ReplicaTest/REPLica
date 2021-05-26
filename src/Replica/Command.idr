@@ -11,17 +11,19 @@ import Replica.Other.Validation
 
 import public Replica.Command.Info
 import public Replica.Command.Run
+import public Replica.Command.Set
 import public Replica.Command.Help
 
 public export
 Commands : Type
-Commands = Union Prelude.id [RunCommand, InfoCommand, Help]
+Commands = Union Prelude.id [RunCommand, InfoCommand, SetCommand, Help]
 
 export
 parseArgs : Default Global' -> List1 String -> ParseResult Commands
 parseArgs g xs = foldl1 go $ toList1 $ map (flip apply xs)
   [ map inj . parseRun g
   , map inj . parseInfo g
+  , map inj . parseSet
   , map inj . parseHelp
   ]
   where

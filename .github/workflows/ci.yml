@@ -1,6 +1,6 @@
 name: ci
 
-on: [push, workflow_dispatch]
+on: [push, pull_request]
 
 env:
   IDRIS2_VERSION: 0.3.0

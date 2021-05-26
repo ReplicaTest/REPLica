@@ -7,6 +7,9 @@
 - Can check the content of a generated file using `outputFile`
 - Partial expectations
 - Space sensitivity is configurable
+- Directory for golden values is configurable
+- external configuration (via `replica set`)
+- nix flake (thanks to Matthieu Coudron)
 
 ## version 0.2.0
 
