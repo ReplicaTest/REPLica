@@ -1,12 +1,16 @@
 # REPLica changelog
 
-## since 0.2.0
+## version 0.3.0
 
 - Can mark tests as _pending_
 - Can set `expected` in json and dhall to specify expected output directly
 - Can check the content of a generated file using `outputFile`
 - Partial expectations
 - Space sensitivity is configurable
+- Directory for golden values is configurable
+- external configuration (via `replica set`)
+- nix flake (thanks to Matthieu Coudron)
+- dockerfile
 
 ## version 0.2.0
 

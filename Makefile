@@ -25,4 +25,10 @@ generate: ${TEST}
 test: ${TEST} build
 	build/exec/replica ${GLOBAL} run ${RUN} ${TEST}
 
-all: build test
+docker-build:
+	docker build . -t berewt/replica
+
+docker-run:
+	docker run berewt/replica
+
+all: test install docker-build

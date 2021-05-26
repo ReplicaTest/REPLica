@@ -311,7 +311,7 @@ collectOutputs = do
     | True => pure $ Left Skipped
   outputFile <- getOutputFile
   exitStatus <- runCommand outputFile
-  output <- catchNew (readFile $ outputFile)
+  output <- catchNew (readFile outputFile)
     (\e : FSError => throw $
           FileSystemError "Can't read output file \{outputFile}")
   let Just f = t.file
