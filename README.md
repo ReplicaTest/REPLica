@@ -178,6 +178,11 @@ The [documentation](./documentation) folder also contain useful pieces of inform
 
 You can also explore the tool options with `replica help`.
 
+### replica in my project?
+
+The [utils](./utils) folder contains a few helpers to ease the integration of
+replica in `git` and `Make`.
+
 ## Roadmap
 
 I keep track of the things I want to implement in a
