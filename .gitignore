@@ -1,5 +1,6 @@
-**/.replica/**/output
-**/.replica/log
+.replica
+!.replica/*/expected
+!.replica/*/file
 examples/.replica
 /tests.json
 /.history

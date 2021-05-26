@@ -20,7 +20,7 @@ let tests : Replica.Replica = [
      with tags = ["idris", "inline", "idris-file"]
   },
   { mapKey = "loadAPackage"
-  , mapValue = (Idris.multiLineTest { context = Idris.Context.Package "test.ipkg"
+  , mapValue = (Idris.multiLineTest { context = Idris.package "test.ipkg"
                                     , input = ''
                                               :module Test
                                               aString

@@ -101,4 +101,12 @@ let multiLineTest
     : MultiLineContent -> Replica.Test
     = \(content : MultiLineContent) -> build (Test.MultiLine content)
 
-in  { build, Test, Context, OneLineContent, MultiLineContent, oneLineTest, multiLineTest }
+let package
+    : Text -> Context
+    = Context.Package
+
+let file
+    : Text -> Context
+    = Context.File
+
+in  { build, Test, package, file, Context, OneLineContent, MultiLineContent, oneLineTest, multiLineTest }

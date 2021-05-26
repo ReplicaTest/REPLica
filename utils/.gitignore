@@ -1,0 +1,7 @@
+# replica .gitignore template
+
+# ignore the whole replica internal mess
+.replica
+# but keep the golden values
+!.replica/test/*/expected
+!.replica/test/*/file
