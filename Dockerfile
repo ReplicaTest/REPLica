@@ -1,10 +1,9 @@
-FROM snazzybucket/idris2:latest as builder
+FROM snazzybucket/idris2:v0.3.0-576-g34930839 as builder
 
 RUN mkdir /opt/replica
 WORKDIR /opt/replica
 
 COPY . ./
-RUN true
 
 RUN make build
 RUN pwd
