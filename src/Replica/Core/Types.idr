@@ -73,12 +73,20 @@ defaultFile : String
 defaultFile = "file"
 
 export
+defaultError : String
+defaultError = "error"
+
+export
 defaultOutput : String
 defaultOutput = "output"
 
 export
 defaultInput : String
 defaultInput = "input"
+
+export
+defaultStatus : String
+defaultStatus = "status"
 
 
 

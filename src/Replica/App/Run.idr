@@ -310,21 +310,30 @@ collectOutputs = do
   let False = t.pending
     | True => pure $ Left Skipped
   outputFile <- getOutputFile
-  exitStatus <- runCommand outputFile
+  errorFile <- getErrorFile
+  statusFile <- getStatusFile
+  ignore $ runCommand outputFile errorFile statusFile
   output <- catchNew (readFile outputFile)
     (\e : FSError => throw $
           FileSystemError "Can't read output file \{outputFile}")
+  exitStatus <- fromMaybe 0 . parseInteger <$>
+    catchNew (readFile statusFile) (\err : FSError => pure "0")
   let Just f = t.file
     | Nothing => pure $ Right $  MkTestOutput exitStatus output Nothing
   Just fileContent <- catchNew (Just <$> readFile f) (\err : FSError => pure Nothing)
     | Nothing => pure $ Left $ Fail [ExpectedFileNotFound f]
   pure $ Right $ MkTestOutput exitStatus output (Just fileContent)
   where
-    runCommand : String -> App e Int
-    runCommand outputFile = do
+    runCommand : (outputFile, errorFile, statusFile : String) -> App e Int
+    runCommand outputFile errorFile statusFile = do
       t <- get CurrentTest
       inputFile <- generateInput
-      let cmd = "(\{t.command}) \{maybe "" ("< " ++ )inputFile} > \"\{outputFile}\""
+      let cmd = """
+                (\{t.command}) \{maybe "" ("< " ++ )inputFile} 1> \"\{outputFile}\" 2> \"\{errorFile}\";
+                EXIT_STATUS=$?;
+                echo $EXIT_STATUS > \{statusFile};
+                exit $EXIT_STATUS
+                """
       log $ withOffset 2 "Running command: \{cmd}"
       handle (system cmd) (const $ pure 0) (\(Err n) => pure n)
 

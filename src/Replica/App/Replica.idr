@@ -93,6 +93,14 @@ getSingleTestGoldenDir = do
 
 
 export
+getErrorFile : Has
+  [ State CurrentTest Test
+  , State GlobalConfig Global ] e => App e String
+getErrorFile = do
+  t <- getSingleTestDir
+  pure $ t </> defaultError
+
+export
 getInputFile : Has
   [ State CurrentTest Test
   , State GlobalConfig Global ] e => App e String
@@ -107,6 +115,14 @@ getOutputFile : Has
 getOutputFile = do
   t <- getSingleTestDir
   pure $ t </> defaultOutput
+
+export
+getStatusFile : Has
+  [ State CurrentTest Test
+  , State GlobalConfig Global ] e => App e String
+getStatusFile = do
+  t <- getSingleTestDir
+  pure $ t </> defaultStatus
 
 export
 getExpectedOutput : Has
