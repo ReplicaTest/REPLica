@@ -12,7 +12,7 @@ import Replica.Other.Decorated
 
 import Language.JSON
 
-%default total/
+%default total
 
 public export
 data TargetConfig = Local | Global
