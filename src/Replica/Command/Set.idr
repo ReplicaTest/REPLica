@@ -12,7 +12,7 @@ import Replica.Other.Decorated
 
 import Language.JSON
 
-%default total
+%default total/
 
 public export
 data TargetConfig = Local | Global
@@ -133,7 +133,7 @@ helpSet = record {lastWords = Just footer} baseCommand
       #"""
        Available keys, and description:
          replicaDir (or replica-dir, rDir) where replica stores internal information (default `./.replica`)
-         globalDir  (or global-dir, gDir) where replica stores golden values (default `./.replica/tests`)
+         goldenDir  (or golden-dir, gDir) where replica stores golden values (default `./.replica/tests`)
          colour     (or color) do we used colored output or not? (true or false, default `true`)
          ascii      do we keep away emojis or not? (true or false, default `false`)
          diff       command used to display diff
