@@ -1,5 +1,10 @@
 # REPLica changelog
 
+## version 0.3.1
+
+- FIX documentation error in replica set
+- CHANGE docker entry point is now a shell
+
 ## version 0.3.0
 
 - Can mark tests as _pending_
