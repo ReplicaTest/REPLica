@@ -82,6 +82,12 @@ getSingleTestDir = do
   pure $ testDir d </> t.name
 
 export
+getSingleTestFileDir : Has
+  [ State CurrentTest Test
+  , State GlobalConfig Global ] e => App e String
+getSingleTestFileDir = (</> defaultFile) <$> getSingleTestDir
+
+export
 getSingleTestGoldenDir : Has
   [ State CurrentTest Test
   , State GlobalConfig Global ] e => App e String
@@ -90,7 +96,11 @@ getSingleTestGoldenDir = do
   t <- get CurrentTest
   pure $ d </> t.name
 
-
+export
+getSingleTestGoldenFileDir : Has
+  [ State CurrentTest Test
+  , State GlobalConfig Global ] e => App e String
+getSingleTestGoldenFileDir = (</> defaultFile) <$> getSingleTestGoldenDir
 
 export
 getErrorFile : Has
@@ -125,6 +135,14 @@ getStatusFile = do
   pure $ t </> defaultStatus
 
 export
+getWatchedFile : Has
+  [ State CurrentTest Test
+  , State GlobalConfig Global ] e => String -> App e String
+getWatchedFile f = do
+  t <- get CurrentTest
+  pure $ maybe f (</> f) t.workingDir
+
+export
 getExpectedOutput : Has
   [ State CurrentTest Test
   , State GlobalConfig Global ] e => App e String
@@ -133,12 +151,20 @@ getExpectedOutput = do
   pure $ t </> defaultExpected
 
 export
-getExpectedFile : Has
+getExpectedError : Has
   [ State CurrentTest Test
   , State GlobalConfig Global ] e => App e String
-getExpectedFile = do
+getExpectedError = do
   t <- getSingleTestGoldenDir
-  pure $ t </> defaultFile
+  pure $ t </> defaultError
+
+export
+getExpectedFile : Has
+  [ State CurrentTest Test
+  , State GlobalConfig Global ] e => String -> App e String
+getExpectedFile s = do
+  t <- getSingleTestGoldenFileDir
+  pure $ t </> s
 
 export
 getReplica :

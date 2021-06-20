@@ -39,11 +39,11 @@ data RunContext : Type where
 record TestOutput where
   constructor MkTestOutput
   status : Int
-  std : String
-  file : Maybe String
+  parts : List (Part, String)
 
 normalize : String -> String
 normalize = unlines . map unwords . filter (not . force . null) . map (assert_total words) . forget . lines
+
 
 -- Create the folders needed by Replica (usually ./.replica/test and ./.replica/log)
 prepareReplicaDir : SystemIO (SystemError :: e) =>
@@ -117,6 +117,13 @@ showDiff (Custom z) n x y = catchNew
   (system $ "\{z} \{!getExpectedOutput} \{!getOutputFile}")
   (\err : SystemError => pure ())
 
+getExpectationFile : Has
+  [ State CurrentTest Test
+  , State GlobalConfig Global ] e => Part -> App e String
+getExpectationFile StdOut = getExpectedOutput
+getExpectationFile StdErr = getExpectedError
+getExpectationFile (FileName x) = getExpectedFile x
+
 -- on mismatch, check if we should replace the golden value
 interactiveGolden : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
@@ -125,29 +132,26 @@ interactiveGolden : SystemIO (SystemError :: e) =>
       , Exception TestError
       , Console
       ] e =>
-  (source : Maybe String) ->
+  (source : Part) ->
   (given : String) ->
   (expected : Maybe String) ->
   App e (Maybe FailReason)
 interactiveGolden source given expected = do
   t <- get CurrentTest
-  putStrLn $ "\{t.name}: Golden value mismatch for \{maybe "standard output" ("file " ++) source}"
+  putStrLn $ "\{t.name}: Golden value mismatch for \{displaySource source}"
   showExpectedAndGiven
   putStrLn $ "Do you want to \{maybe "set" (const "replace") expected} the golden value? [N/y]"
   if !readAnswer
      then do
-       f <- expectedFile
+       f <- getExpectationFile source
        handle (writeFile f given)
          (const $ pure Nothing)
          (\err : FSError => throw $ FileSystemError "Cannot write golden value in: \{f}")
      else pure . Just $ maybe
-       (WrongOutput source (GoldenIsMissing given))
-       (WrongOutput source . flip DifferentOutput given)
+       (WrongOutput source given $ singleton (Generated ** Nothing))
+       (\x => WrongOutput source given $ singleton (Generated ** Just x))
        expected
   where
-
-    expectedFile : App e String
-    expectedFile = maybe getExpectedOutput (const getExpectedFile) source
 
     readAnswer : App e Bool
     readAnswer = do
@@ -178,25 +182,86 @@ getExpected src= do
         MissingFile _ => pure Nothing
         err => throw $ FileSystemError "Cannot read expectation")
 
-
--- check partial expectations
-checkPartial : (ordered : OrderSensitive) -> (xs : List String) ->
-               (given : String) ->
-               Maybe FailReason
-checkPartial Ordered [] given = Nothing
-checkPartial Ordered (x :: xs) given = do
+checkConsecutive : (xs : List String) -> (given : String) -> Maybe String
+checkConsecutive [] given = Nothing
+checkConsecutive (x :: xs) given = do
   let (s::_) = unpack x
-      | [] => checkPartial Ordered xs given
+      | [] => checkConsecutive xs given
   case break (== s) given of
-       (_, "") => Just $ WrongOutput Nothing (PartialOutputMismatch Ordered (x::xs) given)
+       (_, "") => Just x
        (_, str) => if isPrefixOf x str
-                      then checkPartial Ordered xs (assert_smaller given $ drop (length x) str)
-                      else checkPartial Ordered (x::xs) (assert_smaller given $ drop 1 str)
-checkPartial Whatever xs given = let
-  errors = catMaybes $ map (\exp => guard (not $ isInfixOf exp given) $> exp) xs
-  in case errors of
-          [] => Nothing
-          _  => Just $ WrongOutput Nothing (PartialOutputMismatch Whatever errors given)
+                      then checkConsecutive xs (assert_smaller given $ drop (length x) str)
+                      else checkConsecutive (x::xs) (assert_smaller given $ drop 1 str)
+
+checkContains : List String -> String -> Maybe (List1 String)
+checkContains xs given =
+  fromList $ catMaybes $ map (\exp => guard (not $ isInfixOf exp given) $> exp) xs
+
+getPartContent : SystemIO (SystemError :: e) =>
+  FileSystem (FSError :: e) =>
+  Has [ State CurrentTest Test
+      , State GlobalConfig Global
+      , State RunContext RunCommand
+      , Exception TestError
+      , Console ] e =>
+  (part: Part) ->
+  App e String
+getPartContent StdOut =
+  catchNew (readFile !getOutputFile)
+    (\err : FSError => throw $ FileSystemError "Standard output cannot be read")
+getPartContent StdErr =
+  catchNew (readFile !getErrorFile)
+    (\err : FSError => throw $ FileSystemError "Standard error cannot be read")
+getPartContent (FileName x) =
+  catchNew (readFile !(getWatchedFile x))
+  (\err : FSError => throw $ FileSystemError "Expected file \{show x} cannot be read")
+
+getPartExpectation : SystemIO (SystemError :: e) =>
+  FileSystem (FSError :: e) =>
+  Has [ State CurrentTest Test
+      , State GlobalConfig Global
+      , State RunContext RunCommand
+      , Exception TestError
+      , Console ] e =>
+  (part: Part) ->
+  App e (Maybe String)
+getPartExpectation part =
+  catchNew (Just <$> readFile !(getExpectationFile part)) (\err : FSError => pure Nothing)
+
+checkContent : SystemIO (SystemError :: e) =>
+  FileSystem (FSError :: e) =>
+  Has [ State CurrentTest Test
+      , State GlobalConfig Global
+      , Exception TestError
+      , Console
+      ] e =>
+  (spaceSensitive :Bool) ->
+  (given : String) ->
+  (expected : Maybe String) ->
+  Expectation ->
+  Maybe (e : Expectation ** ExpectationError e)
+checkContent spaceSensitive given _ exp@(Exact expected) = let
+  e : String = if spaceSensitive then expected else normalize expected
+  g : String = if spaceSensitive then given else normalize given
+  in guard (e /= g) $> (exp ** ())
+checkContent spaceSensitive given _ exp@(StartsWith expected) = let
+  e : String = if spaceSensitive then expected else normalize expected
+  g : String = if spaceSensitive then given else normalize given
+  in guard (not $ e `isPrefixOf` g) $> (exp ** ())
+checkContent spaceSensitive given _ exp@(EndsWith expected) = let
+  e : String = if spaceSensitive then expected else normalize expected
+  g : String = if spaceSensitive then given else normalize given
+  in guard (not $ e `isSuffixOf` g) $> (exp ** ())
+checkContent spaceSensitive given _ exp@(Partial Ordered xs) =
+  MkDPair exp <$> checkConsecutive xs given
+checkContent spaceSensitive given _ exp@(Partial Whatever xs) =
+  MkDPair exp <$> checkContains xs given
+checkContent spaceSensitive given Nothing Generated =
+  Just (Generated ** Nothing)
+checkContent spaceSensitive given (Just expected) Generated = let
+  e : String = if spaceSensitive then expected else normalize expected
+  g : String = if spaceSensitive then given else normalize given
+  in guard (e /= g) $> (Generated ** Just expected)
 
 checkOutput : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
@@ -205,41 +270,17 @@ checkOutput : SystemIO (SystemError :: e) =>
       , State RunContext RunCommand
       , Exception TestError
       , Console ] e =>
-  (source : Maybe String) ->
-  (given : String) ->
-  App e (Maybe (FailReason, Maybe (App e (Maybe FailReason))))
-checkOutput source given = do
+  (part: Part) ->
+  (expectations : List Expectation) ->
+  App e (Maybe FailReason)
+checkOutput part expectations = do
   t <- get CurrentTest
-  let Generated = maybe t.expectation (const Generated) source
-       | Exact expected => noInteractionOnFailure $
-                             checkExact t.spaceSensitive expected given
-       | Partial x xs => noInteractionOnFailure $ checkPartial' t.spaceSensitive x xs given
-  Just expected <- getExpected $ maybe !getExpectedOutput (const !getExpectedFile) source
-    | Nothing => interactiveFailure Nothing $ Just $ WrongOutput source (GoldenIsMissing given)
-  interactiveFailure (Just expected) $ checkExact t.spaceSensitive expected given
-  where
-    checkExact : (spaceSensitive : Bool) -> (expected, given : String) -> Maybe FailReason
-    checkExact spaceSensitive expected given = let
-      e : String = if spaceSensitive then expected else normalize expected
-      g : String = if spaceSensitive then given else normalize given
-      in guard (e /= g) $> WrongOutput source (DifferentOutput expected given)
-    checkPartial' : (spaceSensitive : Bool) -> (o : OrderSensitive) ->
-                    (expected : List String) -> (given : String) -> Maybe FailReason
-    checkPartial' spaceSensitive o expected given = let
-      e : List String = if spaceSensitive then expected else map normalize expected
-      g : String = if spaceSensitive then given else normalize given
-      in checkPartial o e g
-    noInteractionOnFailure : Maybe FailReason ->
-      App e (Maybe (FailReason, Maybe (App e (Maybe FailReason))))
-    noInteractionOnFailure = pure . map (flip MkPair Nothing)
-    interactiveFailure :
-      Maybe String ->
-      Maybe FailReason ->
-      App e (Maybe (FailReason, Maybe (App e (Maybe FailReason))))
-    interactiveFailure expected =
-      pure . map (flip MkPair (Just $ interactiveGolden source given expected))
+  given <- getPartContent part
+  golden <- getPartExpectation part
+  pure $ map (WrongOutput part given) $ fromList $ catMaybes $
+    map (checkContent {e} t.spaceSensitive given golden) expectations
 
-checkStatus : Maybe Bool -> Int -> Maybe FailReason
+checkStatus : Maybe Bool -> Nat -> Maybe FailReason
 checkStatus Nothing y = Nothing
 checkStatus (Just True) y = guard (y /= 0) $> WrongStatus True
 checkStatus (Just False) y = guard (y == 0) $> WrongStatus False
@@ -251,35 +292,31 @@ checkExpectations :  SystemIO (SystemError :: e) =>
       , State RunContext RunCommand
       , Exception TestError
       , Console ] e =>
-  (ouputs : TestOutput) ->
+  (exitCode : Nat) ->
   App e TestResult
-checkExpectations outputs = do
+checkExpectations exitCode = do
   t <- get CurrentTest
   ctx <- get RunContext
-  let statusFailure = checkStatus t.mustSucceed outputs.status
-  stdFailure <- checkOutput Nothing outputs.std
-  fileFailure <- maybe (pure Nothing) (checkOutput t.file) outputs.file
-  let failures = catMaybes [statusFailure, fst <$> stdFailure, fst <$> fileFailure]
+  let statusCheck = checkStatus t.mustSucceed exitCode
+  expResults <- traverse (uncurry checkOutput) t.expectations
+  let failures = maybe id (::) statusCheck $ catMaybes expResults
   debug $ withOffset 4 "Check success"
   let (x :: xs) = failures
     | _ => pure Success
-  let Nothing = statusFailure
+  let Nothing = statusCheck
     | _ => pure $ Fail failures
   debug $ withOffset 4
-        "Check interactive: \{show $ isNothing statusFailure} \{show ctx.interactive}"
-  let (Nothing, True) = (statusFailure, ctx.interactive)
+        "Check interactive: \{show $ isNothing statusCheck} \{show ctx.interactive}"
+  let (Nothing, True) = (statusCheck, ctx.interactive)
     | _ =>  pure $ Fail failures
-  stdFinalFailure <- do
-    Just (_, Just newF) <- pure stdFailure
-      | e => pure $ fst <$> e
-    newF
-  fileFinalFailure <- do
-    Just (_, Just newF) <- pure fileFailure
-      | e => pure $ fst <$> e
-    newF
-  let (x :: xs) = catMaybes [statusFailure, stdFinalFailure, fileFinalFailure]
-    | _ => pure Success
-  pure $ Fail (x :: xs)
+  [] <- map catMaybes $ traverse askForGolden failures
+    | xs => pure $ Fail xs
+  pure Success
+  where
+    askForGolden : FailReason -> App e (Maybe FailReason)
+    askForGolden (WrongOutput x given ((Generated ** expected) ::: [])) =
+      interactiveGolden x given expected
+    askForGolden x = pure $ Just x
 
 -- if an input is given for a test, write it in a file to pass it to the command
 generateInput : FileSystem (FSError :: e) =>
@@ -296,33 +333,23 @@ generateInput = do
   pure (Just f)
 
 -- run the tested commands and gather the outputs (standard output and file output, if provided)
-collectOutputs : SystemIO (SystemError :: e) =>
+generateOutputs : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
       , State GlobalConfig Global
       , State RunContext RunCommand
       , Exception TestError
       , Console
-      ] e => App e (Either TestResult TestOutput)
-collectOutputs = do
+      ] e => App e (Either TestResult Nat)
+generateOutputs = do
   t <- get CurrentTest
   debug $ withOffset 2 "Check pending"
   let False = t.pending
     | True => pure $ Left Skipped
-  outputFile <- getOutputFile
-  errorFile <- getErrorFile
   statusFile <- getStatusFile
-  ignore $ runCommand outputFile errorFile statusFile
-  output <- catchNew (readFile outputFile)
-    (\e : FSError => throw $
-          FileSystemError "Can't read output file \{outputFile}")
-  exitStatus <- fromMaybe 0 . parseInteger <$>
+  ignore $ runCommand !getOutputFile !getErrorFile statusFile
+  Right . fromMaybe 0 . parsePositive <$>
     catchNew (readFile statusFile) (\err : FSError => pure "0")
-  let Just f = t.file
-    | Nothing => pure $ Right $  MkTestOutput exitStatus output Nothing
-  Just fileContent <- catchNew (Just <$> readFile f) (\err : FSError => pure Nothing)
-    | Nothing => pure $ Left $ Fail [ExpectedFileNotFound f]
-  pure $ Right $ MkTestOutput exitStatus output (Just fileContent)
   where
     runCommand : (outputFile, errorFile, statusFile : String) -> App e Int
     runCommand outputFile errorFile statusFile = do
@@ -346,9 +373,9 @@ testCore : SystemIO (SystemError :: e) =>
       , Console
       ] e => App e TestResult
 testCore = do
-  Right outputs <- collectOutputs
+  Right exitCode <- generateOutputs
     | Left res => pure res
-  checkExpectations outputs
+  checkExpectations exitCode
 
 -- the whole test execution, including pre and post operation
 performTest : SystemIO (SystemError :: e) =>
@@ -399,15 +426,15 @@ runTest = do
       pure res
     continueIfExists : FSError -> App e ()
     continueIfExists (FileExists _) = pure ()
-    continueIfExists _ = throw $ FileSystemError "Cant't create or accesse test directory"
+    continueIfExists _ = throw $ FileSystemError "Cant't create or access test directory"
     createTestDir : App e ()
     createTestDir = do
-      testDir <- getSingleTestDir
-      catchNew (createDir testDir) continueIfExists
+      catchNew (createDir !getSingleTestDir) continueIfExists
+      catchNew (createDir !getSingleTestFileDir) continueIfExists
     createGoldenDir : App e ()
     createGoldenDir = do
-      goldenDir <- getSingleTestGoldenDir
-      catchNew (createDir goldenDir) continueIfExists
+      catchNew (createDir !getSingleTestGoldenDir) continueIfExists
+      catchNew (createDir !getSingleTestGoldenFileDir) continueIfExists
 
 
 testOutput : SystemIO (SystemError :: e) =>
@@ -431,22 +458,42 @@ testOutput (Right Success) = do
 testOutput (Right (Fail xs)) = do
   t <- get CurrentTest
   putStrLn $ withOffset 2 $ !red "\{!ko} \{t.name}: \{unwords $ map displayFailReason xs}"
-  getContentMismatch xs
+  traverse_ writeFailure xs
   where
-    partialExpectation : String -> String
-    partialExpectation x = case lines x of
-      (head ::: tail) => unlines $ withOffset 6 ("- " ++ head) :: (withOffset 8 <$> tail)
-    getContentMismatch : List FailReason -> App e ()
-    getContentMismatch [] = pure ()
-    getContentMismatch (WrongOutput src (DifferentOutput x y) :: _) =
-      let d = case !(diff <$> get GlobalConfig) of
-                   None => Native
-                   d' => d'
-      in showDiff d 6 x y
-    getContentMismatch (WrongOutput src (PartialOutputMismatch order  xs ys) :: _) = do
-      putStrLn $ withOffset 6 $ "Unmatched expectations:"
-      traverse_ (putStrLn . partialExpectation) xs
-    getContentMismatch (_ :: xs) = getContentMismatch xs
+    multilineDisplay : (offset : Nat) -> (content : String) -> App e ()
+    multilineDisplay offset = traverse_ (putStrLn . withOffset offset) . forget . lines
+
+    displayError : (given : String)  -> (exp : (e: Expectation ** ExpectationError e)) -> App e ()
+    displayError given (MkDPair (Exact x) snd) =
+      let content = case !(diff <$> get GlobalConfig) of
+            None => multilineDisplay 6 x
+            d' => showDiff d' 6 given x
+      in putStrLn (withOffset 4 "Exact expectation mismatch:") >> content
+    displayError given (MkDPair (StartsWith x) snd) =
+      putStrLn (withOffset 4 "Start mismatch:") >> multilineDisplay 6 x
+    displayError given (MkDPair (EndsWith x) snd) =
+      putStrLn (withOffset 4 "End mismatch:") >> multilineDisplay 6 x
+    displayError given (MkDPair (Partial Ordered ys) snd) = do
+      putStrLn (withOffset 4 "Consecutive expectations mismatch, first not found:")
+      multilineDisplay 6 snd
+    displayError given (MkDPair (Partial Whatever ys) snd) = do
+      putStrLn (withOffset 4 "Contains expectations mismatch, not found:")
+      traverse_ (multilineDisplay 6) snd
+    displayError given (MkDPair Generated Nothing) = pure ()
+    displayError given (MkDPair Generated (Just x)) = ?displayError_rhs_8
+      let content = case !(diff <$> get GlobalConfig) of
+            None => multilineDisplay 6 x
+            d' => showDiff d' 6 given x
+      in putStrLn (withOffset 4 "Golden value expectation mismatch:") >> content
+
+    writeFailure : FailReason -> App e ()
+    writeFailure (WrongStatus expectSuccess) = pure ()
+    writeFailure (ExpectedFileNotFound x) = pure ()
+    writeFailure (WrongOutput x given ys) = do
+      putStrLn $ withOffset 4 $ !bold "Error on \{displaySource x}:"
+      putStrLn $ withOffset 4 $ "Given:"
+      traverse_ (putStrLn . withOffset 6) $ forget $ lines given
+      traverse_ (displayError given) ys
 
 runAllTests : SystemIO (SystemError :: TestError :: e) =>
   SystemIO (SystemError :: e) =>
@@ -463,8 +510,6 @@ runAllTests plan = do
   where
     processTest : Test -> App e (Test, Either TestError TestResult)
     processTest x = do
-
-      rdir <- getReplicaDir
       let False = x.pending
         | True => pure (x, Right Skipped)
       r <- handle
