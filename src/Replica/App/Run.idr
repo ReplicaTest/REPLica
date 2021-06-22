@@ -144,6 +144,7 @@ interactiveGolden source given expected = do
   if !readAnswer
      then do
        f <- getExpectationFile source
+       log $ "Creating expectation file \{f}"
        handle (writeFile f given)
          (const $ pure Nothing)
          (\err : FSError => throw $ FileSystemError "Cannot write golden value in: \{f}")
@@ -278,11 +279,15 @@ checkOutput : SystemIO (SystemError :: e) =>
   (expectations : List Expectation) ->
   App e (Maybe FailReason)
 checkOutput part expectations = do
+  log $ withOffset 4 $ "Check \{displaySource part}"
+  debug $ withOffset 4 $ show expectations
   t <- get CurrentTest
   given <- getPartContent part
   golden <- getPartExpectation part
-  pure $ map (WrongOutput part given) $ fromList $ catMaybes $
-    map (checkContent {e} t.spaceSensitive given golden) expectations
+  let result = fromList $ catMaybes $
+    checkContent {e} t.spaceSensitive given golden <$> expectations
+  debug $ withOffset 4 $ "Errors: \{show $ map (map fst) result}"
+  pure $ map (WrongOutput part given) result
 
 checkStatus : Maybe Bool -> Nat -> Maybe FailReason
 checkStatus Nothing y = Nothing

@@ -87,8 +87,12 @@ Show Test where
     ]
 
 export
-defaultExpected : String
-defaultExpected = "expected"
+defaultExpectedOutput : String
+defaultExpectedOutput = "expected"
+
+export
+defaultExpectedError : String
+defaultExpectedError = "expected.err"
 
 export
 defaultFile : String

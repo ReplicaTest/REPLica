@@ -148,7 +148,7 @@ getExpectedOutput : Has
   , State GlobalConfig Global ] e => App e String
 getExpectedOutput = do
   t <- getSingleTestGoldenDir
-  pure $ t </> defaultExpected
+  pure $ t </> defaultExpectedOutput
 
 export
 getExpectedError : Has
@@ -156,7 +156,7 @@ getExpectedError : Has
   , State GlobalConfig Global ] e => App e String
 getExpectedError = do
   t <- getSingleTestGoldenDir
-  pure $ t </> defaultError
+  pure $ t </> defaultExpectedError
 
 export
 getExpectedFile : Has
