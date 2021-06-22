@@ -4,6 +4,9 @@ import Replica.Core.Types
 import Replica.Other.Validation
 
 import Data.List
+import Data.List1
+import Data.Maybe
+import Data.String
 import Language.JSON
 
 %default total
@@ -35,18 +38,55 @@ validatOrderSensitive (Just (JBoolean x)) = Valid $ if x then Ordered else Whate
 validatOrderSensitive (Just x) = Error
   ["OrderSensitive must be a boolean, found \{show x}"]
 
-validateExpectation : Maybe JSON -> Validation (List String) Expectation
-validateExpectation Nothing = Valid Generated
-validateExpectation (Just (JString x)) = Valid (Exact x)
-validateExpectation (Just (JArray xs)) = Partial Ordered <$> allString xs
-validateExpectation (Just (JObject o)) =
-  let Just (JArray parts) = lookup "parts" o
-      | other => Error $ maybe ["missing parts"] (const ["invalid parts"]) other
-  in [| Partial
-     (validatOrderSensitive $ lookup "ordered" o)
-     (allString parts)
-     |]
-validateExpectation x = Error ["An expectation must be an expectation, found: \{show x}"]
+validateExpectation : String -> JSON -> Validation (List String) (Maybe Expectation)
+validateExpectation "generated" (JBoolean True) = Valid $ Just $ Generated
+validateExpectation "generated" (JBoolean False) = Valid Nothing
+validateExpectation "exact" (JString str) = Valid $ Just $ Exact str
+validateExpectation "exact" json = Error ["exact expectation requires a string, found: \{show json}"]
+validateExpectation "start" (JString str) = Valid $ Just $ StartsWith str
+validateExpectation "start" json = Error ["start expectation requires a string, found: \{show json}"]
+validateExpectation "end" (JString str) = Valid $ Just $ EndsWith str
+validateExpectation "end" json = Error ["end expectation requires a string, found: \{show json}"]
+validateExpectation "consecutive" (JArray []) = Valid Nothing
+validateExpectation "consecutive" (JArray xs) = Just . Partial Ordered <$> allString xs
+validateExpectation "consecutive" json =
+  Error ["consecutive expectation requires a string, found: \{show json}"]
+validateExpectation "contains" (JArray []) = Valid Nothing
+validateExpectation "contains" (JArray xs) = Just . Partial Whatever <$> allString xs
+validateExpectation "contains" json =
+  Error ["consecutive expectation requires a string, found: \{show json}"]
+validateExpectation x json = Error ["Unknown expectation: \{show x}"]
+
+defaultExpectation : List (Part, List Expectation)
+defaultExpectation = [(StdOut, [Generated])]
+
+validateExpectations : Maybe JSON -> Validation (List String) (List (Part, List Expectation))
+validateExpectations (Just (JString x)) = Valid [(StdOut, [Exact x])]
+validateExpectations (Just (JArray [])) = Valid defaultExpectation
+validateExpectations (Just (JArray xs)) = pure . MkPair StdOut . pure . Partial Whatever <$> allString xs
+validateExpectations (Just (JObject [])) = Valid defaultExpectation
+validateExpectations (Just (JObject o)) = traverse go o
+  where
+    readStdout : String -> Maybe Part
+    readStdout x = guard (toLower x == "stdout") $> StdOut
+    readStderr : String -> Maybe Part
+    readStderr x = guard (toLower x == "stderr") $> StdErr
+    readPart : String -> Part
+    readPart x = fromMaybe (FileName x) (readStdout x <|> readStderr x)
+    go : (String, JSON) -> Validation (List String) (Part, List Expectation)
+    go (x, JNull) = Valid $ MkPair (readPart x) [Generated]
+    go (x, JBoolean True) = Valid $ MkPair (readPart x) [Generated]
+    go (x, JBoolean False) = Valid $ MkPair (readPart x) []
+    go (x, JArray []) = Valid $ MkPair (readPart x) [Generated]
+    go (x, JArray y) = MkPair (readPart x) . pure . Partial Ordered <$> allString y
+    go (x, JString y) = Valid $ MkPair (readPart x) [Exact y]
+    go (x, JObject []) = Valid $ MkPair (readPart x) [Generated]
+    go (x, JObject o) = MkPair (readPart x) . catMaybes <$> traverse (uncurry validateExpectation) o
+    go (x, y) = Error ["Invalid expectation entry : \{show y}"]
+validateExpectations (Just JNull) = Valid []
+validateExpectations (Just (JBoolean x)) = Error ["Expectations can't be a boolean"]
+validateExpectations (Just (JNumber x)) = Error ["Expectations can't be a number"]
+validateExpectations Nothing = Valid defaultExpectation
 
 validateRequireList : Maybe JSON -> Validation (List String) (List String)
 validateRequireList Nothing = Valid empty
@@ -136,7 +176,7 @@ jsonToTest str (JObject xs) =
   (traverse validateInput $ lookup "input" xs)
   (validateStatus $ lookup "succeed" xs)
   (validateSpaceSensitive $ lookup "spaceSensitive" xs)
-  (validateExpectation $ lookup "expectation" xs)
+  (validateExpectations $ lookup "expectation" xs <|> lookup "expectations" xs)
   (validateFile $ lookup "outputFile" xs)
   |]
 jsonToTest str json =
@@ -147,38 +187,6 @@ jsonToReplica : JSON -> Validation (List String) Replica
 jsonToReplica (JObject xs) = [| MkReplica $ traverse (uncurry jsonToTest) xs |]
 jsonToReplica _ = Error ["Replica test file must be a JSON object"]
 
-
-parseMissingGolden : Maybe String -> List (String, JSON) -> Maybe FailReason
-parseMissingGolden src xs = do
-  JString "Missing" <- lookup "reason" xs
-    | _ => Nothing
-  JString given <- lookup "given" xs
-    | _ => Nothing
-  pure $ WrongOutput src $ GoldenIsMissing given
-
-parseWrongOutput : Maybe String -> List (String, JSON) -> Lazy (Maybe FailReason)
-parseWrongOutput src xs = do
-  JString exp <- lookup "expected" xs
-    | _ => Nothing
-  JString given <- lookup "given" xs
-    | _ => Nothing
-  pure $ WrongOutput src $ DifferentOutput exp given
-
-parsePartialOutputMsimatch : Maybe String -> List (String, JSON) -> Maybe FailReason
-parsePartialOutputMsimatch src xs = do
-  JBoolean o<- lookup "ordered" xs
-    | _ => Nothing
-  JArray missing <- lookup "missingParts" xs
-    | _ => Nothing
-  let Just m = the (Maybe (List String)) $ traverse go missing
-    | _ => Nothing
-  JString given <- lookup "given" xs
-    | _ => Nothing
-  pure $ WrongOutput src $ PartialOutputMismatch (if o then Ordered else Whatever) m given
-  where
-    go : JSON -> Maybe String
-    go (JString str) = Just str
-    go _ = Nothing
 
 parseWrongStatus : List (String, JSON) -> Maybe FailReason
 parseWrongStatus xs = do
@@ -192,18 +200,55 @@ parseExpectedNotFound xs = do
     | _ => Nothing
   pure $ ExpectedFileNotFound exp
 
+parseWrongOutput : JSON -> Maybe (e : Expectation ** ExpectationError e)
+parseWrongOutput (JObject [("exact", JString x)]) = Just (Exact x ** ())
+parseWrongOutput (JObject [("start", JString x)]) = Just (StartsWith x ** ())
+parseWrongOutput (JObject [("end", JString x)]) = Just (EndsWith x ** ())
+parseWrongOutput (JObject [("generated", JString x)]) = Just (Generated ** Just x)
+parseWrongOutput (JObject [("generated", JNull)]) = Just (Generated ** Nothing)
+parseWrongOutput (JObject xs) = parseConsecutive xs <|> parseContains xs
+  where
+    parseConsecutive : List (String, JSON) -> Maybe (e : Expectation ** ExpectationError e)
+    parseConsecutive xs = do
+      JArray ys <- lookup "consecutive" xs
+        | _ => Nothing
+      let Valid x = allString ys
+        | _ => Nothing
+      JString notFound <- lookup "notFound" xs
+        | _ => Nothing
+      pure $ (Partial Ordered x ** notFound)
+    parseContains : List (String, JSON) -> Maybe (e : Expectation ** ExpectationError e)
+    parseContains xs = do
+      JArray ys <- lookup "contains" xs
+        | _ => Nothing
+      let Valid x = allString ys
+        | _ => Nothing
+      JArray notFound <- lookup "notFound" xs
+        | _ => Nothing
+      let Valid (n::nf) = allString notFound
+        | _ => Nothing
+      pure $ (Partial Whatever x ** (n:::nf))
+parseWrongOutput json = Nothing
+
+parsePart : JSON -> Validation (List String) Part
+parsePart (JString "stdout") = Valid StdOut
+parsePart (JString "stderr") = Valid StdErr
+parsePart (JObject [("file", JString x)]) = Valid $ FileName x
+parsePart xs = Error ["Unable to parse a part, found: \{show xs}"]
+
 parseFailReason : JSON -> Validation (List String) FailReason
 parseFailReason (JObject xs) = do
-  let Just src = case lookup "file" xs of
-                 Nothing => Just Nothing
-                 Just (JString str) => Just $ Just str
-                 _ => Nothing
-    | _ => Error ["Unexpected file value"]
+  let Valid src = maybe (Error ["Missing source cause"]) parsePart $ lookup "source" xs
+    | Error e => Error e
   case lookup "type" xs of
     Just (JString "output") => maybe
       (Error ["Invalid Wrong output content"])
-      Valid
-      (parseMissingGolden src xs <|> parseWrongOutput src xs <|> parsePartialOutputMsimatch src xs)
+      Valid $ do
+        JString given <- lookup "given" xs
+          | _ => Nothing
+        JArray errs <- lookup "errors" xs
+          | _ => Nothing
+        (WrongOutput src given <$> (traverse parseWrongOutput errs >>= fromList))
     Just (JString "status") => maybe
       (Error ["Invalid Wrong output content"])
       Valid

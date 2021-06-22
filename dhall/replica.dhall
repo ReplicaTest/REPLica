@@ -1,21 +1,54 @@
 let Map = https://prelude.dhall-lang.org/v20.1.0/Map/Type.dhall
 
-let PartialExpectation
+let ComplexExpectation
     : Type
-    = { ordered : Bool
-      , parts : List Text
+    = { generated : Bool
+      , exact : Optional Text
+      , start : Optional Text
+      , end: Optional Text
+      , consecutive : List Text
+      , contains : List Text
       }
+
+let EmptyExpectation
+    = { Type = ComplexExpectation
+      , default =
+        { generated = False
+        , exact = None Text
+        , start = None Text
+        , end = None Text
+        , consecutive = [] : List Text
+        , contains = [] : List Text
+        }
+      }
+
+let BySourceExpectation
+    : Type
+    = Map Text ComplexExpectation
 
 let Expectation
     : Type
-    = < PartialExp : PartialExpectation | ExactExp : Text >
+    = < GeneratedExp : Bool
+      | ExactExp : Text
+      | ContainsExp : List Text
+      | ComplexExp : BySourceExpectation
+      >
+
 
 let Exact : Text -> Expectation = \(e : Text) -> Expectation.ExactExp e
 
-let Partial : Bool -> List Text -> Expectation
-    = \(ordered : Bool) ->
-      \(parts : List Text) ->
-      Expectation.PartialExp {ordered, parts}
+let Contains : List Text -> Expectation
+    = \(parts : List Text) ->
+      Expectation.ContainsExp parts
+
+let Generated : Bool -> Expectation
+    = \(b : Bool) -> Expectation.GeneratedExp b
+
+let BySource : BySourceExpectation -> Expectation
+    = \(exp : BySourceExpectation) ->  Expectation.ComplexExp exp
+
+let StdOut : Text = "stdout"
+let StdErr : Text = "stderr"
 
 let Test
     : Type
@@ -29,7 +62,7 @@ let Test
       , input : Optional Text
       , succeed : Optional Bool
       , spaceSensitive : Bool
-      , expectation : Optional Expectation
+      , expectation : Expectation
       , outputFile : Optional Text
       , pending : Bool
       }
@@ -46,7 +79,7 @@ let Minimal =
         , input = None Text
         , succeed = None Bool
         , spaceSensitive = True
-        , expectation = None Expectation
+        , expectation = BySource ([] : BySourceExpectation)
         , outputFile = None Text
         , pending = False
         }
@@ -60,4 +93,19 @@ let Replica
     : Type
     = Map Text Test
 
-in  { Test, Replica, Minimal, Success, Failure, Expectation, Partial, Exact}
+in  { Test
+    , Replica
+    , Minimal
+    , Success
+    , Failure
+    , Expectation
+    , Contains
+    , Exact
+    , Generated
+    , BySource
+    , BySourceExpectation
+    , ComplexExpectation
+    , EmptyExpectation
+    , StdOut
+    , StdErr
+    }

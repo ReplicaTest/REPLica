@@ -1,12 +1,13 @@
 --------------------------------------------------------------------------------
 [1mRunning tests...[0m
-  [38;5;1m❌  mismatch: [Unexpected content for output][0m
-      Expected:
-      [38;5;1mtwo[0m
-      [38;5;1m[0m
+  [38;5;1m❌  mismatch:[0m
+      [1mError on standard output:[0m
       Given:
-      [38;5;2mone[0m
-      [38;5;2m[0m
+        one
+        
+      Golden value expectation mismatch:
+        two
+        
 --------------------------------------------------------------------------------
 [1mSummary:[0m
   ❌  (Failure): 1 / 1

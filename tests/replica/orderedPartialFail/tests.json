@@ -5,11 +5,12 @@
     "command": "echo \"Hello, World!\"",
     "description": "check an ordered partial expectation that fails",
     "expectation": {
-      "ordered": true,
-      "parts": [
-        "World",
-        "Hello"
-      ]
+      "stdOut": {
+        "consecutive": [
+          "World",
+          "Hello"
+        ]
+      }
     },
     "pending": false,
     "require": [],

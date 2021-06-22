@@ -32,27 +32,49 @@ displayExpectation : FileSystem (FSError :: e) =>
   Has [ State InfoContext InfoCommand
       , State GlobalConfig Global
       , State CurrentTest Test
-      , Console] e => App e ()
-displayExpectation = do
-  t <- get CurrentTest
-  let Generated = t.expectation
+      , Console] e => Expectation -> App e ()
+displayExpectation exp = do
+  let Generated = exp
     | Exact expected => printExpectation expected
     | Partial x xs => do
-        putStrLn $ withOffset 4 $ case x of
+        putStrLn $ withOffset 6 $ case x of
           Ordered => "Expect these parts (ordered):"
           Whatever => "Expect these parts (in any order):"
         traverse_ putStrLn (map partialExpectation xs)
+    | EndsWith x => do
+      putStrLn $ withOffset 6 $ "Ends with: \{show x}"
+    | StartsWith x => do
+      putStrLn $ withOffset 6 $ "Starts with: \{show x}"
   handle (readFile !getExpectedOutput)
     printExpectation
     (\err : FSError => putStrLn "No expectation yet.")
   where
     printExpectation : String -> App e ()
     printExpectation o = do
-      putStrLn $ withOffset 4 $ "Expect exactly as output:"
-      putStrLn $ unlines $ map (withOffset 6) $ forget $ lines o
+      putStrLn $ withOffset 6 $ "Expect exactly as output:"
+      putStrLn $ unlines $ map (withOffset 8) $ forget $ lines o
     partialExpectation : String -> String
     partialExpectation x = case lines x of
-      (head ::: tail) => unlines $ withOffset 4 ("- " ++ head) :: (withOffset 6 <$> tail)
+      (head ::: tail) => unlines $ withOffset 6 ("- " ++ head) :: (withOffset 8 <$> tail)
+
+displayExpectations : FileSystem (FSError :: e) =>
+  Has [ State InfoContext InfoCommand
+      , State GlobalConfig Global
+      , State CurrentTest Test
+      , Console] e => App e ()
+displayExpectations = do
+  t <- get CurrentTest
+  traverse_ (uncurry go) t.expectations
+  where
+    showPart : Part -> App e ()
+    showPart StdOut = putStrLn $ withOffset 4 "Expected on standard output"
+    showPart StdErr = putStrLn $ withOffset 4 "Expected on error output"
+    showPart (FileName x) = putStrLn $ withOffset 4 "Expected in file \{show x}"
+    go : Part -> List Expectation -> App e ()
+    go x xs = do
+      showPart x
+      traverse_ displayExpectation xs
+
 
 filterTests : FileSystem (FSError :: e) =>
   Has [ State InfoContext InfoCommand
@@ -112,7 +134,7 @@ displayTests = do
     $ putStrLn . withOffset 4 $ "Require: \{show t.require}"
   putStrLn $ withOffset 4 "Command : \{show t.command}"
   when !(showExpectation <$> get InfoContext)
-    displayExpectation
+    displayExpectations
   putStrLn ""
 
 export

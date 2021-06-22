@@ -1,6 +1,8 @@
 module Replica.Core.Types
 
 import Data.String
+import Data.List
+import Data.List1
 import Language.JSON
 
 %default total
@@ -14,15 +16,36 @@ Show OrderSensitive where
   show Whatever = "Whatever"
 
 public export
+data Part = StdOut | StdErr | FileName String
+
+export
+Show Part where
+  show StdOut = "StdOut"
+  show StdErr = "StdErr"
+  show (FileName x) = "(File \{x})"
+
+public export
 data Expectation
    = Exact String
+   | StartsWith String
+   | EndsWith String
    | Partial OrderSensitive (List String)
    | Generated
+
+public export
+ExpectationError : Expectation -> Type
+ExpectationError Generated = Maybe String
+ExpectationError (Partial Ordered xs) = String
+ExpectationError (Partial Whatever xs) = List1 String
+ExpectationError x = Unit
+
 
 export
 Show Expectation where
   show (Exact x) = "Exact \{show x}"
-  show (Partial x xs) = "Partial \{show Ordered} \{show xs}"
+  show (StartsWith x) = "StartsWith x"
+  show (EndsWith x) = "EndsWith \{show x}"
+  show (Partial x xs) = "Partial \{show x} \{show xs}"
   show Generated = "Generated"
 
 public export
@@ -36,12 +59,11 @@ record Test where
   tags: List String
   beforeTest : List String
   afterTest : List String
-  -- env: Map String String
   command: String
   input : Maybe String
   mustSucceed : Maybe Bool
   spaceSensitive : Bool
-  expectation : Expectation
+  expectations : List (Part, List Expectation)
   file : Maybe String
 
 export
@@ -60,7 +82,7 @@ Show Test where
     , show x.input
     , show x.mustSucceed
     , show x.spaceSensitive
-    , show x.expectation
+    , show x.expectations
     , show x.file
     ]
 
@@ -73,12 +95,20 @@ defaultFile : String
 defaultFile = "file"
 
 export
+defaultError : String
+defaultError = "error"
+
+export
 defaultOutput : String
 defaultOutput = "output"
 
 export
 defaultInput : String
 defaultInput = "input"
+
+export
+defaultStatus : String
+defaultStatus = "status"
 
 
 
@@ -88,51 +118,81 @@ record Replica where
   tests: List Test
 
 public export
-data OutputError
-  = GoldenIsMissing String
-  | DifferentOutput String String
-  | PartialOutputMismatch OrderSensitive (List String) String
-
-public export
 data FailReason : Type where
   WrongStatus : (expectSuccess : Bool) -> FailReason
-  WrongOutput : Maybe String -> OutputError -> FailReason
+  WrongOutput : Part -> String -> List1 (e : Expectation **  ExpectationError e) -> FailReason
   ExpectedFileNotFound : String -> FailReason
 
-displaySource : Maybe String -> String
-displaySource Nothing = "output"
-displaySource (Just x) = "file \{x}"
+export
+isNoGolden : FailReason -> Bool
+isNoGolden (WrongOutput source given xs) = hasGolden $ forget xs
+  where
+    hasGolden : List (e : Expectation ** ExpectationError e) -> Bool
+    hasGolden [] = False
+    hasGolden ((Generated ** Nothing) :: _) = True
+    hasGolden (_ :: xs) = hasGolden xs
+isNoGolden _ = False
 
 export
-displayFailReason : FailReason -> String
-displayFailReason (WrongStatus True) = "[Fails while it should pass]"
-displayFailReason (WrongStatus False) = "[Pass but it should fail]"
-displayFailReason (WrongOutput src (GoldenIsMissing _)) = "[Missing Golden for \{displaySource src}]"
-displayFailReason (WrongOutput src x) = "[Unexpected content for \{displaySource src}]"
-displayFailReason (ExpectedFileNotFound src) = "[Missing expected file \"\{src}\"]"
+isMismatch : FailReason -> Bool
+isMismatch (WrongOutput source given xs) = hasMismatch $ forget xs
+  where
+    hasMismatch : List (e : Expectation ** ExpectationError e) -> Bool
+    hasMismatch [] = False
+    hasMismatch ((Generated ** Nothing) :: xs) = hasMismatch xs
+    hasMismatch (_ :: xs) = True
+isMismatch _ = False
+
+export
+displaySource : Part -> String
+displaySource StdOut = "standard output"
+displaySource StdErr = "standard error"
+displaySource (FileName x) = "file \{show x}"
+
+export
+Eq Part where
+  (==) StdOut StdOut = True
+  (==) StdErr StdErr = True
+  (==) (FileName x) (FileName y) = x == y
+  (==) _ _ = False
+
+export
+displayFailReason : FailReason -> List String
+displayFailReason (WrongStatus True) = pure "[Fails while it should pass]"
+displayFailReason (WrongStatus False) = pure "[Pass but it should fail]"
+displayFailReason (ExpectedFileNotFound src) = pure "[Missing expected file \"\{src}\"]"
+displayFailReason w@(WrongOutput src given reasons) = join
+  [ guard (isNoGolden w) $> "[Missing Golden for \{displaySource src}]"
+  , guard (isNoGolden w) $> "[Unexpected content for \{displaySource src}]"
+  ]
 
 namespace FailReason
+
+  encodePart : Part -> (String, JSON)
+  encodePart StdOut = ("source", JString "stdout")
+  encodePart StdErr = ("source", JString "stderr")
+  encodePart (FileName x) = ("source", JObject [("file", JString x)])
+
+  encodeFailure : (e : Expectation ** ExpectationError e) -> List (String, JSON)
+  encodeFailure (MkDPair (Exact x) ()) = [("exact", JString x)]
+  encodeFailure (MkDPair (StartsWith x) ()) = [("start", JString x)]
+  encodeFailure (MkDPair (EndsWith x) ()) = [("end", JString x)]
+  encodeFailure (MkDPair (Partial Ordered xs) snd) =
+    [("consecutive", JArray $ JString <$> xs), ("notFound", JString snd)]
+  encodeFailure (MkDPair (Partial Whatever xs) snd) =
+    [("contains", JArray $ JString <$> xs), ("notFound", JArray $ forget $ JString <$> snd)]
+  encodeFailure (MkDPair Generated Nothing) = [("generated", JNull)]
+  encodeFailure (MkDPair Generated (Just x)) = [("generated", JString x)]
 
   export
   toJSON : FailReason -> JSON
   toJSON (WrongStatus e) = JObject
     [("type", JString "status"), ("expected", JBoolean e), ("given", JBoolean $ not e)]
-  toJSON (WrongOutput src (GoldenIsMissing x)) = JObject $
-    maybe id ((::) . MkPair "file" . JString) src
-      [("type", JString "output"), ("reason", JString "Missing"), ("given", JString x)]
-  toJSON (WrongOutput src (DifferentOutput x y)) = JObject $
-    maybe id ((::) . MkPair "file" . JString) src
-      [("type", JString "output"), ("expected", JString x), ("given", JString y)]
-  toJSON (WrongOutput src (PartialOutputMismatch o x y)) = JObject $
-    maybe id ((::) . MkPair "file" . JString) src
-      [ ("type", JString "output")
-      , ("ordered", JBoolean $ case o of
-          Ordered => True
-          Whatever => False)
-      , ("missingParts", JArray $ map JString x)
-      , ("given", JString y)]
   toJSON (ExpectedFileNotFound src) = JObject
-      [("type", JString "missing"), ("expected", JString src)]
+    [("type", JString "missing"), ("expected", JString src)]
+  toJSON (WrongOutput src given err) = JObject $
+    encodePart src :: ("type", JString "output") :: ("given", JString given) ::
+    [("errors", JArray $ map (JObject . encodeFailure) $ forget err)]
 
 public export
 data TestResult
