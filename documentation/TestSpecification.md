@@ -28,7 +28,7 @@ Here is the list of available fields:
 | `pending` | Boolean | Bool | No | `False` | Pending tests won't be executed |
 | `succeed` | Boolean | Optional Bool | No | | If set, REPLica will check the value returned by the command |
 | `spaceSensitive` | Boolean | Bool | No | `True` | If set, the spaces are normalized before comparing the given and expected output: each chunk of space-like character are replaced by a single space and empty-lines are not considered |
-| `expectation` | String / Object | Optional Expectation | No | | See [Expectation](#Expectation) |
+| `expectation` | String / Object / Array String | Optional Expectation | No | | See [Expectation](#Expectation) |
 | `outputFile` | String | Optional Text | No | | If set. REPLica will compare the content of the given file to a golden value. |
 
 The default value are infered in JSON.
@@ -40,7 +40,8 @@ set the `succeed` value to `Some True` and `Some False`.
 
 ## Expectation
 
-By default the behaviour of REPLica is to wait for a golden value to be saved
+By default the behaviour of REPLica is to wait for two golden values
+(one for `stdOut`, one for `stdErr`) to be saved
 (generaly thanks to `replica run --interactive`) and then to compare the output of the
 next runs with this _golden value_.
 
@@ -50,19 +51,43 @@ This can be done by setting the `expectation` field.
 If the field is set, the given value is _immutable_,
 it cannot be changed using the interactive mode.
 
+The semantic of `expectation` depends on the type of its value.
+
 ### JSON
 
-There is two types of values that are supported for expactations:
+There is three types of values that are supported for expactations:
 
+- **Booleans.** If true, use a golden value, if false, explicitly skip this source
 - **Strings.** The given string define the exact value that must be match by the output of the
   command (after a potential normalisation of the space if `spaceSensitive` is set to `False`).
 - **An array of strings.** It defines a partial expectation: the result of the command must contain
   each member of the array. If `spaceSensitive` is set to false, both the output and the
   expectations are normalized before comparison.
-- **An object.** Two fields are then considered:
-    - `parts`: it must be an array of strings, and define the partial matches (mandatory).
-    - `ordered`: a boolean that indicates if the different strings in parts should be ordered or
-      not (optional, default is not ordered).
+- **An object.** Each entry is composed of the source that is tested (the key) and
+  the expectation (its content).
+  The source has 2 special values `stdOut` and `stdErr` that correspond to the standard output and
+  standard error expectations.
+  Any other key is interpreted a a **relative path** to a file to be tested.
+  If the object is empty, we just check the golden value for `stdOut` and `stdErr`.
+  The expectation for each source depends on the value, defined as follows:
+
+    * **Booleans.** If true, use a golden value, if false, explicitly skip this source
+    * **Strings.** The given string define the exact value that must be match by the output of the
+      command (after a potential normalisation of the space if `spaceSensitive` is set to `False`).
+    * **An array of strings.** It defines a partial expectation: the result of the command must contain
+      each member of the array. If `spaceSensitive` is set to false, both the output and the
+      expectations are normalized before comparison.
+    * **An object**: allow the defitinion of several requirements that must all be satisfied.
+      The recognised fields are:
+
+        - `generated`: A boolean that indicates whether or not we use a golden value
+        - `exact`: Check for that exact string
+        - `start`: Check if the source starts with this string
+        - `end`: Check if the source ends with this string
+        - `contains`: Check if the source contains all the strings of the provided list of strings
+        - `consecutive`: Check if the source contains all the strings of the provided list of strings,
+           in the given order.
+
 
 ### Dhall
 
@@ -73,16 +98,25 @@ where `Expectation `is a sum type, defined as follows:
 ```
 let Expectation
     : Type
-    = < PartialExp : PartialExpectation | ExactExp : Text >
+    = < GeneratedExp : Bool
+      | ExactExp : Text
+      | ContainsExp : List Text
+      | ComplexExp : BySourceExpectation
+      >
 ```
 
-with this definition for `PartialExpectation`:
+where `BySourceExpectation` is a `Map Text ComplexExpectation`
+with this definition for `ComplexExpectation`:
 
 ```
-let PartialExpectation
+let ComplexExpectation
     : Type
-    = { ordered : Bool
-      , parts : List Text
+    = { generated : Bool
+      , exact : Optional Text
+      , start : Optional Text
+      , end: Optional Text
+      , consecutive : List Text
+      , contains : List Text
       }
 ```
 
@@ -91,8 +125,13 @@ Reader may refer to the [JSON](#JSON) for the semantic of the fields.
 As using sum types out of the box is a bit verbose in dhall, some smart constructors are provided
 to ease their use:
 
-- `Partial : Bool -> List Text -> Expectation` allow you to build an `Expectation.PartialExp`.
-- `Exact : Text -> Expectation` allow you to build an `Expectation.ExactExp`.
+- `Generated : Bool -> Expectation` allows you to build an `Expectation.Generated`.
+- `Exact : Text -> Expectation` allows you to build an `Expectation.ExactExp`.
+- `Contains : List Text -> Expectation` allows you to build an `Expectation.ContainsExp`
+- `BySource : Map Text ComplexExpectation -> Expectation` allows you to build an
+  `Expectation.ComplexExpectation`.
+
+For `ComplexExpectation` there is an empty template:  `EmptyExpectation`.
 
 ## How test are executed
 

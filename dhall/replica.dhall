@@ -2,25 +2,25 @@ let Map = https://prelude.dhall-lang.org/v20.1.0/Map/Type.dhall
 
 let ComplexExpectation
     : Type
-    = { exact : Optional Text
+    = { generated : Bool
+      , exact : Optional Text
       , start : Optional Text
       , end: Optional Text
-      , consecutive : Optional (List Text)
-      , contains : Optional (List Text)
+      , consecutive : List Text
+      , contains : List Text
       }
 
 let EmptyExpectation
     = { Type = ComplexExpectation
       , default =
-        { exact = None Text
+        { generated = False
+        , exact = None Text
         , start = None Text
         , end = None Text
-        , consecutive = None (List Text)
-        , contains = None (List Text)
+        , consecutive = [] : List Text
+        , contains = [] : List Text
         }
       }
-
-let Generated = EmptyExpectation
 
 let BySourceExpectation
     : Type
@@ -28,7 +28,11 @@ let BySourceExpectation
 
 let Expectation
     : Type
-    = < ExactExp : Text | ContainsExp : List Text | ComplexExp : BySourceExpectation >
+    = < GeneratedExp : Bool
+      | ExactExp : Text
+      | ContainsExp : List Text
+      | ComplexExp : BySourceExpectation
+      >
 
 
 let Exact : Text -> Expectation = \(e : Text) -> Expectation.ExactExp e
@@ -37,6 +41,8 @@ let Contains : List Text -> Expectation
     = \(parts : List Text) ->
       Expectation.ContainsExp parts
 
+let Generated : Bool -> Expectation
+    = \(b : Bool) -> Expectation.GeneratedExp b
 
 let BySource : BySourceExpectation -> Expectation
     = \(exp : BySourceExpectation) ->  Expectation.ComplexExp exp

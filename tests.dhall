@@ -134,7 +134,7 @@ let tests : Replica.Replica = toMap
        { command = "echo \"Hello, World!\""
        , description = Some "check a partial expectation that succeeds"
        , expectation = Replica.BySource ( toMap
-           { stdOut = Replica.EmptyExpectation::{consecutive = Some ["Hello", "World"]}
+           { stdOut = Replica.EmptyExpectation::{consecutive = ["Hello", "World"]}
            }
          )
        , tags = ["expectation", "run", "partial"]
@@ -143,7 +143,7 @@ let tests : Replica.Replica = toMap
        { command = "echo \"Hello, World!\""
        , description = Some "check a not ordered partial expectation that succeeds"
        , expectation = Replica.BySource (toMap
-           {stdOut = Replica.EmptyExpectation::{contains = Some ["World", "Hello"]}
+           {stdOut = Replica.EmptyExpectation::{contains = ["World", "Hello"]}
            })
        , tags = ["expectation", "run", "partial"]
        }
@@ -173,7 +173,7 @@ let tests : Replica.Replica = toMap
        , spaceSensitive = False
        , description = Some "check a space unsensitive partial expectation that succeeds"
        , expectation = Replica.BySource (toMap
-           {stdOut = Replica.EmptyExpectation::{consecutive = Some ["Hello ", " World "]}})
+           {stdOut = Replica.EmptyExpectation::{consecutive = ["Hello ", " World "]}})
        , tags = ["expectation", "run", "partial", "space"]
        }
    , local_config =

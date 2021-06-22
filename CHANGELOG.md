@@ -1,5 +1,14 @@
 # REPLica changelog
 
+## since 0.3.1
+
+- CHANGE:
+    * Expectation format: Note if you use "partial expectations" in your tests, you need to upgrade
+      your tests suites.
+- NEW:
+    * New expectations functions: `contains`, `consecutive`, `start`, `end`
+    * Differentiate `stdOut` and `stdErr`
+
 ## version 0.3.1
 
 - FIX documentation error in replica set

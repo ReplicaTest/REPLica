@@ -1,7 +1,13 @@
 --------------------------------------------------------------------------------
 [1mRunning tests...[0m
   ✅  theChosen
-  [38;5;1m❌  unfortunate1: [Fails while it should pass] [Missing Golden for output][0m
+  [38;5;1m❌  unfortunate1:[0m
+      [38;5;1m[Fails while it should pass][0m
+      [38;5;1m[Missing Golden for standard output][0m
+      [38;5;1m[Unexpected content for standard output][0m
+      [1mError on standard output:[0m
+      Given:
+        
 --------------------------------------------------------------------------------
 [1mSummary:[0m
   ❌  (Failure): 1 / 1
