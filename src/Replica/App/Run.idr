@@ -138,7 +138,7 @@ interactiveGolden : SystemIO (SystemError :: e) =>
   App e (Maybe FailReason)
 interactiveGolden source given expected = do
   t <- get CurrentTest
-  putStrLn $ "\{t.name}: Golden value mismatch for \{displaySource source}"
+  putStrLn $ "\{t.name}: Golden value mismatch for \{!bold (displaySource source)}"
   showExpectedAndGiven
   putStrLn $ "Do you want to \{maybe "set" (const "replace") expected} the golden value? [N/y]"
   if !readAnswer
@@ -252,10 +252,14 @@ checkContent spaceSensitive given _ exp@(EndsWith expected) = let
   e : String = if spaceSensitive then expected else normalize expected
   g : String = if spaceSensitive then given else normalize given
   in guard (not $ e `isSuffixOf` g) $> (exp ** ())
-checkContent spaceSensitive given _ exp@(Partial Ordered xs) =
-  MkDPair exp <$> checkConsecutive xs given
-checkContent spaceSensitive given _ exp@(Partial Whatever xs) =
-  MkDPair exp <$> checkContains xs given
+checkContent spaceSensitive given _ exp@(Partial Ordered xs) = let
+  es = if spaceSensitive then xs else map normalize xs
+  g : String = if spaceSensitive then given else normalize given
+  in MkDPair exp <$> checkConsecutive es given
+checkContent spaceSensitive given _ exp@(Partial Whatever xs) = let
+  es = if spaceSensitive then xs else map normalize xs
+  g : String = if spaceSensitive then given else normalize given
+  in MkDPair exp <$> checkContains es given
 checkContent spaceSensitive given Nothing Generated =
   Just (Generated ** Nothing)
 checkContent spaceSensitive given (Just expected) Generated = let
@@ -457,7 +461,8 @@ testOutput (Right Success) = do
      else putStrLn $ withOffset 2 "\{!ok} \{t.name}"
 testOutput (Right (Fail xs)) = do
   t <- get CurrentTest
-  putStrLn $ withOffset 2 $ !red "\{!ko} \{t.name}: \{unwords $ map displayFailReason xs}"
+  putStrLn $ withOffset 2 $ !red "\{!ko} \{t.name}:"
+  traverse_ (putStrLn . withOffset 6 . !red) (xs >>= displayFailReason)
   traverse_ writeFailure xs
   where
     multilineDisplay : (offset : Nat) -> (content : String) -> App e ()
@@ -466,33 +471,35 @@ testOutput (Right (Fail xs)) = do
     displayError : (given : String)  -> (exp : (e: Expectation ** ExpectationError e)) -> App e ()
     displayError given (MkDPair (Exact x) snd) =
       let content = case !(diff <$> get GlobalConfig) of
-            None => multilineDisplay 6 x
-            d' => showDiff d' 6 given x
+            None => multilineDisplay 8 x
+            Native => multilineDisplay 8 x
+            d' => showDiff d' 8 given x
       in putStrLn (withOffset 4 "Exact expectation mismatch:") >> content
     displayError given (MkDPair (StartsWith x) snd) =
-      putStrLn (withOffset 4 "Start mismatch:") >> multilineDisplay 6 x
+      putStrLn (withOffset 6 "Start mismatch:") >> multilineDisplay 4 x
     displayError given (MkDPair (EndsWith x) snd) =
-      putStrLn (withOffset 4 "End mismatch:") >> multilineDisplay 6 x
+      putStrLn (withOffset 6 "End mismatch:") >> multilineDisplay 4 x
     displayError given (MkDPair (Partial Ordered ys) snd) = do
-      putStrLn (withOffset 4 "Consecutive expectations mismatch, first not found:")
-      multilineDisplay 6 snd
+      putStrLn (withOffset 6 "Consecutive expectations mismatch, first not found:")
+      multilineDisplay 8 snd
     displayError given (MkDPair (Partial Whatever ys) snd) = do
-      putStrLn (withOffset 4 "Contains expectations mismatch, not found:")
-      traverse_ (multilineDisplay 6) snd
+      putStrLn (withOffset 6 "Contains expectations mismatch, not found:")
+      traverse_ (multilineDisplay 8) snd
     displayError given (MkDPair Generated Nothing) = pure ()
     displayError given (MkDPair Generated (Just x)) =
       let content = case !(diff <$> get GlobalConfig) of
-            None => multilineDisplay 6 x
-            d' => showDiff d' 6 given x
-      in putStrLn (withOffset 4 "Golden value expectation mismatch:") >> content
+            None => multilineDisplay 8 x
+            Native => multilineDisplay 8 x
+            d' => showDiff d' 8 given x
+      in putStrLn (withOffset 6 "Golden value expectation mismatch:") >> content
 
     writeFailure : FailReason -> App e ()
     writeFailure (WrongStatus expectSuccess) = pure ()
     writeFailure (ExpectedFileNotFound x) = pure ()
     writeFailure (WrongOutput x given ys) = do
-      putStrLn $ withOffset 4 $ !bold "Error on \{displaySource x}:"
-      putStrLn $ withOffset 4 $ "Given:"
-      traverse_ (putStrLn . withOffset 6) $ forget $ lines given
+      putStrLn $ withOffset 6 $ !bold "Error on \{displaySource x}:"
+      putStrLn $ withOffset 6 $ "Given:"
+      traverse_ (putStrLn . withOffset 8) $ forget $ lines given
       traverse_ (displayError given) ys
 
 runAllTests : SystemIO (SystemError :: TestError :: e) =>

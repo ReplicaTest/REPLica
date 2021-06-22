@@ -38,23 +38,27 @@ validatOrderSensitive (Just (JBoolean x)) = Valid $ if x then Ordered else Whate
 validatOrderSensitive (Just x) = Error
   ["OrderSensitive must be a boolean, found \{show x}"]
 
-validateExpectation : String -> JSON -> Validation (List String) Expectation
-validateExpectation "exact" (JString str) = Valid $ Exact str
+validateExpectation : String -> JSON -> Validation (List String) (Maybe Expectation)
+validateExpectation "generated" (JBoolean True) = Valid $ Just $ Generated
+validateExpectation "generated" (JBoolean False) = Valid Nothing
+validateExpectation "exact" (JString str) = Valid $ Just $ Exact str
 validateExpectation "exact" json = Error ["exact expectation requires a string, found: \{show json}"]
-validateExpectation "start" (JString str) = Valid $ StartsWith str
+validateExpectation "start" (JString str) = Valid $ Just $ StartsWith str
 validateExpectation "start" json = Error ["start expectation requires a string, found: \{show json}"]
-validateExpectation "end" (JString str) = Valid $ EndsWith str
+validateExpectation "end" (JString str) = Valid $ Just $ EndsWith str
 validateExpectation "end" json = Error ["end expectation requires a string, found: \{show json}"]
-validateExpectation "consecutive" (JArray xs) = Partial Ordered <$> allString xs
+validateExpectation "consecutive" (JArray []) = Valid Nothing
+validateExpectation "consecutive" (JArray xs) = Just . Partial Ordered <$> allString xs
 validateExpectation "consecutive" json =
   Error ["consecutive expectation requires a string, found: \{show json}"]
-validateExpectation "contains" (JArray xs) = Partial Whatever <$> allString xs
+validateExpectation "contains" (JArray []) = Valid Nothing
+validateExpectation "contains" (JArray xs) = Just . Partial Whatever <$> allString xs
 validateExpectation "contains" json =
   Error ["consecutive expectation requires a string, found: \{show json}"]
 validateExpectation x json = Error ["Unknown expectation: \{show x}"]
 
 defaultExpectation : List (Part, List Expectation)
-defaultExpectation = [(StdOut, [Generated]), (StdErr, [Generated])]
+defaultExpectation = [(StdOut, [Generated])]
 
 validateExpectations : Maybe JSON -> Validation (List String) (List (Part, List Expectation))
 validateExpectations (Just (JString x)) = Valid [(StdOut, [Exact x])]
@@ -71,15 +75,18 @@ validateExpectations (Just (JObject o)) = traverse go o
     readPart x = fromMaybe (FileName x) (readStdout x <|> readStderr x)
     go : (String, JSON) -> Validation (List String) (Part, List Expectation)
     go (x, JNull) = Valid $ MkPair (readPart x) [Generated]
+    go (x, JBoolean True) = Valid $ MkPair (readPart x) [Generated]
+    go (x, JBoolean False) = Valid $ MkPair (readPart x) []
     go (x, JArray []) = Valid $ MkPair (readPart x) [Generated]
     go (x, JArray y) = MkPair (readPart x) . pure . Partial Ordered <$> allString y
     go (x, JString y) = Valid $ MkPair (readPart x) [Exact y]
     go (x, JObject []) = Valid $ MkPair (readPart x) [Generated]
-    go (x, JObject o) = MkPair (readPart x) <$> traverse (uncurry validateExpectation) o
+    go (x, JObject o) = MkPair (readPart x) . catMaybes <$> traverse (uncurry validateExpectation) o
     go (x, y) = Error ["Invalid expectation entry : \{show y}"]
+validateExpectations (Just JNull) = Valid []
 validateExpectations (Just (JBoolean x)) = Error ["Expectations can't be a boolean"]
 validateExpectations (Just (JNumber x)) = Error ["Expectations can't be a number"]
-validateExpectations _ = Valid [(StdOut, [Generated]), (StdErr, [Generated])]
+validateExpectations Nothing = Valid defaultExpectation
 
 validateRequireList : Maybe JSON -> Validation (List String) (List String)
 validateRequireList Nothing = Valid empty

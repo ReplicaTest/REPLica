@@ -157,11 +157,11 @@ Eq Part where
   (==) _ _ = False
 
 export
-displayFailReason : FailReason -> String
-displayFailReason (WrongStatus True) = "[Fails while it should pass]"
-displayFailReason (WrongStatus False) = "[Pass but it should fail]"
-displayFailReason (ExpectedFileNotFound src) = "[Missing expected file \"\{src}\"]"
-displayFailReason w@(WrongOutput src given reasons) = unwords $ join
+displayFailReason : FailReason -> List String
+displayFailReason (WrongStatus True) = pure "[Fails while it should pass]"
+displayFailReason (WrongStatus False) = pure "[Pass but it should fail]"
+displayFailReason (ExpectedFileNotFound src) = pure "[Missing expected file \"\{src}\"]"
+displayFailReason w@(WrongOutput src given reasons) = join
   [ guard (isNoGolden w) $> "[Missing Golden for \{displaySource src}]"
   , guard (isNoGolden w) $> "[Unexpected content for \{displaySource src}]"
   ]
