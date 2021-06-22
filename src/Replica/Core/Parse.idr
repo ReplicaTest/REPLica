@@ -53,26 +53,33 @@ validateExpectation "contains" json =
   Error ["consecutive expectation requires a string, found: \{show json}"]
 validateExpectation x json = Error ["Unknown expectation: \{show x}"]
 
+defaultExpectation : List (Part, List Expectation)
+defaultExpectation = [(StdOut, [Generated]), (StdErr, [Generated])]
+
 validateExpectations : Maybe JSON -> Validation (List String) (List (Part, List Expectation))
 validateExpectations (Just (JString x)) = Valid [(StdOut, [Exact x])]
+validateExpectations (Just (JArray [])) = Valid defaultExpectation
 validateExpectations (Just (JArray xs)) = pure . MkPair StdOut . pure . Partial Whatever <$> allString xs
+validateExpectations (Just (JObject [])) = Valid defaultExpectation
 validateExpectations (Just (JObject o)) = traverse go o
   where
     readStdout : String -> Maybe Part
     readStdout x = guard (toLower x == "stdout") $> StdOut
     readStderr : String -> Maybe Part
-    readStderr x = guard (toLower x == "stdout") $> StdErr
+    readStderr x = guard (toLower x == "stderr") $> StdErr
     readPart : String -> Part
     readPart x = fromMaybe (FileName x) (readStdout x <|> readStderr x)
     go : (String, JSON) -> Validation (List String) (Part, List Expectation)
+    go (x, JNull) = Valid $ MkPair (readPart x) [Generated]
+    go (x, JArray []) = Valid $ MkPair (readPart x) [Generated]
     go (x, JArray y) = MkPair (readPart x) . pure . Partial Ordered <$> allString y
-    go (x, JString "generated") = Valid $ MkPair (readPart x) [Generated]
     go (x, JString y) = Valid $ MkPair (readPart x) [Exact y]
+    go (x, JObject []) = Valid $ MkPair (readPart x) [Generated]
     go (x, JObject o) = MkPair (readPart x) <$> traverse (uncurry validateExpectation) o
     go (x, y) = Error ["Invalid expectation entry : \{show y}"]
 validateExpectations (Just (JBoolean x)) = Error ["Expectations can't be a boolean"]
 validateExpectations (Just (JNumber x)) = Error ["Expectations can't be a number"]
-validateExpectations _ = Valid [(StdOut, [Generated])]
+validateExpectations _ = Valid [(StdOut, [Generated]), (StdErr, [Generated])]
 
 validateRequireList : Maybe JSON -> Validation (List String) (List String)
 validateRequireList Nothing = Valid empty

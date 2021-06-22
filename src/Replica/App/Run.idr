@@ -480,7 +480,7 @@ testOutput (Right (Fail xs)) = do
       putStrLn (withOffset 4 "Contains expectations mismatch, not found:")
       traverse_ (multilineDisplay 6) snd
     displayError given (MkDPair Generated Nothing) = pure ()
-    displayError given (MkDPair Generated (Just x)) = ?displayError_rhs_8
+    displayError given (MkDPair Generated (Just x)) =
       let content = case !(diff <$> get GlobalConfig) of
             None => multilineDisplay 6 x
             d' => showDiff d' 6 given x
