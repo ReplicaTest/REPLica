@@ -4,17 +4,19 @@
     "beforeTest": [],
     "command": "echo \"Hello, World!\"",
     "description": "check an ordered partial expectation that fails",
-    "expectation": {
-      "stdOut": {
-        "consecutive": [
-          "World",
-          "Hello"
-        ]
-      }
-    },
+    "files": {},
     "pending": false,
     "require": [],
     "spaceSensitive": true,
+    "stdErr": false,
+    "stdOut": {
+      "consecutive": [
+        "World",
+        "Hello"
+      ],
+      "contains": [],
+      "generated": false
+    },
     "succeed": true,
     "tags": []
   }

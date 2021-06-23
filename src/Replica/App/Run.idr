@@ -304,6 +304,7 @@ checkExpectations :  SystemIO (SystemError :: e) =>
   (exitCode : Nat) ->
   App e TestResult
 checkExpectations exitCode = do
+  log $ withOffset 2 "Checking expectations"
   t <- get CurrentTest
   ctx <- get RunContext
   let statusCheck = checkStatus t.mustSucceed exitCode
@@ -539,6 +540,7 @@ runAllTests plan = do
     batchTests : List (Test, Either TestError TestResult) ->
                  TestPlan -> App e (List (Test, Either TestError TestResult))
     batchTests acc plan = do
+      debug $ withOffset 4 $ "Run a batch"
       n <- threads <$> get RunContext
       case prepareBatch n plan of
            ([], later) => pure $ join
@@ -547,6 +549,8 @@ runAllTests plan = do
               , map (\(reason, t) => (t, Left $ RequirementsFailed reason)) plan.skipped
               ]
            (now, nextBatches) => do
+             debug $ withOffset 4 "Now: \{show $ length now}"
+             debug $ withOffset 4 "Later: \{show $ length nextBatches}"
              res <- map await <$> traverse (map (fork . delay) . processTest) now
              when (not !(interactive <$> get RunContext))
                (traverse_ (\(t, r) => new t (testOutput r)) res)

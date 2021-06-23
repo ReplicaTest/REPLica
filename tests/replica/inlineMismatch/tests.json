@@ -4,9 +4,12 @@
     "beforeTest": [],
     "command": "echo \"one\"",
     "description": "Expectation is different than one",
-    "expectation": "two\n",
+    "files": {},
     "pending": false,
     "require": [],
+    "spaceSensitive": true,
+    "stdErr": false,
+    "stdOut": "two\n",
     "tags": []
   }
 }
