@@ -1,6 +1,11 @@
-.replica
-!.replica/*/expected
-!.replica/*/file
+.replica/log
+.replica/test/*/output
+.replica/test/*/status
+.replica/test/*/error
+/tests/replica/*/.replica/log
+/tests/replica/*/.replica/test/*/output
+/tests/replica/*/.replica/test/*/status
+/tests/replica/*/.replica/test/*/error
 examples/.replica
 /tests.json
 /.history

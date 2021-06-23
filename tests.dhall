@@ -139,6 +139,36 @@ let tests : Replica.Replica = toMap
          )
        , tags = ["expectation", "run", "partial"]
        }
+   , file_expectation1 = Replica.Success::
+       { command = "echo \"test\" > tmp123456"
+       , description = Some "Check expectation on file"
+       , afterTest = ["rm tmp123456"]
+       , expectation = Replica.BySource
+         [ { mapKey = "tmp123456"
+           , mapValue = Replica.EmptyExpectation::{generated = True}
+           }
+         ]
+       , tags = ["expectation", "run", "file"]
+       }
+   , file_expectation2 = Replica.Success::
+       { command = "echo \"test\" > tests/tmp123456"
+       , description = Some "Check expectation on file in a subdir"
+       , afterTest = ["rm tests/tmp123456"]
+       , expectation = Replica.BySource
+         [ { mapKey = "tests/tmp123456"
+           , mapValue = Replica.EmptyExpectation::{generated = True}
+           }
+         ]
+       , require = ["file_expectation1"]
+       , tags = ["expectation", "run", "file"]
+       }
+   , error_expectation = Replica.Success::
+       { command = "echo \"test\" >&2"
+       , description = Some "Check expectation on error"
+       , expectation = Replica.BySource
+           (toMap { stdErr = Replica.EmptyExpectation::{generated = True} })
+       , tags = ["expectation", "run", "error"]
+       }
    , whatever_partial_expectation_match = Replica.Success::
        { command = "echo \"Hello, World!\""
        , description = Some "check a not ordered partial expectation that succeeds"

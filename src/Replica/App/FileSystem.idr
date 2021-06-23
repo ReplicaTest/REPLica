@@ -3,6 +3,7 @@ module Replica.App.FileSystem
 
 import Control.App
 import System.Directory
+import System.Path
 
 %default covering
 
@@ -51,9 +52,21 @@ Has [PrimIO, Exception FSError] e => FileSystem e where
        else throw (CantAccess d)
   removeDir d = primIO $ removeDir d
   writeFile f content = do
+    let Just (dir, filename) = splitParent f
+      | Nothing => throw (CantAccess f)
+    buildDirectory dir
     Right x <- primIO $ writeFile f content
       | Left err => throw (toFSError err f)
     pure x
+    where
+      buildDirectory : String -> App e ()
+      buildDirectory dir = do
+        Left _ <- primIO $ openDir dir
+          | _ => pure ()
+        let Just (parent, _) = splitParent dir
+          | Nothing => throw (CantAccess dir)
+        buildDirectory parent
+        createDir dir
   readFile f = do
     Right x <- primIO $ readFile f
       | Left err => throw (toFSError err f)
