@@ -63,8 +63,13 @@ record Test where
   input : Maybe String
   mustSucceed : Maybe Bool
   spaceSensitive : Bool
-  expectations : List (Part, List Expectation)
-  file : Maybe String
+  stdOut : List Expectation
+  stdErr : List Expectation
+  files : List (String, List Expectation)
+
+export
+(.expectations) : Test -> List (Part, List Expectation)
+(.expectations) t = (StdOut, t.stdOut) :: (StdErr, t.stdErr) :: (mapFst FileName <$> t.files)
 
 export
 Show Test where
@@ -82,8 +87,9 @@ Show Test where
     , show x.input
     , show x.mustSucceed
     , show x.spaceSensitive
-    , show x.expectations
-    , show x.file
+    , show x.stdOut
+    , show x.stdErr
+    , show x.files
     ]
 
 export

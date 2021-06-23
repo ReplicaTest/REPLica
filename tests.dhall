@@ -20,7 +20,7 @@ let tests : Replica.Replica = toMap
    , test_given_expectation = Replica.Success::
        { command = "echo \"Hello, world!\""
        , description = Some "We use the given expectation field if it exists"
-       , expectation = Replica.Exact "Hello, world!\n"
+       , stdOut = Replica.Exact "Hello, world!\n"
        }
    , testWorkingDir = Replica.Success::
        { command = "./run.sh"
@@ -116,12 +116,6 @@ let tests : Replica.Replica = toMap
        { command = "cat", input = Some "hello, world"
        , description = Some "pass input to the command"
        }
-   , check_file = Replica.Success::
-       { command = "echo \"hello, world\" > test.blurb"
-       , outputFile = Some "test.blurb"
-       , afterTest = ["rm test.blurb"]
-       , description = Some "pass input to the command"
-       }
    , no_golden_with_inlined_expectation =
        (Meta.replicaTest Meta.Run::{ directory = "tests/replica/inlineMismatch"
                                    , parameters = [ "--interactive" ]
@@ -133,19 +127,17 @@ let tests : Replica.Replica = toMap
    , ordered_partial_expectation_match = Replica.Success::
        { command = "echo \"Hello, World!\""
        , description = Some "check a partial expectation that succeeds"
-       , expectation = Replica.BySource ( toMap
-           { stdOut = Replica.EmptyExpectation::{consecutive = ["Hello", "World"]}
-           }
-         )
+       , stdOut = Replica.Consecutive ["Hello", "World"]
        , tags = ["expectation", "run", "partial"]
        }
    , file_expectation1 = Replica.Success::
        { command = "echo \"test\" > tmp123456"
        , description = Some "Check expectation on file"
        , afterTest = ["rm tmp123456"]
-       , expectation = Replica.BySource
+       , stdOut = Replica.Generated False
+       , files =
          [ { mapKey = "tmp123456"
-           , mapValue = Replica.EmptyExpectation::{generated = True}
+           , mapValue = Replica.Generated True
            }
          ]
        , tags = ["expectation", "run", "file"]
@@ -154,9 +146,10 @@ let tests : Replica.Replica = toMap
        { command = "echo \"test\" > tests/tmp123456"
        , description = Some "Check expectation on file in a subdir"
        , afterTest = ["rm tests/tmp123456"]
-       , expectation = Replica.BySource
+       , stdOut = Replica.Generated False
+       , files =
          [ { mapKey = "tests/tmp123456"
-           , mapValue = Replica.EmptyExpectation::{generated = True}
+           , mapValue = Replica.Generated True
            }
          ]
        , require = ["file_expectation1"]
@@ -165,16 +158,14 @@ let tests : Replica.Replica = toMap
    , error_expectation = Replica.Success::
        { command = "echo \"test\" >&2"
        , description = Some "Check expectation on error"
-       , expectation = Replica.BySource
-           (toMap { stdErr = Replica.EmptyExpectation::{generated = True} })
+       , stdOut = Replica.Generated False
+       , stdErr = Replica.Generated True
        , tags = ["expectation", "run", "error"]
        }
    , whatever_partial_expectation_match = Replica.Success::
        { command = "echo \"Hello, World!\""
        , description = Some "check a not ordered partial expectation that succeeds"
-       , expectation = Replica.BySource (toMap
-           {stdOut = Replica.EmptyExpectation::{contains = ["World", "Hello"]}
-           })
+       , stdOut = Replica.Contains ["World", "Hello"]
        , tags = ["expectation", "run", "partial"]
        }
    , ordered_partial_expectation_mismatch =
@@ -194,7 +185,7 @@ let tests : Replica.Replica = toMap
       (Meta.replicaTest Meta.Run::{ directory = "tests/replica/goldenDirFile"
                                   , parameters = ["--golden-dir golden"]
                                   , testFile = "tests.json"})
-           with require = [ "check_file" ]
+           with require = [ "file_expectation1" ]
            with description = Some "test --goldenDir for files"
            with succeed = Some True
            with tags = ["config", "golden", "meta"]
@@ -202,8 +193,7 @@ let tests : Replica.Replica = toMap
        { command = "echo \"Hello, World!\""
        , spaceSensitive = False
        , description = Some "check a space unsensitive partial expectation that succeeds"
-       , expectation = Replica.BySource (toMap
-           {stdOut = Replica.EmptyExpectation::{consecutive = ["Hello ", " World "]}})
+       , stdOut = Replica.Consecutive ["Hello ", " World "]
        , tags = ["expectation", "run", "partial", "space"]
        }
    , local_config =

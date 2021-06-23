@@ -57,36 +57,29 @@ validateExpectation "contains" json =
   Error ["consecutive expectation requires a string, found: \{show json}"]
 validateExpectation x json = Error ["Unknown expectation: \{show x}"]
 
-defaultExpectation : List (Part, List Expectation)
-defaultExpectation = [(StdOut, [Generated])]
+validateExpectations : JSON -> Validation (List String) (List Expectation)
+validateExpectations (JString x) = Valid [Exact x]
+validateExpectations (JArray xs) = pure . Partial Whatever <$> allString xs
+validateExpectations (JBoolean True) = Valid [Generated]
+validateExpectations (JBoolean False) = Valid []
+validateExpectations JNull = Valid []
+validateExpectations (JObject o) = catMaybes <$> traverse (uncurry validateExpectation) o
+validateExpectations json = Error ["Invalid expectation: \{show json}"]
 
-validateExpectations : Maybe JSON -> Validation (List String) (List (Part, List Expectation))
-validateExpectations (Just (JString x)) = Valid [(StdOut, [Exact x])]
-validateExpectations (Just (JArray [])) = Valid defaultExpectation
-validateExpectations (Just (JArray xs)) = pure . MkPair StdOut . pure . Partial Whatever <$> allString xs
-validateExpectations (Just (JObject [])) = Valid defaultExpectation
-validateExpectations (Just (JObject o)) = traverse go o
+validateFiles : JSON -> Validation (List String) (List (String, List Expectation))
+validateFiles (JObject o) = traverse (\(k, v) => MkPair k <$> (go v)) o
   where
-    readStdout : String -> Maybe Part
-    readStdout x = guard (toLower x == "stdout") $> StdOut
-    readStderr : String -> Maybe Part
-    readStderr x = guard (toLower x == "stderr") $> StdErr
-    readPart : String -> Part
-    readPart x = fromMaybe (FileName x) (readStdout x <|> readStderr x)
-    go : (String, JSON) -> Validation (List String) (Part, List Expectation)
-    go (x, JNull) = Valid $ MkPair (readPart x) [Generated]
-    go (x, JBoolean True) = Valid $ MkPair (readPart x) [Generated]
-    go (x, JBoolean False) = Valid $ MkPair (readPart x) []
-    go (x, JArray []) = Valid $ MkPair (readPart x) [Generated]
-    go (x, JArray y) = MkPair (readPart x) . pure . Partial Ordered <$> allString y
-    go (x, JString y) = Valid $ MkPair (readPart x) [Exact y]
-    go (x, JObject []) = Valid $ MkPair (readPart x) [Generated]
-    go (x, JObject o) = MkPair (readPart x) . catMaybes <$> traverse (uncurry validateExpectation) o
-    go (x, y) = Error ["Invalid expectation entry : \{show y}"]
-validateExpectations (Just JNull) = Valid []
-validateExpectations (Just (JBoolean x)) = Error ["Expectations can't be a boolean"]
-validateExpectations (Just (JNumber x)) = Error ["Expectations can't be a number"]
-validateExpectations Nothing = Valid defaultExpectation
+    go : JSON -> Validation (List String) (List Expectation)
+    go JNull = Valid [Generated]
+    go (JBoolean True) = Valid [Generated]
+    go (JBoolean False) = Valid []
+    go (JArray []) = Valid [Generated]
+    go (JArray y) = pure . Partial Ordered <$> allString y
+    go (JString y) = Valid [Exact y]
+    go (JObject []) = Valid [Generated]
+    go (JObject o) = catMaybes <$> traverse (uncurry validateExpectation) o
+    go y = Error ["Invalid expectation entry : \{show y}"]
+validateFiles json = Error ["Invalid files expectation: \{show json}"]
 
 validateRequireList : Maybe JSON -> Validation (List String) (List String)
 validateRequireList Nothing = Valid empty
@@ -176,8 +169,9 @@ jsonToTest str (JObject xs) =
   (traverse validateInput $ lookup "input" xs)
   (validateStatus $ lookup "succeed" xs)
   (validateSpaceSensitive $ lookup "spaceSensitive" xs)
-  (validateExpectations $ lookup "expectation" xs <|> lookup "expectations" xs)
-  (validateFile $ lookup "outputFile" xs)
+  (maybe (Valid [Generated]) validateExpectations $ lookup "stdout" xs <|> lookup "stdOut" xs)
+  (maybe (Valid []) validateExpectations $ lookup "stderr" xs <|> lookup "stdErr" xs)
+  (maybe (Valid []) validateFiles $ lookup "files" xs)
   |]
 jsonToTest str json =
   Error ["Expecting a JSON object for test '\{str}' and got: \{show json}"]

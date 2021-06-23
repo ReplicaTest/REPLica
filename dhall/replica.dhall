@@ -1,6 +1,6 @@
 let Map = https://prelude.dhall-lang.org/v20.1.0/Map/Type.dhall
 
-let ComplexExpectation
+let ComplexExpectationType
     : Type
     = { generated : Bool
       , exact : Optional Text
@@ -11,7 +11,7 @@ let ComplexExpectation
       }
 
 let EmptyExpectation
-    = { Type = ComplexExpectation
+    = { Type = ComplexExpectationType
       , default =
         { generated = False
         , exact = None Text
@@ -22,16 +22,12 @@ let EmptyExpectation
         }
       }
 
-let BySourceExpectation
-    : Type
-    = Map Text ComplexExpectation
-
 let Expectation
     : Type
     = < GeneratedExp : Bool
       | ExactExp : Text
       | ContainsExp : List Text
-      | ComplexExp : BySourceExpectation
+      | ComplexExp : ComplexExpectationType
       >
 
 
@@ -41,14 +37,16 @@ let Contains : List Text -> Expectation
     = \(parts : List Text) ->
       Expectation.ContainsExp parts
 
+let Consecutive : List Text -> Expectation
+    = \(parts : List Text) ->
+      Expectation.ComplexExp (EmptyExpectation::{consecutive = parts})
+
 let Generated : Bool -> Expectation
     = \(b : Bool) -> Expectation.GeneratedExp b
 
-let BySource : BySourceExpectation -> Expectation
-    = \(exp : BySourceExpectation) ->  Expectation.ComplexExp exp
+let ComplexExpectation : ComplexExpectationType -> Expectation
+    = \(exp : ComplexExpectationType) ->  Expectation.ComplexExp exp
 
-let StdOut : Text = "stdout"
-let StdErr : Text = "stderr"
 
 let Test
     : Type
@@ -62,8 +60,9 @@ let Test
       , input : Optional Text
       , succeed : Optional Bool
       , spaceSensitive : Bool
-      , expectation : Expectation
-      , outputFile : Optional Text
+      , stdOut : Expectation
+      , stdErr : Expectation
+      , files : Map Text (Expectation)
       , pending : Bool
       }
 
@@ -79,8 +78,9 @@ let Minimal =
         , input = None Text
         , succeed = None Bool
         , spaceSensitive = True
-        , expectation = BySource ([] : BySourceExpectation)
-        , outputFile = None Text
+        , stdOut = Generated True
+        , stdErr = Generated False
+        , files = [] : Map Text Expectation
         , pending = False
         }
       }
@@ -99,13 +99,11 @@ in  { Test
     , Success
     , Failure
     , Expectation
+    , Consecutive
     , Contains
     , Exact
     , Generated
-    , BySource
-    , BySourceExpectation
     , ComplexExpectation
+    , ComplexExpectationType
     , EmptyExpectation
-    , StdOut
-    , StdErr
     }

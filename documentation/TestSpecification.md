@@ -28,8 +28,10 @@ Here is the list of available fields:
 | `pending` | Boolean | Bool | No | `False` | Pending tests won't be executed |
 | `succeed` | Boolean | Optional Bool | No | | If set, REPLica will check the value returned by the command |
 | `spaceSensitive` | Boolean | Bool | No | `True` | If set, the spaces are normalized before comparing the given and expected output: each chunk of space-like character are replaced by a single space and empty-lines are not considered |
-| `expectation` | String / Object / Array String | Optional Expectation | No | | See [Expectation](#Expectation) |
-| `outputFile` | String | Optional Text | No | | If set. REPLica will compare the content of the given file to a golden value. |
+| `stdOut` | Anything but an integer | Optional Expectation | No | True | set the expectation for `stdOut`, see [Expectation](#Expectation) |
+| `stdErr` | Anything but an integer | Optional Expectation | No | False | set the expectation for `stdErr`, see [Expectation](#Expectation) |
+| `files` | Object | Map Text Expectation | No | | List the files to check, and set the
+corresponding expectation, see [Expectation](#Expectation) |
 
 The default value are infered in JSON.
 In Dhall, you need to use `Replica.Minimal` a schema that populate a test record with the default
@@ -40,53 +42,37 @@ set the `succeed` value to `Some True` and `Some False`.
 
 ## Expectation
 
-By default the behaviour of REPLica is to wait for two golden values
-(one for `stdOut`, one for `stdErr`) to be saved
+By default the behaviour of REPLica is to wait for a golden value
+for `stdOut` to be saved
 (generaly thanks to `replica run --interactive`) and then to compare the output of the
 next runs with this _golden value_.
 
 However, users may wants to inline their own expectations directly in the test.
-This can be done by setting the `expectation` field.
+This can be done by setting the `stdOut`, `stdErr` and `file` fields.
 
-If the field is set, the given value is _immutable_,
-it cannot be changed using the interactive mode.
-
-The semantic of `expectation` depends on the type of its value.
+The semantic of an `expectation` depends on the type of its value.
 
 ### JSON
 
 There is three types of values that are supported for expactations:
 
 - **Booleans.** If true, use a golden value, if false, explicitly skip this source
+- **null.** don't check this source (equivalent to `false`)
 - **Strings.** The given string define the exact value that must be match by the output of the
   command (after a potential normalisation of the space if `spaceSensitive` is set to `False`).
 - **An array of strings.** It defines a partial expectation: the result of the command must contain
   each member of the array. If `spaceSensitive` is set to false, both the output and the
   expectations are normalized before comparison.
-- **An object.** Each entry is composed of the source that is tested (the key) and
-  the expectation (its content).
-  The source has 2 special values `stdOut` and `stdErr` that correspond to the standard output and
-  standard error expectations.
-  Any other key is interpreted a a **relative path** to a file to be tested.
-  If the object is empty, we just check the golden value for `stdOut` and `stdErr`.
-  The expectation for each source depends on the value, defined as follows:
+- **An object**: allow the defitinion of several requirements that must all be satisfied.
+  The recognised fields are:
 
-    * **Booleans.** If true, use a golden value, if false, explicitly skip this source
-    * **Strings.** The given string define the exact value that must be match by the output of the
-      command (after a potential normalisation of the space if `spaceSensitive` is set to `False`).
-    * **An array of strings.** It defines a partial expectation: the result of the command must contain
-      each member of the array. If `spaceSensitive` is set to false, both the output and the
-      expectations are normalized before comparison.
-    * **An object**: allow the defitinion of several requirements that must all be satisfied.
-      The recognised fields are:
-
-        - `generated`: A boolean that indicates whether or not we use a golden value
-        - `exact`: Check for that exact string
-        - `start`: Check if the source starts with this string
-        - `end`: Check if the source ends with this string
-        - `contains`: Check if the source contains all the strings of the provided list of strings
-        - `consecutive`: Check if the source contains all the strings of the provided list of strings,
-           in the given order.
+    * `generated`: A boolean that indicates whether or not we use a golden value
+    * `exact`: Check for that exact string
+    * `start`: Check if the source starts with this string
+    * `end`: Check if the source ends with this string
+    * `contains`: Check if the source contains all the strings of the provided list of strings
+    * `consecutive`: Check if the source contains all the strings of the provided list of strings,
+       in the given order.
 
 
 ### Dhall
@@ -101,15 +87,14 @@ let Expectation
     = < GeneratedExp : Bool
       | ExactExp : Text
       | ContainsExp : List Text
-      | ComplexExp : BySourceExpectation
+      | ComplexExp : ComplexExpectationType
       >
 ```
 
-where `BySourceExpectation` is a `Map Text ComplexExpectation`
-with this definition for `ComplexExpectation`:
+with this definition for `ComplexExpectationType`:
 
 ```
-let ComplexExpectation
+let ComplexExpectationType
     : Type
     = { generated : Bool
       , exact : Optional Text
@@ -127,9 +112,9 @@ to ease their use:
 
 - `Generated : Bool -> Expectation` allows you to build an `Expectation.Generated`.
 - `Exact : Text -> Expectation` allows you to build an `Expectation.ExactExp`.
-- `Contains : List Text -> Expectation` allows you to build an `Expectation.ContainsExp`
-- `BySource : Map Text ComplexExpectation -> Expectation` allows you to build an
-  `Expectation.ComplexExpectation`.
+- `Contains : List Text -> Expectation` allows you to build an `Expectation.ContainsExp`.
+- `Contains : List Text -> Expectation` allows you to build a complex expectation with only a list
+  of consecutive values to check.
 
 For `ComplexExpectation` there is an empty template:  `EmptyExpectation`.
 
