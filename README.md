@@ -4,6 +4,22 @@
 
 Golden tests for Command Line interfaces.
 
+## Table of Content
+
+* [Purpose](#purpose)
+    * [Why REPLica](#why-replica)
+    * [Features](#features)
+* [Install](#install)
+    * [Requirements](#requirements)
+    * [Steps](#steps)
+* [Quickstart](#quickstart)
+* [Using dhall](#using-dhall)
+* [Writing tests](#writing-tests)
+* [Going further](#going-further)
+    * [REPLica in my project?](#replica-in-my-project)
+* [Roadmap](#roadmap)
+* [Help and support](#help-and-support)
+
 ## Purpose
 
 Replica aims at managing tests suites composed of command line interfaces calls.
@@ -143,7 +159,7 @@ TADA... it works.
 
 if you want to see it fails again, you can modify the command in `hello.json`.
 
-### Using dhall
+## Using dhall
 
 REPLica takes a JSON specification in input.
 Though, using [dhall][] is prefered as it can allow us to build test templates
@@ -165,6 +181,53 @@ dhall-to-json --file hello.dhall -o hello.json
 # run the test
 replica run hello.json
 ```
+
+## Writing tests
+
+
+### `command`
+
+The [Quickstart](#quickstart) section introduced a first, minimal test in json:
+
+```json
+{ "hello": {"command": "echo \"hello, world!\""} }
+```
+
+or in dhall:
+
+```dhall
+{ hello = Replica.Minimal::{command = "echo \"Hello, world!\""}}
+```
+
+In both case, we have declared the only mandatory field of a test: `command`.
+
+It defines the command that will be tested.
+REPLica will save the exit code of the command, the standard output and the standard error.
+By default, REPLica will only check the output,
+comparing it to the golden value that will be stored in the `interactive` mode.
+
+### `beforeTest` and `afterTest`
+
+The `beforeTest` and `afterTest` allow you to prepare and to clean the test environment.
+Warning: commands in each of them run in separated shells.
+It means that you can't share (at the moment), variables between `beforeTest`, `command`,
+and `afterTest`.
+`command` won't be executed if `beforeTest` failed,
+and an error will be emited if a command of `beforeTest` or `afterTest` failed.
+REPLica distinguish an error (when something went wrong during the execution of a test)
+and a failure (when the test doesn't meet the expectations).
+
+### `require`
+
+The `require` field ensure that a test will be executed only if the given list of
+tests succeed.
+If one of the required tests failed, the test will be marked as ignore.
+
+### `description`
+
+You can add a `description` to your test.
+Description is here for informative purpose and can be displayed with `replica info`.
+
 
 ## Going further
 
