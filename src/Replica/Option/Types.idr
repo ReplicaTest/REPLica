@@ -60,6 +60,7 @@ embedOption f g x = MkOption x.mods x.defaultValue (embed f g x.setter)
 
 namespace Param
 
+
   public export
   record Param b a where
     constructor MkParam
