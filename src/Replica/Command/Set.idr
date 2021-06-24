@@ -77,7 +77,7 @@ targetPart = inj $ MkOption
                        (const $ const "Contradictory target")
 
 setterPart : Part (Builder SetCommand') Setter
-setterPart = inj $ MkParam
+setterPart = inj $ MkParam1
   "KEY=VALUE"
   parseKV
   go

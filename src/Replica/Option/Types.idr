@@ -60,13 +60,22 @@ embedOption f g x = MkOption x.mods x.defaultValue (embed f g x.setter)
 
 namespace Param
 
-
   public export
   record Param b a where
     constructor MkParam
     name : String
-    parser : String -> Maybe a
+    parser : List String -> Maybe a
     setter : a -> b -> Either String b
+
+  export
+  MkParam1 : (name : String) -> (parser : String -> Maybe a) ->
+             (setter : a -> b -> Either String b) ->
+             Param b a
+  MkParam1 name parser setter = MkParam name (go parser) setter
+    where
+      go : (String -> Maybe a) -> List String -> Maybe a
+      go f [x] = f x
+      go f _   = Nothing
 
   export
   embedParam : (c -> b) -> (b -> c -> c) -> Param b a -> Param c a
@@ -122,9 +131,7 @@ namespace Parser
   partParser : Part b a -> Parser (b -> Either String b)
   partParser x xs = let
     Left x1 = decomp x
-      | Right v => case xs of
-                        [y] => MkPair [] . v.setter <$> v.parser y
-                        _   => Nothing
+      | Right v => MkPair [] . v.setter <$> v.parser xs
     in optionParser (decomp0 x1) xs
 
   public export
