@@ -123,7 +123,7 @@ jsonConfig (JObject xs) = MkGlobal
   (foldMap (getKey asciiValues) xs >>= toMaybe . validateAscii)
   (foldMap (getKey logValues) xs >>= toMaybe . validateLogLevel)
   (foldMap (getKey diffValues) xs >>= toMaybe . validateDiff)
-  (foldMap (getKey testFileValues) xs >>= toMaybe . validateFile)
+  (foldMap (getKey testFileValues) xs >>= toMaybe . map pure . validateFile)
 jsonConfig json = neutral
 
 export

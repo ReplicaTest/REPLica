@@ -57,7 +57,7 @@ record Global' (f : Type -> Type) where
   ascii : f Bool
   logLevel : f (Maybe LogLevel)
   diff : f DiffCommand
-  file : f String
+  files : f (List String)
 
 public export
 Global : Type
@@ -73,7 +73,7 @@ Show Global where
     , show x.ascii
     , show x.logLevel
     , show x.diff
-    , show x.file
+    , show x.files
     ]
 
 export
@@ -82,7 +82,7 @@ TyMap Global' where
     (func x.replicaDir) (func x.goldenDir)
     (func x.colour) (func x.ascii)
     (func x.logLevel)
-    (func x.diff) (func x.file)
+    (func x.diff) (func x.files)
 
 export
 TyTraversable Global' where
@@ -91,7 +91,7 @@ TyTraversable Global' where
     (func x.replicaDir) (func x.goldenDir)
     (func x.colour) (func x.ascii)
     (func x.logLevel)
-    (func x.diff) (func x.file)
+    (func x.diff) (func x.files)
     |]
 
 export
@@ -216,13 +216,15 @@ diffPart = inj $ MkOption
                   (\x, y => "More than one diff command were given: \{show y}, \{show x}")
 
 export
-fileParamPart : Part (Builder Global') String
-fileParamPart = inj $ MkParam1 "JSON_FILE" Just go
+filesParamPart : Part (Builder Global') (List String)
+filesParamPart = inj $ MkParam "JSON_FILE(S)" (traverse checkNotOption) go
   where
-    go : String -> Builder Global' -> Either String (Builder Global')
-    go = one file
-             (\x => record {file = Right x})
-             (\x, y => "More than one test file were given: \{y}, \{x}")
+    checkNotOption : String -> Maybe String
+    checkNotOption x = guard (not $ "-" `isPrefixOf` x) $> x
+    go : List String -> Builder Global' -> Either String (Builder Global')
+    go = one files
+             (\x => record {files = Right x})
+             (\x, y => "More than one set of test files were given: \{show y}, \{show x}")
 
 
 export
@@ -235,7 +237,7 @@ optParseGlobal =
     (liftAp asciiPart)
     (liftAp logLevelPart)
     (liftAp diffPart)
-    (liftAp fileParamPart)
+    (liftAp filesParamPart)
   |]
 
 export
@@ -248,7 +250,7 @@ defaultGlobal =
     (defaultPart asciiPart)
     (defaultPart logLevelPart)
     (defaultPart diffPart)
-    (defaultPart fileParamPart)
+    (defaultPart filesParamPart)
 
 export
 globalOptionsHelp : List1 Help
@@ -264,7 +266,7 @@ Alternative m => Semigroup (Global' m) where
     (x.ascii <|> y.ascii)
     (x.logLevel <|> y.logLevel)
     (x.diff <|> y.diff)
-    (x.file <|> y.file)
+    (x.files <|> y.files)
 
 export
 Alternative m => Monoid (Global' m) where

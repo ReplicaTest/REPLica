@@ -1,0 +1,14 @@
+{
+  "two": {
+    "afterTest": [],
+    "beforeTest": [],
+    "command": "echo \"two\"",
+    "files": {},
+    "pending": false,
+    "require": [],
+    "spaceSensitive": true,
+    "stdErr": false,
+    "stdOut": true,
+    "tags": []
+  }
+}

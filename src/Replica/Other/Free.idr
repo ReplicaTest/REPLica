@@ -29,5 +29,10 @@ runApM func (Pure x) = neutral
 runApM func (MkAp x y) = runApM func y <+> func x
 
 export
+runApM' : Monoid m => (forall x. f x -> m) -> Ap f c -> m
+runApM' func (Pure x) = neutral
+runApM' func (MkAp x y) = func x <+> runApM func y
+
+export
 liftAp : f a -> Ap f a
 liftAp x = MkAp x (Pure id)
