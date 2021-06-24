@@ -217,7 +217,7 @@ diffPart = inj $ MkOption
 
 export
 fileParamPart : Part (Builder Global') String
-fileParamPart = inj $ MkParam "JSON_FILE" Just go
+fileParamPart = inj $ MkParam1 "JSON_FILE" Just go
   where
     go : String -> Builder Global' -> Either String (Builder Global')
     go = one file
