@@ -203,6 +203,19 @@ let tests : Replica.Replica = toMap
            with description = Some "test localConfig"
            with succeed = Some True
            with tags = ["config", "local", "meta"]
+   , multi_json =
+      (Meta.replicaTest Meta.Run::{ directory = "tests/replica/multi"
+                                    , testFile = "tests1.json tests2.json"})
+           with description = Some "test several json files"
+           with succeed = Some True
+           with tags = ["multi", "meta"]
+
+   , multi_json_error =
+      (Meta.replicaTest Meta.Run::{ directory = "tests/replica/multi"
+                                    , testFile = "tests1.json testsDup.json"})
+           with description = Some "test several json files"
+           with succeed = Some False
+           with tags = ["multi", "meta"]
    }
 
 in tests # parsing_errors # idris

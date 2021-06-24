@@ -42,11 +42,11 @@ Other CLI testing frameworks
 
 - Test tags
 - Test dependencies (test are run only if other tests succeed)
-- Check exit status (0 or non 0 only)
+- Check exit status
 - Multi-threads
 - Run only selected tests/tags
-- Partial expectation
-- Test output file if any
+- Expectation language
+- Can test standard output, standard error and file content
 
 ## Install
 

@@ -8,6 +8,8 @@
 - NEW:
     * New expectations functions: `contains`, `consecutive`, `start`, `end`
     * Differentiate `stdOut` and `stdErr`
+    * command exit code can be checked
+    * we can submit several json files
 
 ## version 0.3.1
 

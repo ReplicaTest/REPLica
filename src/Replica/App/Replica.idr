@@ -173,15 +173,28 @@ getReplica :
       , Exception ReplicaError ] e => App e Replica
 getReplica = do
   ctx <- get GlobalConfig
-  let f = ctx.file
-  content <- handle (readFile f)
-                    pure
-                    (\err : FSError => throw $ CantAccessTestFile f)
-  let Just json = parse content
+  let fs = ctx.files
+  content <- traverse readReplica fs
+  let Just jsons = traverse parse content
         | Nothing => throw $ InvalidJSON []
-  let Valid repl = jsonToReplica json
+  let res = traverse jsonToReplica jsons
+  let Valid repl = map (>>= (\(MkReplica xs) => xs)) res
         | Error xs => throw $ InvalidJSON xs
-  pure repl
+  let ([], _) = duplicatedKeys repl
+      | (dup, _) => throw $ InvalidJSON ["Duplicated key(s): \{show dup}"]
+  pure $ MkReplica repl
+  where
+    readReplica : String -> App e String
+    readReplica f = handle (readFile f)
+      pure (\err : FSError => throw $ CantAccessTestFile f)
+    go : (List String, List String) -> Test -> (List String, List String)
+    go (dup, names) t = if t.name `elem` names
+                           then if t.name `elem` dup
+                                   then (dup, names)
+                                   else (t.name :: dup, names)
+                           else (dup, t.name :: names)
+    duplicatedKeys : List Test -> (List String, List String)
+    duplicatedKeys xs = foldl go ([], []) xs
 
 export
 when : Bool -> App e () -> App e ()
