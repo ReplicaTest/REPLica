@@ -289,10 +289,11 @@ checkOutput part expectations = do
   debug $ withOffset 4 $ "Errors: \{show $ map (map fst) result}"
   pure $ map (WrongOutput part given) result
 
-checkStatus : Maybe Bool -> Nat -> Maybe FailReason
+checkStatus : Maybe (Either Bool Nat) -> Nat -> Maybe FailReason
 checkStatus Nothing y = Nothing
-checkStatus (Just True) y = guard (y /= 0) $> WrongStatus True
-checkStatus (Just False) y = guard (y == 0) $> WrongStatus False
+checkStatus (Just (Left True)) y = guard (y /= 0) $> WrongStatus y (Left True)
+checkStatus (Just (Left False)) y = guard (y == 0) $> WrongStatus y (Left False)
+checkStatus (Just (Right x)) y = guard (y /= x) $> WrongStatus y (Right x)
 
 checkExpectations :  SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
@@ -307,7 +308,7 @@ checkExpectations exitCode = do
   log $ withOffset 2 "Checking expectations"
   t <- get CurrentTest
   ctx <- get RunContext
-  let statusCheck = checkStatus t.mustSucceed exitCode
+  let statusCheck = checkStatus t.status exitCode
   expResults <- traverse (uncurry checkOutput) t.expectations
   let failures = maybe id (::) statusCheck $ catMaybes expResults
   debug $ withOffset 4 "Check success"
@@ -500,7 +501,7 @@ testOutput (Right (Fail xs)) = do
       in putStrLn (withOffset 6 "Golden value expectation mismatch:") >> content
 
     writeFailure : FailReason -> App e ()
-    writeFailure (WrongStatus expectSuccess) = pure ()
+    writeFailure (WrongStatus _ expected) = pure ()
     writeFailure (ExpectedFileNotFound x) = pure ()
     writeFailure (WrongOutput x given ys) = do
       putStrLn $ withOffset 6 $ !bold "Error on \{displaySource x}:"

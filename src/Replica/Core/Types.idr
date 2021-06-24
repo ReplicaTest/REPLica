@@ -61,7 +61,7 @@ record Test where
   afterTest : List String
   command: String
   input : Maybe String
-  mustSucceed : Maybe Bool
+  status : Maybe (Either Bool Nat)
   spaceSensitive : Bool
   stdOut : List Expectation
   stdErr : List Expectation
@@ -85,7 +85,7 @@ Show Test where
     , show x.afterTest
     , show x.command
     , show x.input
-    , show x.mustSucceed
+    , show x.status
     , show x.spaceSensitive
     , show x.stdOut
     , show x.stdErr
@@ -129,7 +129,7 @@ record Replica where
 
 public export
 data FailReason : Type where
-  WrongStatus : (expectSuccess : Bool) -> FailReason
+  WrongStatus : (status : Nat) -> (expected : Either Bool Nat) -> FailReason
   WrongOutput : Part -> String -> List1 (e : Expectation **  ExpectationError e) -> FailReason
   ExpectedFileNotFound : String -> FailReason
 
@@ -168,8 +168,9 @@ Eq Part where
 
 export
 displayFailReason : FailReason -> List String
-displayFailReason (WrongStatus True) = pure "[Fails while it should pass]"
-displayFailReason (WrongStatus False) = pure "[Pass but it should fail]"
+displayFailReason (WrongStatus x (Left True)) = pure "[Fails while it should pass : \{show x}]"
+displayFailReason (WrongStatus _ (Left False)) = pure "[Pass but it should fail]"
+displayFailReason (WrongStatus x (Right y)) = pure "[Status error: got \{show x}, expected \{show y}]"
 displayFailReason (ExpectedFileNotFound src) = pure "[Missing expected file \"\{src}\"]"
 displayFailReason w@(WrongOutput src given reasons) = join
   [ guard (isNoGolden w) $> "[Missing Golden for \{displaySource src}]"
@@ -196,8 +197,8 @@ namespace FailReason
 
   export
   toJSON : FailReason -> JSON
-  toJSON (WrongStatus e) = JObject
-    [("type", JString "status"), ("expected", JBoolean e), ("given", JBoolean $ not e)]
+  toJSON (WrongStatus x y) = JObject
+    [("type", JString "status"), ("expected", either JBoolean (JNumber . cast) y), ("given", JNumber $ cast x)]
   toJSON (ExpectedFileNotFound src) = JObject
     [("type", JString "missing"), ("expected", JString src)]
   toJSON (WrongOutput src given err) = JObject $

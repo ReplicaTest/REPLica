@@ -135,10 +135,13 @@ validateInput : JSON -> Validation (List String) String
 validateInput (JString str) = Valid str
 validateInput x = Error ["input must be a string, found \{show x}"]
 
-validateStatus : Maybe JSON -> Validation (List String) (Maybe Bool)
+validateStatus : Maybe JSON -> Validation (List String) (Maybe (Either Bool Nat))
 validateStatus Nothing = Valid empty
 validateStatus (Just JNull) = Valid empty
-validateStatus (Just (JBoolean x)) = Valid $ Just x
+validateStatus (Just (JBoolean x)) = Valid $ Just $ Left x
+validateStatus (Just (JNumber x)) =
+  maybe (Error ["Status can't be negative: \{show x}"]) (Valid .  Just . Right)
+    (let i : Integer = cast x in guard (i >= 0) $> fromInteger i)
 validateStatus (Just x) = Error ["Status should be a boolean, found: \{show x}"]
 
 validateSpaceSensitive : Maybe JSON -> Validation (List String) Bool
@@ -167,7 +170,7 @@ jsonToTest str (JObject xs) =
   (validateAfter $ lookup "afterTest" xs)
   (validateCommand $ lookup "command" xs)
   (traverse validateInput $ lookup "input" xs)
-  (validateStatus $ lookup "succeed" xs)
+  (validateStatus $ lookup "status" xs <|> lookup "succeed" xs)
   (validateSpaceSensitive $ lookup "spaceSensitive" xs)
   (maybe (Valid [Generated]) validateExpectations $ lookup "stdout" xs <|> lookup "stdOut" xs)
   (maybe (Valid []) validateExpectations $ lookup "stderr" xs <|> lookup "stdErr" xs)
@@ -184,9 +187,14 @@ jsonToReplica _ = Error ["Replica test file must be a JSON object"]
 
 parseWrongStatus : List (String, JSON) -> Maybe FailReason
 parseWrongStatus xs = do
-  JBoolean exp <- lookup "expected" xs
-    | _ => Nothing
-  pure $ WrongStatus exp
+  exp <- case lookup "expected" xs of
+    Just (JBoolean b) => Just (Left b)
+    Just (JNumber x) => let i = cast x in guard (i >= 0) $> Right (fromInteger i)
+    _ => Nothing
+  given <- case lookup "given" xs of
+    Just (JNumber x) => let i = cast x in guard (i >= 0) $> fromInteger i
+    _ => Nothing
+  pure $ WrongStatus given exp
 
 parseExpectedNotFound : List (String, JSON) -> Maybe FailReason
 parseExpectedNotFound xs = do
