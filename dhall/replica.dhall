@@ -47,6 +47,10 @@ let Generated : Bool -> Expectation
 let ComplexExpectation : ComplexExpectationType -> Expectation
     = \(exp : ComplexExpectationType) ->  Expectation.ComplexExp exp
 
+let Status = <ExactlyStatus : Natural | SucceedStatus : Bool>
+
+let Exactly : Natural -> Optional Status = \(t : Natural) -> Some (Status.ExactlyStatus t)
+let Succeed : Bool -> Optional Status = \(t : Bool) -> Some (Status.SucceedStatus t)
 
 let Test
     : Type
@@ -58,7 +62,7 @@ let Test
       , afterTest : List Text
       , command : Text
       , input : Optional Text
-      , succeed : Optional Bool
+      , status : Optional Status
       , spaceSensitive : Bool
       , stdOut : Expectation
       , stdErr : Expectation
@@ -76,7 +80,7 @@ let Minimal =
         , beforeTest = [] : List Text
         , afterTest = [] : List Text
         , input = None Text
-        , succeed = None Bool
+        , status = None Status
         , spaceSensitive = True
         , stdOut = Generated True
         , stdErr = Generated False
@@ -85,9 +89,9 @@ let Minimal =
         }
       }
 
-let Success = Minimal with default.succeed = Some True
+let Success = Minimal with default.status = Succeed True
 
-let Failure = Minimal with default.succeed = Some False
+let Failure = Minimal with default.status = Succeed False
 
 let Replica
     : Type
@@ -102,6 +106,8 @@ in  { Test
     , Consecutive
     , Contains
     , Exact
+    , Exactly
+    , Succeed
     , Generated
     , ComplexExpectation
     , ComplexExpectationType

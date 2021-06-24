@@ -10,6 +10,7 @@ let tests : Replica.Replica = [
                         , testFile = "tests.json"
                         })
       with description = Some "Unknown commands are rejected, showing help"
+      with status = Replica.Exactly 254
       with tags = ["meta","parser"]
   },
   { mapKey = "unknown_parameter"
