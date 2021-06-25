@@ -24,7 +24,7 @@ jobs:
         with:
           path: Idris2-${{ env.IDRIS2_VERSION }}
           key: ${{ runner.os }}-idris2-bootstrapped-${{ env.IDRIS2_VERSION }}
-      - name : Build stable version
+      - name : Bootstrap stable version
         if: steps.previous-version-cache.outputs.cache-hit != 'true'
         run: |
           wget https://www.idris-lang.org/idris2-src/idris2-$IDRIS2_VERSION.tgz
