@@ -4,6 +4,38 @@
 
 Golden tests for Command Line interfaces.
 
+## Table of Content
+
+* [Purpose](#purpose)
+    * [Why REPLica](#why-replica)
+    * [Features](#features)
+* [Install](#install)
+    * [Requirements](#requirements)
+    * [Steps](#steps)
+* [Quickstart](#quickstart)
+* [Using dhall](#using-dhall)
+* [Writing tests](#writing-tests)
+    * [`command`](#command)
+    * [`beforeTest` and `afterTest`](#beforetest-and-aftertest)
+    * [`require`](#require)
+    * [`input`](#input)
+    * [`tags`](#tags)
+    * [`description`](#description)
+    * [`pending`](#description)
+    * [`status`](#status)
+    * [`spaceSensitive`](#spacesensitive)
+    * [`stdOut` and `stdErr`](#stdout-and-stderr)
+    * [`files`](#files)
+* [Expectations](#expectations)
+    * [Golden value](#golden-value)
+    * [Exact value](#exact-value)
+    * [Contains](#contains)
+    * [Complex expectations](#complex-expectations)
+* [Going further](#going-further)
+    * [REPLica in my project?](#replica-in-my-project)
+* [Roadmap](#roadmap)
+* [Help and support](#help-and-support)
+
 ## Purpose
 
 Replica aims at managing tests suites composed of command line interfaces calls.
@@ -143,7 +175,7 @@ TADA... it works.
 
 if you want to see it fails again, you can modify the command in `hello.json`.
 
-### Using dhall
+## Using dhall
 
 REPLica takes a JSON specification in input.
 Though, using [dhall][] is prefered as it can allow us to build test templates
@@ -164,6 +196,276 @@ Supposed you have a `hello.dhall` file with this content, you can then do:
 dhall-to-json --file hello.dhall -o hello.json
 # run the test
 replica run hello.json
+```
+
+## Writing tests
+
+
+### `command`
+
+The [Quickstart](#quickstart) section introduced a first, minimal test in json:
+
+```json
+{ "hello": {"command": "echo \"hello, world!\""} }
+```
+
+or in dhall:
+
+```dhall
+{ hello = Replica.Minimal::{command = "echo \"Hello, world!\""}}
+```
+
+In both case, we have declared the only mandatory field of a test: `command`.
+
+It defines the command that will be tested.
+REPLica will save the exit code of the command, the standard output and the standard error.
+By default, REPLica will only check the output,
+comparing it to the golden value that will be stored in the `interactive` mode.
+
+### `beforeTest` and `afterTest`
+
+The `beforeTest` and `afterTest` allow you to prepare and to clean the test environment.
+Warning: commands in each of them run in separated shells.
+It means that you can't share (at the moment), variables between `beforeTest`, `command`,
+and `afterTest`.
+`command` won't be executed if `beforeTest` failed,
+and an error will be emited if a command of `beforeTest` or `afterTest` failed.
+REPLica distinguish an error (when something went wrong during the execution of a test)
+and a failure (when the test doesn't meet the expectations).
+
+```json
+{ "test cat":
+  { "beforeTest": ["echo \"test\" > foo.txt"]
+  , "command": ["cat foo.txt"]
+  , "afterTest": ["rm foo.txt"]
+}
+```
+
+```dhall
+{ test_cat = Replica.Minimal::
+  { beforeTest = ["echo \"test\" > foo.txt"]
+  , command = "cat foo.txt"
+  , afterTest = ["rm foo.txt"]
+  }
+}
+```
+
+### `require`
+
+The `require` field ensure that a test will be executed only if the given list of
+tests succeed.
+If one of the required tests failed, the test will be marked as ignore.
+
+```json
+{ "test_first": {"command": "echo \"Hello, \""}
+, "test_then":
+   { "command":  "echo \"world!\""
+   , "require": ["test_first"]
+   }
+}
+```
+
+```dhall
+{ test_first = {command = "echo \"Hello, \""}
+, test_then =
+   { command =  "echo \"world!\""
+   , require = ["test_first"]
+   }
+}
+```
+
+### `input`
+
+The `input` field allows you to define inputs for your command, repacing the standard input by it's
+content.
+
+```json
+{ "send_text_to_cat":
+  { "command": "cat"
+  , "input" = "hello, wold!"
+  }
+}
+```
+
+```dhall
+{ send_text_to_cat = Replica.Minimal::
+  { command = "cat"
+  , input = "hello, wold!"
+  }
+}
+```
+### `tags`
+
+The `tags` field allow you to organise your test suites.
+Once you've defined tags for your tests, you can decide to run test that have (or didn't have) a
+given tags thanks to REPLica command line options.
+
+```json
+{ "hello": {"command": "echo \"hello, world!\""}, "tags": ["example", "hello"]}
+```
+
+or in dhall:
+
+```dhall
+{ hello = Replica.Minimal::{command = "echo \"Hello, world!\"", tags = ["example", "hello"]}}
+```
+
+And then you can run `replica -t example your_file.json` to include tests tagged with `example`
+or `replica -T example your_file.json` to exclude them.
+
+### `description`
+
+You can add a `description` to your test.
+Description is here for informative purpose and can be displayed with `replica info`.
+
+### `pending`
+
+If `pending` is set to `true`, the corresponding test will be ignored.
+
+### `status``
+
+The `status` field allow you to verify the exit code of your command.
+You can either set the value to a boolean,
+to check if the command succeeded (`true`) or failed (`false`),
+or to a natural, to check if the exit code was exactly the one provided.
+
+```json
+{ "success1": {"command": "true", "status": true}
+, "success2": {"command": "true", "status": 0}
+, "success3": {"command": "false", "status": false}
+, "success4": {"command": "false", "status": 1}
+, "failure":  {"command": "false", "status": 2}
+}
+```
+
+The dhall version is slightly more complex, as we need to use a union type to allow booleans and
+natural values.
+A few helper are available to ease the settings though:
+
+```dhall
+{ "success1": Replica.Minimal::{command = "true", status = Replica.Succeed true}
+, "success2": Replica.Minimal::{command = "true", status = Replica.Exactly 0}
+, "success3": Replica.Minimal::{command = "false", status = Replica.Succeed false}
+, "success4": Replica.Minimal::{command = "false", status = Replica.Exactly 1}
+, "failure":  Replica.Minimal::{command = "false", status = Replica.Exactly 2}
+}
+```
+
+### `spaceSensitive`
+
+If this field is set to `false`, all text comparisons that are performed in this test are
+space insensitive: it means that the content that the given and expected content are
+"normalized" before the comparison: consecutive space-like characters are replaced by a
+single space ands consecutive new lines are replaced by a single new line.
+
+### `stdOut` and `stdErr`
+
+By default, REPLica compares the standard output (`stdOut`)
+to a (previously generated) golden value,
+and ignores totally the output of the standard error (`stdErr`).
+
+The fields `stdOut` and `stdErr` allow you to modify this behaviour.
+The possible values for these fields are describe in the [expectations](#expectations)
+section.
+
+### `files`
+
+Aside the standard output and error,
+REPLica can also check contents of files, as it can be useful to check the result of
+a command.
+To do so, we can use the `files` field,
+which expects an object where keys must be relative paths to the fields to check and
+[expectations](#expectations) as a value, to define what is expected for the fields.
+
+## Expectations
+
+For each type of expectations, we give the json and the dhall version.
+As we use a union type, dhall version is a bit more verbose, but smart constructors
+ease the pain.
+
+### Golden value
+
+The simpliest value for an expectation is a boolean.
+`true` means that we compare the content of this source to a golden value,
+`false` (or `null`) means that this source is ignored`.
+
+```json
+{ "hello": {"command": "echo \"hello, world!\"", "stdOut": false} }
+```
+
+or, in dhall:
+
+```dhall
+{ hello = Replica.Minimal::{command = "echo \"Hello, world!\"", stdOut = Replica.Generated False}}
+```
+
+### Exact value
+
+If you set a string as an expectation, the content of the corresponding source is expected to be
+exactly this string.
+
+```json
+{ "hello": {"command": "echo \"hello, world!\"", "stdOut": "hello, world!\n"} }
+```
+
+or, in dhall:
+
+```dhall
+{ hello = Replica.Minimal::{command = "echo \"Hello, world!\"", stdOut = Replica.Exactly "Hello, world!"}}
+```
+
+### Contains
+
+If you set a list of strings as a value, the source must contains all the values of the list, in any
+order.
+
+```json
+{ "hello": {"command": "echo \"hello, world!\"", "stdOut": ["world", "hello"]} }
+```
+
+or, in dhall:
+
+```dhall
+{ hello = Replica.Minimal::
+  {command = "echo \"Hello, world!\"", stdOut = Replica.Contains ["world, hello"]}}
+```
+
+### Complex expectations
+
+Complex expectations are a solutions that allows you to compose the solutions given before
+and that enables a few other types of expectations.
+A complex expectation is an object where the following fields are considered:
+
+- `generated`: true or false, depending on whether you want to use a golden value or not.
+- `exact`: if set, the exact expectation for this source.
+- `start`: if set, the source must start with this string.
+- `end`: if set, the source must end with this string.
+- `contains`: a list of string, that must be found in the source.
+- `consecutive`: a list of string, that must be found in this order (optionnaly with some text in between) in the source.
+
+```json
+{ "hello":
+    {"command": "echo \"hello, world!\"",
+      "stdOut": { "generated": true
+                , "consecutive": ["hello", "world"]
+                , "end": "!"
+                }
+    }
+}
+```
+
+or, in dhall:
+
+```dhall
+{ hello = Replica.Minimal::
+  { command = "echo \"Hello, world!\""
+  , stdOut = Replica.ComplexExpectation
+      { generated = True
+      , consecutive = ["hello", "world"]
+      , end = Some "!"
+      }
+  }
+}
 ```
 
 ## Going further
