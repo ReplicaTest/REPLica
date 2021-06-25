@@ -38,6 +38,8 @@ modules = Replica
         , Replica.Other.String
         , Replica.Other.Validation
 
+        , Replica.Version
+
 main = Replica
 
 executable = replica

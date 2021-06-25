@@ -57,7 +57,10 @@ runCommand a0 = let
     | Right cmd => runInfo cmd
   Left a3 = decomp a2
     | Right cmd => runSet cmd
-  in runHelp (decomp0 a3) $> 0
+  Left a4 = decomp a3
+    | Right h => runHelp h $> 0
+  MkVersion v = (decomp0 a4)
+  in putStrLn v $> 0
 
 covering
 main : IO ()

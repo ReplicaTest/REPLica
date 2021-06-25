@@ -84,21 +84,9 @@ Other CLI testing frameworks
 
 ### Requirements
 
-- [idris2](https://idris-lang.org)
+- [idris2](https://idris-lang.org) (v0.4.0)
 - [git](https://git-scm.com)
 - preferably, [dhall][] and [dhall-to-json][]
-
-**Regarding idris2 version:**
-
-As idris is in active development,
-REPLica try to stay compatible with the latest snapshots of idris2.
-
-A consequence is that, unfortunately, REPLica is not compatible with idris2 0.3.0, which
-is usually provided by `brew` and `nix`.
-
-The plan in the future is to stabilise the code on the next major idris2 release.
-
-You must either build `idris2` [from source][idris_repo] or use [docker][idris_docker].
 
 ### Steps
 
