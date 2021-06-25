@@ -1,6 +1,6 @@
 # REPLica changelog
 
-## since 0.3.1
+## version 0.4.0
 
 - CHANGE:
     * Expectation format: Note if you use "partial expectations" in your tests, you need to upgrade
@@ -10,6 +10,7 @@
     * Differentiate `stdOut` and `stdErr`
     * command exit code can be checked
     * we can submit several json files
+    * add a `version` subcommand
 
 ## version 0.3.1
 
