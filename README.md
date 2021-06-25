@@ -234,10 +234,10 @@ REPLica distinguish an error (when something went wrong during the execution of 
 and a failure (when the test doesn't meet the expectations).
 
 ```json
-{ test cat =
-  { "beforeTest": ['echo "test" > foo.txt']
-  , "command": ['cat foo.txt']
-  , "afterTest": ['rm foo.txt']
+{ "test cat":
+  { "beforeTest": ["echo \"test\" > foo.txt"]
+  , "command": ["cat foo.txt"]
+  , "afterTest": ["rm foo.txt"]
 }
 ```
 
@@ -257,9 +257,9 @@ tests succeed.
 If one of the required tests failed, the test will be marked as ignore.
 
 ```json
-{ "test_first": {command = 'echo "Hello, "'}
+{ "test_first": {"command": "echo \"Hello, \""}
 , "test_then":
-   { "command":  'echo "world!"'
+   { "command":  "echo \"world!\""
    , "require": ["test_first"]
    }
 }
@@ -281,16 +281,16 @@ content.
 
 ```json
 { "send_text_to_cat":
-  { "command": 'cat'
-  , "input" = 'hello, wold!'
+  { "command": "cat"
+  , "input" = "hello, wold!"
   }
 }
 ```
 
 ```dhall
 { send_text_to_cat = Replica.Minimal::
-  { command = 'cat'
-  , input = 'hello, wold!'
+  { command = "cat"
+  , input = "hello, wold!"
   }
 }
 ```
@@ -405,7 +405,7 @@ If you set a string as an expectation, the content of the corresponding source i
 exactly this string.
 
 ```json
-{ "hello": {"command": 'echo "hello, world!"', "stdOut": "hello, world!\n"} }
+{ "hello": {"command": "echo \"hello, world!\"", "stdOut": "hello, world!\n"} }
 ```
 
 or, in dhall:
@@ -420,7 +420,7 @@ If you set a list of strings as a value, the source must contains all the values
 order.
 
 ```json
-{ "hello": {"command": 'echo "hello, world!"', "stdOut": ["world", "hello"]} }
+{ "hello": {"command": "echo \"hello, world!\"", "stdOut": ["world", "hello"]} }
 ```
 
 or, in dhall:
@@ -445,7 +445,7 @@ A complex expectation is an object where the following fields are considered:
 
 ```json
 { "hello":
-    {"command": 'echo "hello, world!"',
+    {"command": "echo \"hello, world!\"",
       "stdOut": { "generated": true
                 , "consecutive": ["hello", "world"]
                 , "end": "!"
