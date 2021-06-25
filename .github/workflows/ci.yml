@@ -35,6 +35,7 @@ jobs:
       - name: Install stable version
         run: |
           cd Idris2-$IDRIS2_VERSION
+          mkdir -p build/exec/idris2
           make install
           cd ..
       - name: Artifact Idris2
