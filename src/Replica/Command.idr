@@ -13,10 +13,11 @@ import public Replica.Command.Info
 import public Replica.Command.Run
 import public Replica.Command.Set
 import public Replica.Command.Help
+import public Replica.Command.Version
 
 public export
 Commands : Type
-Commands = Union Prelude.id [RunCommand, InfoCommand, SetCommand, Help]
+Commands = Union Prelude.id [RunCommand, InfoCommand, SetCommand, Help, Version]
 
 export
 parseArgs : Default Global' -> List1 String -> ParseResult Commands
@@ -25,6 +26,7 @@ parseArgs g xs = foldl1 go $ toList1 $ map (flip apply xs)
   , map inj . parseInfo g
   , map inj . parseSet
   , map inj . parseHelp
+  , map inj . parseVersion
   ]
   where
     go : ParseResult Commands -> ParseResult Commands -> ParseResult Commands

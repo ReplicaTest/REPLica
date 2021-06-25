@@ -5,24 +5,35 @@
 TEST=tests.json
 DEST=${HOME}/.local/bin
 
-build:
+FORCE:
+
+src/Replica/Version.idr: FORCE # We force the update of the version on build
+	echo "module Replica.Version" > src/Replica/Version.idr
+	echo "" >> src/Replica/Version.idr
+	echo "export" >> src/Replica/Version.idr
+	echo "version : String" >> src/Replica/Version.idr
+	echo "version = \"`git describe --tags`\"" >> src/Replica/Version.idr
+
+build: src/Replica/Version.idr
 	idris2 --build replica.ipkg
 
 install: build
 	mkdir -p ${DEST}
 	cp -r build/exec/* ${DEST}
 
-clean:
-	${RM} -r build
+clean-test:
 	${RM} ${TEST}
+
+clean: clean-test
+	${RM} -r build
 
 .dhall.json:
 	dhall-to-json --file $? --output $@
 
-generate: ${TEST}
+generate: clean-test ${TEST} build
 	build/exec/replica ${GLOBAL} run ${RUN} --interactive ${TEST}
 
-test: ${TEST} build
+test: clean-test ${TEST} build
 	build/exec/replica ${GLOBAL} run ${RUN} ${TEST}
 
 docker-build:

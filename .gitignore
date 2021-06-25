@@ -10,3 +10,4 @@ examples/.replica
 /tests.json
 /.history
 /.replica.json
+src/Replica/Version.idr
