@@ -6,6 +6,8 @@ import Data.List1
 import Replica.Command.Info
 import Replica.Command.Run
 import Replica.Command.Set
+import Replica.Command.New
+import Replica.Command.Version
 import public Replica.Help
 import Replica.Option.Types
 import Replica.Other.Validation
@@ -16,7 +18,7 @@ help = MkHelp
   "replica"
   (Just "replica COMMAND [COMMAND_OPTIONS]")
   "Integration testing for command line interfaces"
-  [ ("Commands", helpRun ::: [helpInfo, helpSet])
+  [ ("Commands", helpRun ::: [helpInfo, helpSet, helpNew, helpVersion])
   ]
   (Just "Run 'replica help COMMAND' for more information on a command.")
 

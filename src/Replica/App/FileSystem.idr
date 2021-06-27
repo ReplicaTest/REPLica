@@ -52,9 +52,10 @@ Has [PrimIO, Exception FSError] e => FileSystem e where
        else throw (CantAccess d)
   removeDir d = primIO $ removeDir d
   writeFile f content = do
-    let Just (dir, filename) = splitParent f
-      | Nothing => throw (CantAccess f)
-    buildDirectory dir
+    case splitParent f of
+      Just ("", filename) => pure ()
+      Just (dir, filename) => buildDirectory dir
+      Nothing => pure ()
     Right x <- primIO $ writeFile f content
       | Left err => throw (toFSError err f)
     pure x

@@ -49,6 +49,12 @@ runSet x = do
     noGlobal = build $ initBuilder (record {files = Just []} defaultGlobal)
 
 covering
+runNew : NewCommand -> IO Int
+runNew ctx = run $ new ctx $ handle newReplica
+  (const $ pure 0)
+  (\err : ReplicaError => putStrLn (show err) >> pure 252)
+
+covering
 runCommand : Commands -> IO Int
 runCommand a0 = let
   Left a1 = decomp a0
@@ -58,8 +64,10 @@ runCommand a0 = let
   Left a3 = decomp a2
     | Right cmd => runSet cmd
   Left a4 = decomp a3
+    | Right cmd => runNew cmd
+  Left a5 = decomp a4
     | Right h => runHelp h $> 0
-  MkVersion v = (decomp0 a4)
+  MkVersion v = (decomp0 a5)
   in putStrLn v $> 0
 
 covering
