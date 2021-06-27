@@ -204,16 +204,56 @@ let tests : Replica.Replica = toMap
            with tags = ["config", "local", "meta"]
    , multi_json =
       (Meta.replicaTest Meta.Run::{ directory = "tests/replica/multi"
-                                    , testFile = "tests1.json tests2.json"})
+                                  , testFile = "tests1.json tests2.json"})
            with description = Some "test several json files"
            with status = Replica.Succeed True
            with tags = ["multi", "meta"]
    , multi_json_error =
       (Meta.replicaTest Meta.Run::{ directory = "tests/replica/multi"
-                                    , testFile = "tests1.json testsDup.json"})
+                                  , testFile = "tests1.json testsDup.json"})
            with description = Some "test several json files"
            with status = Replica.Succeed False
            with tags = ["multi", "meta"]
+   , new_json_template =
+      (Meta.replicaTest Meta.Run::{ directory = "tests/replica/new"
+                                  , testFile = "generated.json"})
+        with description = Some "generated json template should succeed"
+        with status = Replica.Succeed True
+        with beforeTest = ["${Meta.replica_exe} new generated.json"]
+        with afterTest = ["rm -rf .replica", "rm -f generated.json"]
+        with tags = ["meta", "new"]
+   , new_json_empty_template =
+      (Meta.replicaTest Meta.Run::{ directory = "tests/replica/new"
+                                  , testFile = "generated.json"})
+        with description = Some "generated empty json template should succeed"
+        with status = Replica.Succeed True
+        with beforeTest = ["${Meta.replica_exe} new -S generated.json"]
+        with afterTest = ["rm -rf .replica", "rm -f generated.json"]
+        with tags = ["meta", "new"]
+   , new_dhall_template =
+      (Meta.replicaTest Meta.Run::{ directory = "tests/replica/new"
+                                  , testFile = "generated.json"})
+        with description = Some "generated dhall template should succeed"
+        with require = ["new_json_template"]
+        with status = Replica.Succeed True
+        with beforeTest =
+          [ "${Meta.replica_exe} new generated.dhall"
+          , "dhall-to-json --file generated.dhall --output generated.json"]
+        with afterTest =
+          [ "rm -rf .replica", "rm -f generated.json", "rm -f generated.dhall"]
+        with tags = ["meta", "new"]
+   , new_dhall_empty_template =
+      (Meta.replicaTest Meta.Run::{ directory = "tests/replica/new"
+                                  , testFile = "generated.json"})
+        with description = Some "generated empty dhall template should succeed"
+        with require = ["new_json_empty_template"]
+        with status = Replica.Succeed True
+        with beforeTest =
+          [ "${Meta.replica_exe} new -S generated.dhall"
+          , "dhall-to-json --file generated.dhall --output generated.json"]
+        with afterTest =
+          [ "rm -rf .replica", "rm -f generated.json", "rm -f generated.dhall"]
+        with tags = ["meta", "new"]
    }
 
 in tests # parsing_errors # idris

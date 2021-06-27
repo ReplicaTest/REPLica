@@ -167,4 +167,4 @@ helpRun : Help
 helpRun = commandHelp {b = Builder RunCommand'}
   "run" "Run tests from a Replica JSON file"
   optParseRun
-  (Just "JSON_TEST_FILE")
+  (Just "JSON_TEST_FILE(S)")

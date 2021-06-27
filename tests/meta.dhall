@@ -41,4 +41,5 @@ in { ReplicaTest
    , Run
    , Info
    , replicaTest
+   , replica_exe
    }
