@@ -75,7 +75,7 @@ newReplica : FileSystem (FSError :: e) =>
 newReplica = do
   ctx <- get NewContext
   let content = case ctx.format of
-        JSON => show $ jsonContent ctx.includeSample
+        JSON => format 2 $ jsonContent ctx.includeSample
         Dhall => dhallContent ctx.includeSample
   catchNew (writeFile ctx.file content)
     (\err : FSError => throw (CantAccessTestFile ctx.file))
