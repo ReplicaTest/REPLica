@@ -1,3 +1,3 @@
-let Replica = https://raw.githubusercontent.com/berewt/REPLica/main/dhall/replica.dhall
+let Replica = https://raw.githubusercontent.com/ReplicaTest/REPLica/main/dhall/replica.dhall
 
 in { hello = Replica.Minimal::{command = "echo \"Hello, world!\""}}
