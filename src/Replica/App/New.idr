@@ -17,7 +17,7 @@ import Replica.Other.Decorated
 data NewContext : Type where
 
 replicaURL : String
-replicaURL = "https://raw.githubusercontent.com/berewt/REPLica/main/dhall/replica.dhall"
+replicaURL = "https://raw.githubusercontent.com/ReplicaTest/REPLica/main/dhall/replica.dhall"
 
 jsonTestSample : JSON
 jsonTestSample = JObject

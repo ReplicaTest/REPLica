@@ -1,6 +1,6 @@
 # REPLica
 
-[![ci](https://github.com/berewt/REPLica/actions/workflows/ci.yml/badge.svg)](https://github.com/berewt/REPLica/actions/workflows/ci.yml)
+[![ci](https://github.com/ReplicaTest/REPLica/actions/workflows/ci.yml/badge.svg)](https://github.com/ReplicaTest/REPLica/actions/workflows/ci.yml)
 
 Golden tests for Command Line interfaces.
 
@@ -92,10 +92,10 @@ Other CLI testing frameworks
 
 ```shell
 # clone repo
-git clone git@github.com:berewt/REPLica.git
+git clone git@github.com:ReplicaTest/REPLica.git
 
 # install replica
-make install
+make instal
 
 # Ensure that `${HOME}/.local/bin` is in your path
 
@@ -172,7 +172,7 @@ and then translate it to JSON using [dhall-to-json][].
 For example, the dhall equivalent to the "hello word" example is the following:
 
 ```
-let Replica = https://raw.githubusercontent.com/berewt/REPLica/main/dhall/replica.dhall
+let Replica = https://raw.githubusercontent.com/ReplicaTest/REPLica/main/dhall/replica.dhall
 
 in { hello = Replica.Minimal::{command = "echo \"Hello, world!\""}}
 ```
@@ -476,7 +476,7 @@ replica in `git` and `Make`.
 ## Roadmap
 
 I keep track of the things I want to implement in a
-[dedicated project](https://github.com/berewt/REPLica/projects/3).
+[dedicated project](https://github.com/ReplicaTest/REPLica/projects/3).
 If you think that something is missing, don't hesitate to submit a feature request.
 
 
@@ -492,6 +492,6 @@ If you use the tool, I'd be happy to know about it, drop me a line on
 [idris_repo]: https://github.com/idris-lang/Idris2
 [idris_docker]: https://hub.docker.com/r/snazzybucket/idris2
 [golden]: https://ro-che.info/articles/2017-12-04-golden-tests
-[test file]: https://github.com/berewt/REPLica/blob/main/tests.dhall
+[test file]: https://github.com/ReplicaTest/REPLica/blob/main/tests.dhall
 [gitlab ci]: https://docs.gitlab.com/ee/ci/README.html
 [github actions]: https://github.com/features/actions
