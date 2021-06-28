@@ -1,5 +1,12 @@
 # REPLica changelog
 
+## Since version 0.4.0
+
+- NEW:
+    * `replica new` to create tests file templates
+- FIX:
+    * `replica help` mentions `version`
+
 ## version 0.4.0
 
 - CHANGE:
