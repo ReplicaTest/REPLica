@@ -13,7 +13,8 @@ Golden tests for Command Line interfaces.
     * [Requirements](#requirements)
     * [Steps](#steps)
 * [Quickstart](#quickstart)
-* [Using dhall](#using-dhall)
+    * [JSON](#json)
+    * [dhall](#dhall)
 * [Writing tests](#writing-tests)
     * [`command`](#command)
     * [`beforeTest` and `afterTest`](#beforetest-and-aftertest)
@@ -84,9 +85,9 @@ Other CLI testing frameworks
 
 ### Requirements
 
-- [idris2](https://idris-lang.org) (v0.4.0)
-- [git](https://git-scm.com)
-- preferably, [dhall][] and [dhall-to-json][]
+- [idris2](https://idris-lang.org) (v0.4.0);
+- [git](https://git-scm.com);
+- while you can go with it and use JSON, we recommand to use [dhall][] and [dhall-to-json][].
 
 ### Steps
 
@@ -105,25 +106,88 @@ replica help
 
 ## Quickstart
 
+### JSON
+
 ```shell
-tee hello.json > /dev/null << EOF
-{ "hello": {"command": "echo \"hello, world!\""} }
-EOF
+replica new hello.json
 ```
 
-And then run replica on it: `replica run hello.json`.
-You sholu obtain the following result:
+This command creates a `hello.json` file that contains a sample test:
+
+```
+$ replica new hello.json
+Test file created (JSON): hello.json
+
+$ cat hello.json
+{
+  "hello": {
+    "command": "echo \"Hello, World!\"",
+    "description": "This test is a placeholder, you can edit it.",
+    "spaceSensitive": false,
+    "status": true,
+    "stdOut": {
+      "generated": false,
+      "consecutive": [
+        "Hello",
+        "World"
+      ],
+      "end": "!"
+    }
+  }
+}
+```
+
+The given test checks that the output of `echo "Hello, World!"` contains consecutively
+`Hello` and "World", and ends with an exclamation mark (`'!'`).
+
+You can directly run replica on it: `replica run hello.json`.
+You should obtain the following result:
+
 
 ```
 $ replica run hello.json
-------------------------------------------------------------
+--------------------------------------------------------------------------------
 Running tests...
-------------------------------------------------------------
-Test results:
-  hello: ❌ WrongOutput
-------------------------------------------------------------
+  ✅  hello
+--------------------------------------------------------------------------------
 Summary:
-  ❌ (Failure): 1 / 1
+  ✅  (Success): 1 / 1
+```
+
+Now, edit the `hello.json` file and change the `stdOut` part so that your file looks
+like this:
+
+```json
+{
+  "hello": {
+    "command": "echo \"Hello, World!\"",
+    "description": "This test is a placeholder, you can edit it.",
+    "spaceSensitive": false,
+    "status": true,
+    "stdOut": true
+  }
+}
+```
+
+Instead of providing an expectation, we now rely on a golden value:
+a previously saved value of the output of the tested command.
+Unfortunately, we didn't save any yet... and thus `replica run hello.json`
+fails now:
+
+```
+$ replica run hello.json
+--------------------------------------------------------------------------------
+Running tests...
+  ❌  hello:
+      [Missing Golden for standard output]
+      [Unexpected content for standard output]
+      Error on standard output:
+      Given:
+        Hello, World!
+
+--------------------------------------------------------------------------------
+Summary:
+  ❌  (Failure): 1 / 1
 ```
 
 It's totally fine: `replica` has no golden value for this test yet, we need to build one.
@@ -132,12 +196,12 @@ Now you should be prompted if you want to set the golden value for the test:
 
 ```
 $ replica run --interactive hello.json
-------------------------------------------------------------
+--------------------------------------------------------------------------------
 Running tests...
-hello: Golden value mismatch
+hello: Golden value mismatch for standard output
 Expected: Nothing Found
 Given:
-hello, world!
+Hello, World!
 
 Do you want to set the golden value? [N/y]
 ```
@@ -148,43 +212,135 @@ Now that the golden value is set, we can retry to run the suite in a non interac
 
 ```
 $ replica run hello.json
-------------------------------------------------------------
+--------------------------------------------------------------------------------
 Running tests...
-------------------------------------------------------------
-Test results:
-  hello: ✅
-------------------------------------------------------------
+  ✅  hello
+--------------------------------------------------------------------------------
 Summary:
-  ✅ (Success): 1 / 1
+  ✅  (Success): 1 / 1
 ```
 
 
 TADA... it works.
 
-if you want to see it fails again, you can modify the command in `hello.json`.
+If you want to see it fails again, you can modify the command in `hello.json`.
 
-## Using dhall
+### Dhall
 
-REPLica takes a JSON specification in input.
-Though, using [dhall][] is prefered as it can allow us to build test templates
-and then translate it to JSON using [dhall-to-json][].
+```shell
+replica new hello.dhall
+```
 
-For example, the dhall equivalent to the "hello word" example is the following:
+This command creates a `hello.dhall` file that contains a sample test:
 
 ```
+$ replica new hello.dhall
+Test file created (Dhall): hello.dhall
+
+$ cat hello.dhall
 let Replica = https://raw.githubusercontent.com/ReplicaTest/REPLica/main/dhall/replica.dhall
 
-in { hello = Replica.Minimal::{command = "echo \"Hello, world!\""}}
+let hello = Replica.Success::
+   { command = "echo \"Hello, World!\""
+   , description = Some "This test is a placeholder, you can edit it."
+   , spaceSensitive = False
+   , stdOut = Replica.ComplexExpectation
+       (Replica.EmptyExpectation::{consecutive = ["Hello", "World"], end = Some "!"})
+   }
+
+let tests : Replica.Replica = toMap { hello }
+
+in tests%
+
 ```
 
-Supposed you have a `hello.dhall` file with this content, you can then do:
+The given test checks that the output of `echo "Hello, World!"` contains consecutively
+`Hello` and "World", and ends with an exclamation mark (`'!'`).
+
+At this stage, `replica` isn't able to process `dhall` files directlyr.
+We have to generate a JSON file first and then to execute it.
+
 
 ```
-# translate it to json
-dhall-to-json --file hello.dhall -o hello.json
-# run the test
-replica run hello.json
+$ dhall-to-json --output hello.json --file hello.dhall
+$ replica run hello.json
+--------------------------------------------------------------------------------
+Running tests...
+  ✅  hello
+--------------------------------------------------------------------------------
+Summary:
+  ✅  (Success): 1 / 1
 ```
+
+Now, edit the `hello.dhall` file and change the `stdOut` part so that your file looks
+like this:
+
+```dhall
+let Replica = https://raw.githubusercontent.com/ReplicaTest/REPLica/main/dhall/replica.dhall
+
+let hello = Replica.Success::
+   { command = "echo \"Hello, World!\""
+   , description = Some "This test is a placeholder, you can edit it."
+   , spaceSensitive = False
+   , stdOut = Replica.Generated True
+   }
+```
+
+Instead of providing an expectation, we now rely on a golden value:
+a previously saved value of the output of the tested command.
+Unfortunately, we didn't save any yet... and thus **if we recompile**
+`hello.json`, `replica run hello.json` fails now:
+
+```
+$ dhall-to-json --output hello.json --file hello.dhall
+$ replica run hello.json
+--------------------------------------------------------------------------------
+Running tests...
+  ❌  hello:
+      [Missing Golden for standard output]
+      [Unexpected content for standard output]
+      Error on standard output:
+      Given:
+        Hello, World!
+
+--------------------------------------------------------------------------------
+Summary:
+  ❌  (Failure): 1 / 1
+```
+
+It's totally fine: `replica` has no golden value for this test yet, we need to build one.
+To do so, we will rerun the test in the interactive mode: `replica run --interactive hello.json`.
+Now you should be prompted if you want to set the golden value for the test:
+
+```
+$ replica run --interactive hello.json
+--------------------------------------------------------------------------------
+Running tests...
+hello: Golden value mismatch for standard output
+Expected: Nothing Found
+Given:
+Hello, World!
+
+Do you want to set the golden value? [N/y]
+```
+
+Answer `y` (or `yes`) and the test should pass.
+Now that the golden value is set, we can retry to run the suite in a non interactive mode:
+`replica run hello.json`...
+
+```
+$ replica run hello.json
+--------------------------------------------------------------------------------
+Running tests...
+  ✅  hello
+--------------------------------------------------------------------------------
+Summary:
+  ✅  (Success): 1 / 1
+```
+
+The main motivation of using dhall is:
+- type safety;
+- ease to generate a set of similar tests.
 
 ## Writing tests
 
