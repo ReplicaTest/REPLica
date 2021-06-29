@@ -22,6 +22,7 @@ modules = Replica
         , Replica.Command.Help
         , Replica.Command.Info
         , Replica.Command.Run
+        , Replica.Command.Version
 
         , Replica.Core
         , Replica.Core.Parse
