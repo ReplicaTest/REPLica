@@ -2,11 +2,11 @@
   "nodes": {
     "flake-utils": {
       "locked": {
-        "lastModified": 1620759905,
-        "narHash": "sha256-WiyWawrgmyN0EdmiHyG2V+fqReiVi8bM9cRdMaKQOFg=",
+        "lastModified": 1631561581,
+        "narHash": "sha256-3VQMV5zvxaVLvqqUrNz3iJelLw30mIVSfZmAaauM3dA=",
         "owner": "numtide",
         "repo": "flake-utils",
-        "rev": "b543720b25df6ffdfcf9227afafc5b8c1fabfae8",
+        "rev": "7e5bf3925f6fbdfaf50a2a7ca0be2879c4261d19",
         "type": "github"
       },
       "original": {
@@ -23,14 +23,15 @@
         "idris-emacs-src": "idris-emacs-src",
         "nixpkgs": [
           "nixpkgs"
-        ]
+        ],
+        "nixpkgs-chez-racket": "nixpkgs-chez-racket"
       },
       "locked": {
-        "lastModified": 1621286848,
-        "narHash": "sha256-ZQaRlsVYj9JL2ZXqViQO4uU8qmOP9e28uhzq0+vwwrU=",
+        "lastModified": 1632512335,
+        "narHash": "sha256-PfhOjUdPS9frBG2ouHdK5CvbS1jro25/uSVsGvMfcJ0=",
         "owner": "idris-lang",
         "repo": "Idris2",
-        "rev": "2f66f3e006bbbe73605db30cdb8c2464d41bb49c",
+        "rev": "a9ccf4db4f69677c5287a1278ab167247dac161d",
         "type": "github"
       },
       "original": {
@@ -57,16 +58,32 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1621290140,
-        "narHash": "sha256-J26tkCmjDejI3cdu1GSf3UR+uH3NGYrAzz9spyUnXNM=",
+        "lastModified": 1632600271,
+        "narHash": "sha256-2WndMSEsdnamVktLmYLd8dZrRsGCH5Bd8mu5L4HuupU=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "c9587434922830fa2657febf05adb91dc866713d",
+        "rev": "6201954aa117d24cc73e46f355c0ea19b8fcad6f",
         "type": "github"
       },
       "original": {
         "id": "nixpkgs",
         "type": "indirect"
+      }
+    },
+    "nixpkgs-chez-racket": {
+      "locked": {
+        "lastModified": 1627484694,
+        "narHash": "sha256-UsEb5G0ZJ8l/2y9u9FNj2akXx2PC5QAan24U3t32cfI=",
+        "owner": "L-as",
+        "repo": "nixpkgs",
+        "rev": "9b3c4bee8cee477ac03b0cfd4ebca40954c66106",
+        "type": "github"
+      },
+      "original": {
+        "owner": "L-as",
+        "ref": "chez-racket",
+        "repo": "nixpkgs",
+        "type": "github"
       }
     },
     "root": {
