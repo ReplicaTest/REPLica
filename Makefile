@@ -19,6 +19,7 @@ build: src/Replica/Version.idr
 
 install: build
 	mkdir -p ${DEST}
+	${RM} ${DEST}/replica
 	cp -r build/exec/* ${DEST}
 
 clean-test:
