@@ -1,45 +1,35 @@
-let Replica = ../dhall/replica.dhall
-let Meta = ./meta.dhall
+let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
 
-let tests : Replica.Replica = [
-  { mapKey = "unknown_command"
-  , mapValue =
-      (Meta.replicaTest { command = "tagada"
-                        , directory = "tests/replica/two"
-                        , parameters = [] : List Text
-                        , testFile = "tests.json"
-                        })
+let Meta = Replica.Command.Replica
+  with default.executable = "${env:PWD as Text}/build/exec/replica"
+
+let Test = Replica.Test
+let Status = Replica.Status
+let Expectation = Replica.Expectation
+
+let runTestsJSON = Meta.Run ([] : List Text) ["tests.json"]
+
+let tests : Replica.Type = toMap
+  { unknown_command = (Meta.toTest (Meta ::
+      { command = "tagada"
+      , testFiles = ["tests.json"]
+      }))
       with description = Some "Unknown commands are rejected, showing help"
-      with status = Replica.Exactly 254
+      with status = Status.Exactly 254
       with tags = ["meta","parser"]
-  },
-  { mapKey = "unknown_parameter"
-  , mapValue =
-      (Meta.replicaTest Meta.Run::{ directory = "tests/replica/two"
-                                  , parameters = ["--oops"]
-                                  , testFile = "tests.json"
-                                  })
+  , unknown_parameter = (Meta.Run ["--oops"] ["tests.json"])
       with description = Some "If a parameter doesn't exist, display an error message and the help"
+      with workingDir = Some "tests/replica/two"
       with tags = ["meta","parser"]
-  },
-  { mapKey = "opposite_include_exclude"
-  , mapValue =
-      (Meta.replicaTest Meta.Run::{ directory = "tests/replica/two"
-                                  , parameters = ["--only one", "--exclude one"]
-                                  , testFile = "tests.json"
-                                  })
+  , opposite_include_exclude = (Meta.Run ["--only one", "--exclude one"] ["tests.json"])
+      with workingDir = Some "tests/replica/two"
       with description = Some "If a test is both included and rejected, the command fails"
       with tags = ["meta","parser"]
-  },
-  { mapKey = "opposite_include_exclude_tags"
-  , mapValue =
-      (Meta.replicaTest Meta.Run::{ directory = "tests/replica/two"
-                                  , parameters = ["--tags shiny", "--exclude-tags shiny"]
-                                  , testFile = "tests.json"
-                                  })
+  , opposite_include_exclude_tags =
+      (Meta.Run ["--tags shiny", "--exclude-tags shiny"] ["tests.json"])
+      with workingDir = Some "tests/replica/two"
       with description = Some "If a tag is both included and rejected, the command fails"
       with tags = ["meta","parser"]
   }
-  ]
 
 in tests
