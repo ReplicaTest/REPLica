@@ -1,3 +1,4 @@
-Main> Imported module Test
-Main> "Hello, World!"
-Main> Bye for now!
+1/1: Building Test (Test.idr)
+Test> Imported module Test
+Test> "Hello, World!"
+Test> Bye for now!
