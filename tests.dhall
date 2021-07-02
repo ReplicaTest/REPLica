@@ -1,7 +1,6 @@
 let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
 
-let Meta = Replica.Command.Replica
-  with default.executable = "${env:PWD as Text}/build/exec/replica"
+let Meta = ./tests/Meta/package.dhall
 
 let Test = Replica.Test
 let Status = Replica.Status

@@ -3,32 +3,84 @@
     "afterTest": [],
     "beforeTest": [],
     "command": "true",
+    "files": {},
+    "pending": false,
     "require": [],
-    "succeed": true,
+    "spaceSensitive": true,
+    "status": true,
+    "stdErr": {
+      "consecutive": [],
+      "contains": [],
+      "generated": false
+    },
+    "stdOut": {
+      "consecutive": [],
+      "contains": [],
+      "generated": true
+    },
     "tags": []
   },
   "unfortunate1": {
     "afterTest": [],
     "beforeTest": [],
     "command": "false",
+    "files": {},
+    "pending": false,
     "require": [],
-    "succeed": true,
+    "spaceSensitive": true,
+    "status": true,
+    "stdErr": {
+      "consecutive": [],
+      "contains": [],
+      "generated": false
+    },
+    "stdOut": {
+      "consecutive": [],
+      "contains": [],
+      "generated": true
+    },
     "tags": []
   },
   "unfortunate2": {
     "afterTest": [],
     "beforeTest": [],
     "command": "false",
+    "files": {},
+    "pending": false,
     "require": [],
-    "succeed": true,
+    "spaceSensitive": true,
+    "status": true,
+    "stdErr": {
+      "consecutive": [],
+      "contains": [],
+      "generated": false
+    },
+    "stdOut": {
+      "consecutive": [],
+      "contains": [],
+      "generated": true
+    },
     "tags": []
   },
   "unfortunate3": {
     "afterTest": [],
     "beforeTest": [],
     "command": "false",
+    "files": {},
+    "pending": false,
     "require": [],
-    "succeed": true,
+    "spaceSensitive": true,
+    "status": true,
+    "stdErr": {
+      "consecutive": [],
+      "contains": [],
+      "generated": false
+    },
+    "stdOut": {
+      "consecutive": [],
+      "contains": [],
+      "generated": true
+    },
     "tags": []
   }
 }

@@ -5,7 +5,20 @@
       "oops"
     ],
     "command": "true",
+    "files": {},
+    "pending": false,
     "require": [],
+    "spaceSensitive": true,
+    "stdErr": {
+      "consecutive": [],
+      "contains": [],
+      "generated": false
+    },
+    "stdOut": {
+      "consecutive": [],
+      "contains": [],
+      "generated": true
+    },
     "tags": [],
     "workingDir": "getOut"
   },
@@ -13,7 +26,20 @@
     "afterTest": [],
     "beforeTest": [],
     "command": "true",
+    "files": {},
+    "pending": false,
     "require": [],
+    "spaceSensitive": true,
+    "stdErr": {
+      "consecutive": [],
+      "contains": [],
+      "generated": false
+    },
+    "stdOut": {
+      "consecutive": [],
+      "contains": [],
+      "generated": true
+    },
     "tags": [],
     "workingDir": "getOut"
   }
