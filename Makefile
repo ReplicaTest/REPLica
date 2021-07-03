@@ -2,11 +2,12 @@
 
 .SUFFIXES: .dhall .json
 
-TEST=tests.json
+TEST := tests.json
 
-REPLICA_TESTS= $(wildcard ./tests/replica/*/*.json)
+REPLICA_TESTS_DHALL := $(wildcard ./tests/replica/*/*.dhall)
+REPLICA_TESTS := $(REPLICA_TESTS_DHALL:.dhall=.json)
 
-DEST=${HOME}/.local/bin
+DEST = ${HOME}/.local/bin
 
 FORCE:
 
