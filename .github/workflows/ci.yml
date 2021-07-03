@@ -63,7 +63,7 @@ jobs:
           ls "$HOME/.idris2/bin"
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
       - name: Make replica
-        run: make build && make test
+        run: make test
       - name: Save artifacts
         uses: actions/upload-artifact@v2
         with:
