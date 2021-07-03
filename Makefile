@@ -1,8 +1,11 @@
-.PHONY: build all
+.PHONY: build all FORCE clean clean-test generate tests docker-run docker-build
 
 .SUFFIXES: .dhall .json
 
 TEST=tests.json
+
+REPLICA_TESTS= $(wildcard ./tests/replica/*/*.json)
+
 DEST=${HOME}/.local/bin
 
 FORCE:
@@ -24,6 +27,7 @@ install: build
 
 clean-test:
 	${RM} ${TEST}
+	${RM} ${REPLICA_TESTS}
 
 clean: clean-test
 	${RM} -r build
@@ -31,10 +35,10 @@ clean: clean-test
 .dhall.json:
 	dhall-to-json --file $? --output $@
 
-generate: clean-test ${TEST} build
+generate: ${REPLICA_TESTS} ${TEST} build
 	build/exec/replica ${GLOBAL} run ${RUN} --interactive ${TEST}
 
-test: clean-test ${TEST} build
+test: ${REPLICA_TESTS} ${TEST} build
 	build/exec/replica ${GLOBAL} run ${RUN} ${TEST}
 
 docker-build:

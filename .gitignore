@@ -3,6 +3,7 @@
 .replica/test/*/status
 .replica/test/*/error
 /tests/replica/*/.replica/log
+/tests/replica/*/*.json
 /tests/replica/*/.replica/test/*/output
 /tests/replica/*/.replica/test/*/status
 /tests/replica/*/.replica/test/*/error

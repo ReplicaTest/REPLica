@@ -1,11 +1,13 @@
-let Replica = ../../../dhall/replica.dhall
+let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
+let Test = Replica.Test
+let Success = Replica.Status.Success
 
 let tests =
-  { root_failed = Replica.Minimal::{command = "false"}
-      with succeed = Some True
-  , depends_failed = Replica.Minimal::{command = "true"}
+  { root_failed = Test :: {command = "false"}
+      with succeed = Success
+  , depends_failed = Test :: {command = "true"}
       with require = ["root_failed"]
-      with succeed = Some True
+      with succeed = Success
   }
 
 in tests

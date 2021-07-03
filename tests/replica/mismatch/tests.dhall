@@ -1,5 +1,7 @@
-let Replica = ../../../dhall/replica.dhall
+let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
+let Test = Replica.Test
+let Success = Replica.Status.Success
 
-in { mismatch = Replica.Minimal::{command = "echo \"one\""}
-      with description = Some "Expectation is different than one"
+in { mismatch = Test :: {command = "echo \"one\""}
+       with description = Some "Expectation is different than one"
    }
