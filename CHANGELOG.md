@@ -11,6 +11,7 @@
     * `replica new` to create tests file templates
 - FIX:
     * `replica help` mentions `version`
+    * skipped tests are displayed
 
 ## version 0.4.0
 

@@ -544,11 +544,13 @@ runAllTests plan = do
       debug $ withOffset 4 $ "Run a batch"
       n <- threads <$> get RunContext
       case prepareBatch n plan of
-           ([], later) => pure $ join
-              [ acc
-              , map (\t => (t, Left Inaccessible)) plan.later
-              , map (\(reason, t) => (t, Left $ RequirementsFailed reason)) plan.skipped
-              ]
+           ([], later) => do
+             let errs = join [ map (\t => (t, Left Inaccessible)) plan.later
+                             , map (\(reason, t) => (t, Left $ RequirementsFailed reason)) plan.skipped
+                             ]
+             when (not !(interactive <$> get RunContext))
+               (traverse_ (\(t, r) => new t (testOutput r)) errs)
+             pure $ acc ++ errs
            (now, nextBatches) => do
              debug $ withOffset 4 "Now: \{show $ length now}"
              debug $ withOffset 4 "Later: \{show $ length nextBatches}"
