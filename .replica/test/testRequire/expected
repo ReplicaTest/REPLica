@@ -7,6 +7,7 @@
       [1mError on standard output:[0m
       Given:
         
+  [38;5;3m⚠️  depends_failed: [0mTest rely on test root_failed, which failed
 --------------------------------------------------------------------------------
 [1mSummary:[0m
   ❌  (Failure): 1 / 2
