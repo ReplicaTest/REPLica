@@ -2,6 +2,11 @@
 
 ## Since version 0.4.0
 
+- CHANGE:
+    * The dhall language for replica has changed and is now hosted in its own project.
+      If you have existing `dhall` tests that you don't want to change, you can use this
+      url as an entry point for replica:
+      https://raw.githubusercontent.com/ReplicaTest/REPLica/v0.4.0/dhall/replica.dhall
 - NEW:
     * `replica new` to create tests file templates
 - FIX:
