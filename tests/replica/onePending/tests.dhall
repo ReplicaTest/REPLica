@@ -1,7 +1,9 @@
-let Replica = ../../../dhall/replica.dhall
+let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
+let Test = Replica.Test
+let Success = Replica.Status.Success
 
-in { one = Replica.Minimal::{command = "echo \"one\""}
+in { one = Test :: {command = "echo \"one\""}
        with pending = True
-   , two = Replica.Minimal::{command = "echo \"two\""}
+   , two = Test :: {command = "echo \"two\""}
    }
 

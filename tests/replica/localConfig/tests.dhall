@@ -1,5 +1,7 @@
-let Replica = ../../../dhall/replica.dhall
+let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
+let Test = Replica.Test
+let Success = Replica.Status.Success
 
-in { valid = Replica.Minimal::{command = "echo \"one\""}
-      with description = Some "Simple expectations"
+in { valid = Test :: {command = "echo \"one\""}
+       with description = Some "Simple expectations"
    }

@@ -1,12 +1,14 @@
-let Replica = ../../../dhall/replica.dhall
+let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
+let Test = Replica.Test
+let Success = Replica.Status.Success
 
 in {
-   , unfortunate1 = Replica.Minimal::{command = "false"}
-       with succeed = Some True
-   , unfortunate2 = Replica.Minimal::{command = "false"}
-       with succeed = Some True
-   , unfortunate3 = Replica.Minimal::{command = "false"}
-       with succeed = Some True
-   , theChosen = Replica.Minimal::{command = "true"}
-       with succeed = Some True
+   , unfortunate1 = Test :: {command = "false"}
+       with status = Success
+   , unfortunate2 = Test :: {command = "false"}
+       with status = Success
+   , unfortunate3 = Test :: {command = "false"}
+       with status = Success
+   , theChosen = Test :: {command = "true"}
+       with status = Success
    }

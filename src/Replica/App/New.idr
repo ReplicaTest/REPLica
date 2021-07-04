@@ -17,7 +17,7 @@ import Replica.Other.Decorated
 data NewContext : Type where
 
 replicaURL : String
-replicaURL = "https://raw.githubusercontent.com/ReplicaTest/REPLica/main/dhall/replica.dhall"
+replicaURL = "https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall"
 
 jsonTestSample : JSON
 jsonTestSample = JObject
@@ -35,12 +35,12 @@ jsonTestSample = JObject
 dhallTestSample : String
 dhallTestSample =
   #"""
-   let hello = Replica.Success::
+   let hello = Test.Success ::
       { command = "echo \"Hello, World!\""
       , description = Some "This test is a placeholder, you can edit it."
       , spaceSensitive = False
-      , stdOut = Replica.ComplexExpectation
-          (Replica.EmptyExpectation::{consecutive = ["Hello", "World"], end = Some "!"})
+      , stdOut = Expectation ::
+          {consecutive = ["Hello", "World"], end = Some "!"}
       }
    """#
 
@@ -51,18 +51,22 @@ jsonContent withSample =
 dhallContent : (withSample : Bool) -> String
 dhallContent withSample = unlines
   [ "let Replica = \{replicaURL}"
+  , "let Prelude = Replica.Prelude"
+  , "let Test = Replica.Test"
+  , "let Status = Replica.Status"
+  , "let Expectation = Replica.Expectation"
   , ""
   , if withSample
        then dhallTestSample
        else ""
   , ""
-  , "let tests : Replica.Replica = \{sample}"
+  , "let tests : Replica.Type = \{sample}"
   , ""
   , "in tests"
   ]
   where
     sample : String
-    sample = if withSample then "toMap { hello }" else "[] : Replica.Replica"
+    sample = if withSample then "toMap { hello }" else "[] : Replica.Type"
 
 export
 newReplica : FileSystem (FSError :: e) =>

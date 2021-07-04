@@ -238,20 +238,23 @@ $ replica new hello.dhall
 Test file created (Dhall): hello.dhall
 
 $ cat hello.dhall
-let Replica = https://raw.githubusercontent.com/ReplicaTest/REPLica/main/dhall/replica.dhall
+let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
+let Prelude = Replica.Prelude
+let Test = Replica.Test
+let Status = Replica.Status
+let Expectation = Replica.Expectation
 
-let hello = Replica.Success::
+let hello = Test.Success ::
    { command = "echo \"Hello, World!\""
    , description = Some "This test is a placeholder, you can edit it."
    , spaceSensitive = False
-   , stdOut = Replica.ComplexExpectation
-       (Replica.EmptyExpectation::{consecutive = ["Hello", "World"], end = Some "!"})
+   , stdOut = Expectation ::
+       {consecutive = ["Hello", "World"], end = Some "!"}
    }
 
-let tests : Replica.Replica = toMap { hello }
+let tests : Replica.Type = toMap { hello }
 
-in tests%
-
+in tests
 ```
 
 The given test checks that the output of `echo "Hello, World!"` contains consecutively
@@ -276,14 +279,22 @@ Now, edit the `hello.dhall` file and change the `stdOut` part so that your file 
 like this:
 
 ```dhall
-let Replica = https://raw.githubusercontent.com/ReplicaTest/REPLica/main/dhall/replica.dhall
+let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
+let Prelude = Replica.Prelude
+let Test = Replica.Test
+let Status = Replica.Status
+let Expectation = Replica.Expectation
 
-let hello = Replica.Success::
+let hello = Test.Success ::
    { command = "echo \"Hello, World!\""
    , description = Some "This test is a placeholder, you can edit it."
    , spaceSensitive = False
    , stdOut = Replica.Generated True
    }
+
+let tests : Replica.Type = toMap { hello }
+
+in tests
 ```
 
 Instead of providing an expectation, we now rely on a golden value:

@@ -1,7 +1,9 @@
-let Replica = ../../../dhall/replica.dhall
+let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
+let Test = Replica.Test
+let Expectation = Replica.Expectation
 
 in { ordered_partial_expectation_mismatch =
-       Replica.Success::{command = "echo \"Hello, World!\""}
+       Test.Success :: {command = "echo \"Hello, World!\""}
          with description = Some "check an ordered partial expectation that fails"
-         with stdOut = Replica.Consecutive ["World", "Hello"]
+         with stdOut = Expectation.Consecutive ["World", "Hello"]
    }
