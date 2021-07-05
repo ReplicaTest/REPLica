@@ -31,7 +31,7 @@
 
     in rec {
       packages = replica // idrisPkgs;
-      defaultPackage = pkgs.build;
+      defaultPackage = replica.build;
       devShell = npkgs.mkShell {
         buildInputs = [ idrisPkgs.idris2 npkgs.rlwrap ];
         shellHook = ''
