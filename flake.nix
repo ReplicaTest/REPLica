@@ -3,7 +3,7 @@
 
   inputs.flake-utils.url = github:numtide/flake-utils;
   inputs.idris = {
-    url = github:idris-lang/Idris2;
+    url = github:idris-lang/Idris2/v0.4.0;
     inputs.nixpkgs.follows = "nixpkgs";
     inputs.flake-utils.follows = "flake-utils";
   };
