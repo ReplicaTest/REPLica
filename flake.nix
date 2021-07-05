@@ -14,7 +14,11 @@
       idrisPkgs = idris.packages.${system};
       buildIdris = idris.buildIdris.${system};
 
-      replica_ = buildIdris { ... };
+      replica_ = buildIdris {
+        projectName = "replica";
+        src = ./.;
+        idrisLibraries = [];
+      };
       replica = replica_.build.overrideAttrs (attrs: {
         patchPhase = ''
           # I haven't tested this, might have escaped incorrectly
@@ -25,13 +29,8 @@
         '';
       });
 
-      pkgs = buildIdris {
-        projectName = "replica";
-        src = ./.;
-        idrisLibraries = [];
-      };
     in rec {
-      packages = pkgs // idrisPkgs;
+      packages = replica // idrisPkgs;
       defaultPackage = pkgs.build;
       devShell = npkgs.mkShell {
         buildInputs = [ idrisPkgs.idris2 npkgs.rlwrap ];
