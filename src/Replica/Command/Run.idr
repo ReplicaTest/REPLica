@@ -91,7 +91,7 @@ workingDirPart = inj $ MkOption
 
 threadsPart : Part (Builder RunCommand') Nat
 threadsPart = inj $ MkOption
-      (singleton $ MkMod (singleton "threads") ['n']
+      (singleton $ MkMod (singleton "threads") ['p']
           (Right $ MkValue "N" parsePositive)
           "max number of threads (default 1; 0 for no thread limit)")
       1
