@@ -13,8 +13,8 @@ _arguments -C \
 local commands common
 
 commands=(
-  'info:get information about test suites'
   'run:run test suite'
+  'info:get information about test suites'
   'new:create a test suite'
   'set:set replica default config'
   'help:get some help'
@@ -41,7 +41,7 @@ common=(
 
 case "$state" in
   (cmds)
-    _describe -t commands 'command' commands && ret=0
+    _describe -V -t commands 'command' commands && ret=0
   ;;
   (args)
     case $line[1] in
@@ -52,11 +52,12 @@ case "$state" in
           '(-)*:tests files:_files' \
         && ret=0
       ;;
-      (run)
+    (run)
         _arguments \
-          {--threads,-p}'[Number of threads to run the tests]' \
+          {--threads,-x}'[Number of threads to run the tests]' \
+          {--punitive,-p}'[Stop on first error]' \
           $common \
-          '(-)*:tests files:_files' \
+          '(-)*:tests files:_files -g *.json' \
         && ret=0
       ;;
       (new)
@@ -88,7 +89,11 @@ case "$state" in
         esac
       ;;
       (help)
-        _describe -t commands 'command' commands && ret=0
+        _arguments -C ':topic:->topic'
+        case "$state" in
+          (topic)
+            _describe -V -t topic 'topic' commands && ret=0
+        esac
       ;;
       (version)
         ret=0
