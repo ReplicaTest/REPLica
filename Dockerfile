@@ -1,4 +1,4 @@
-ARG IDRIS_VERSION=v0.5.1
+ARG IDRIS_VERSION=v0.5.1-7-ga9ccf4db
 FROM snazzybucket/idris2:${IDRIS_VERSION} as builder
 
 RUN mkdir /opt/replica
