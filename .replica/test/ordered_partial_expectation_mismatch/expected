@@ -4,7 +4,6 @@
       [1mError on standard output:[0m
       Given:
         Hello, World!
-        
       Consecutive expectations mismatch, first not found:
         Hello
 --------------------------------------------------------------------------------

@@ -1,2 +1,2 @@
-Main> [mJust[0m "work!"
+Main> [38;5;9mJust[0m [38;5;9m"work!"[0m
 Main> Bye for now!

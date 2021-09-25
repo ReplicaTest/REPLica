@@ -6,7 +6,6 @@
       [38;5;1m[Unexpected content for standard output][0m
       [1mError on standard output:[0m
       Given:
-        
   [38;5;3m⚠️  depends_failed: [0mTest rely on test root_failed, which failed
 --------------------------------------------------------------------------------
 [1mSummary:[0m

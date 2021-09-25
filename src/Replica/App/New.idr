@@ -13,6 +13,7 @@ import Replica.App.Log
 import Replica.App.Replica
 import Replica.Command.New
 import Replica.Other.Decorated
+import Replica.Other.String
 
 data NewContext : Type where
 
@@ -49,7 +50,7 @@ jsonContent withSample =
   JObject $ if withSample then [("hello", jsonTestSample)] else []
 
 dhallContent : (withSample : Bool) -> String
-dhallContent withSample = unlines
+dhallContent withSample = removeTrailingNL $ unlines
   [ "let Replica = \{replicaURL}"
   , "let Prelude = Replica.Prelude"
   , "let Test = Replica.Test"

@@ -3,7 +3,7 @@ name: ci
 on: [push, pull_request]
 
 env:
-  IDRIS2_VERSION: 0.4.0
+  IDRIS2_VERSION: 0.5.1
   SCHEME: scheme
 
 jobs:
