@@ -4,8 +4,8 @@ import Control.App
 import Control.App.Console
 
 import Data.List
-import Data.List1
 import Data.String
+import Data.String.Extra
 
 import Language.JSON
 
@@ -52,10 +52,11 @@ displayExpectation exp = do
     printExpectation : String -> App e ()
     printExpectation o = do
       putStrLn $ withOffset 6 $ "Expect exactly as output:"
-      putStrLn $ unlines $ map (withOffset 8) $ forget $ lines o
+      putStrLn $ removeTrailingNL $ unlines $ map (withOffset 8) $ lines o
     partialExpectation : String -> String
     partialExpectation x = case lines x of
-      (head ::: tail) => unlines $ withOffset 6 ("- " ++ head) :: (withOffset 8 <$> tail)
+      (head :: tail) => removeTrailingNL $ unlines $ withOffset 6 ("- " ++ head) :: (withOffset 8 <$> tail)
+      [] => withOffset 6 "- "
 
 displayExpectations : FileSystem (FSError :: e) =>
   Has [ State InfoContext InfoCommand

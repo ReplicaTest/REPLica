@@ -6,10 +6,8 @@
       [1mError on standard output:[0m
       Given:
         one
-        
     Exact expectation mismatch:
         two
-        
 --------------------------------------------------------------------------------
 [1mSummary:[0m
   ❌  (Failure): 1 / 1

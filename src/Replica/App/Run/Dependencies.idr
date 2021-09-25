@@ -4,6 +4,7 @@ import Data.List
 import Data.String
 
 import Replica.Core.Types
+import Replica.Other.String
 
 %default total
 
@@ -16,7 +17,7 @@ record TestPlan where
 
 export
 displayPlan : TestPlan -> String
-displayPlan x = unlines
+displayPlan x = removeTrailingNL $ unlines
   [ "Plan:"
   , "  Now: \{show $ map name x.now}"
   , "  Later: \{show $ map name x.later}"

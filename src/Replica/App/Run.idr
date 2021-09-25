@@ -42,7 +42,7 @@ record TestOutput where
   parts : List (Part, String)
 
 normalize : String -> String
-normalize = unlines . map unwords . filter (not . force . null) . map (assert_total words) . forget . lines
+normalize = removeTrailingNL . unlines . map unwords . filter (not . force . null) . map (assert_total words) . lines
 
 
 -- Create the folders needed by Replica (usually ./.replica/test and ./.replica/log)
@@ -92,8 +92,8 @@ runAll phase liftError (x :: xs) = do
 expectedVsGiven : State GlobalConfig Global e =>
   Nat -> String -> String -> App e (List String)
 expectedVsGiven k expected given = pure $ map (withOffset k) $
-  ( "Expected:" :: map !red (forget $ lines expected)) ++
-  ( "Given:" :: map !green (forget $ lines given))
+  ( "Expected:" :: map !red (lines expected)) ++
+  ( "Given:" :: map !green (lines given))
 
 nativeShow : State GlobalConfig Global e =>
   Console e => Nat -> String -> String -> App e ()
@@ -473,7 +473,7 @@ testOutput (Right (Fail xs)) = do
   traverse_ writeFailure xs
   where
     multilineDisplay : (offset : Nat) -> (content : String) -> App e ()
-    multilineDisplay offset = traverse_ (putStrLn . withOffset offset) . forget . lines
+    multilineDisplay offset = traverse_ (putStrLn . withOffset offset) . lines
 
     displayError : (given : String)  -> (exp : (e: Expectation ** ExpectationError e)) -> App e ()
     displayError given (MkDPair (Exact x) snd) =
@@ -506,7 +506,7 @@ testOutput (Right (Fail xs)) = do
     writeFailure (WrongOutput x given ys) = do
       putStrLn $ withOffset 6 $ !bold "Error on \{displaySource x}:"
       putStrLn $ withOffset 6 $ "Given:"
-      traverse_ (putStrLn . withOffset 8) $ forget $ lines given
+      traverse_ (putStrLn . withOffset 8) $ lines given
       traverse_ (displayError given) ys
 
 runAllTests : SystemIO (SystemError :: TestError :: e) =>
@@ -572,7 +572,7 @@ report x = do
   let nb = countTests x
   if nb == 0
      then putStrLn $ withOffset 2 "No test"
-     else putStrLn $ unlines $ catMaybes
+     else putStrLn $ removeTrailingNL $ unlines $ catMaybes
     [ guard (x.successes > 0) $>
         withOffset 2 "\{!ok} (Success): \{show x.successes} / \{show nb}"
     , guard (x.failures > 0) $>
