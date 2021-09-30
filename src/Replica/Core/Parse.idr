@@ -12,7 +12,7 @@ import Language.JSON
 %default total
 
 allString : List JSON -> Validation (List String) (List String)
-allString =  traverse \j => case j of
+allString =  traverse $ \j => case j of
   JString str => Valid str
   _ => Error ["Invalid expectation part: \{show j}"]
 
