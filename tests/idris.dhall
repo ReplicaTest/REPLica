@@ -1,4 +1,4 @@
-let Replica = ../../replica-dhall/package.dhall -- https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
+let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
 
 let Idris = Replica.Command.Idris
   with default.executable = "${env:PWD as Text}/build/exec/replica"
