@@ -32,6 +32,7 @@ Golden tests for Command Line interfaces.
     * [Exact value](#exact-value)
     * [Contains](#contains)
     * [Complex expectations](#complex-expectations)
+    * [Ignoring output](#ignoring-output)
 * [Going further](#going-further)
     * [REPLica in my project?](#replica-in-my-project)
 * [Roadmap](#roadmap)
@@ -85,7 +86,7 @@ Other CLI testing frameworks
 
 ### Requirements
 
-- [idris2](https://idris-lang.org) (v0.4.0);
+- [idris2](https://idris-lang.org) (v0.5.1);
 - [git](https://git-scm.com);
 - while you can go with it and use JSON, we recommand to use [dhall][] and [dhall-to-json][].
 
@@ -238,7 +239,7 @@ $ replica new hello.dhall
 Test file created (Dhall): hello.dhall
 
 $ cat hello.dhall
-let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
+let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/v0.1/package.dhall
 let Prelude = Replica.Prelude
 let Test = Replica.Test
 let Status = Replica.Status
@@ -279,7 +280,7 @@ Now, edit the `hello.dhall` file and change the `stdOut` part so that your file 
 like this:
 
 ```dhall
-let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
+let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/v0.1/package.dhall
 let Prelude = Replica.Prelude
 let Test = Replica.Test
 let Status = Replica.Status
@@ -367,7 +368,7 @@ The [Quickstart](#quickstart) section introduced a first, minimal test in json:
 or in dhall:
 
 ```dhall
-{ hello = Replica.Minimal::{command = "echo \"Hello, world!\""}}
+{ hello = Replica.Test :: {command = "echo \"Hello, world!\""}}
 ```
 
 In both case, we have declared the only mandatory field of a test: `command`.
@@ -397,7 +398,7 @@ and a failure (when the test doesn't meet the expectations).
 ```
 
 ```dhall
-{ test_cat = Replica.Minimal::
+{ test_cat = Replica.Test ::
   { beforeTest = ["echo \"test\" > foo.txt"]
   , command = "cat foo.txt"
   , afterTest = ["rm foo.txt"]
@@ -443,9 +444,9 @@ content.
 ```
 
 ```dhall
-{ send_text_to_cat = Replica.Minimal::
+{ send_text_to_cat = Replica.Test ::
   { command = "cat"
-  , input = "hello, wold!"
+  , input = Some "hello, wold!"
   }
 }
 ```
@@ -462,7 +463,11 @@ given tags thanks to REPLica command line options.
 or in dhall:
 
 ```dhall
-{ hello = Replica.Minimal::{command = "echo \"Hello, world!\"", tags = ["example", "hello"]}}
+{ hello = Replica.Test ::
+  { command = "echo \"Hello, world!\""
+  , tags = ["example", "hello"]
+  }
+}
 ```
 
 And then you can run `replica -t example your_file.json` to include tests tagged with `example`
@@ -498,11 +503,11 @@ natural values.
 A few helper are available to ease the settings though:
 
 ```dhall
-{ "success1": Replica.Minimal::{command = "true", status = Replica.Succeed true}
-, "success2": Replica.Minimal::{command = "true", status = Replica.Exactly 0}
-, "success3": Replica.Minimal::{command = "false", status = Replica.Succeed false}
-, "success4": Replica.Minimal::{command = "false", status = Replica.Exactly 1}
-, "failure":  Replica.Minimal::{command = "false", status = Replica.Exactly 2}
+{ "success1": Replica.Test::{command = "true", status = Replica.Status.Success}
+, "success2": Replica.Test::{command = "true", status = Replica.Status.Exactly 0}
+, "success3": Replica.Test::{command = "false", status = Replica.Status.Failure}
+, "success4": Replica.Test::{command = "false", status = Replica.Status.Exactly 1}
+, "failure":  Replica.Test::{command = "false", status = Replica.Status.Exactly 2}
 }
 ```
 
@@ -540,18 +545,22 @@ ease the pain.
 
 ### Golden value
 
-The simpliest value for an expectation is a boolean.
-`true` means that we compare the content of this source to a golden value,
-`false` (or `null`) means that this source is ignored`.
+The simpliest expectation is a golden value.
+A test expecting a golden value will fail, as long as you don't set this golden value using
+the interactive mode (`replica run --interactive`)
 
 ```json
-{ "hello": {"command": "echo \"hello, world!\"", "stdOut": false} }
+{ "hello": {"command": "echo \"hello, world!\"", "stdOut": true} }
 ```
 
 or, in dhall:
 
 ```dhall
-{ hello = Replica.Minimal::{command = "echo \"Hello, world!\"", stdOut = Replica.Generated False}}
+{ hello = Replica.Test ::
+  { command = "echo \"Hello, world!\""
+  , stdOut = Replica.Expectation.Golden
+  }
+}
 ```
 
 ### Exact value
@@ -566,7 +575,11 @@ exactly this string.
 or, in dhall:
 
 ```dhall
-{ hello = Replica.Minimal::{command = "echo \"Hello, world!\"", stdOut = Replica.Exactly "Hello, world!"}}
+{ hello = Replica.Test ::
+  { command = "echo \"Hello, world!\""
+  , stdOut = Replica.Expectation.Exact "Hello, world!"
+  }
+}
 ```
 
 ### Contains
@@ -581,8 +594,11 @@ order.
 or, in dhall:
 
 ```dhall
-{ hello = Replica.Minimal::
-  {command = "echo \"Hello, world!\"", stdOut = Replica.Contains ["world, hello"]}}
+{ hello = Replica.Minimal ::
+  { command = "echo \"Hello, world!\""
+  , stdOut = Replica.Expectations.Contains ["world, hello"]
+  }
+}
 ```
 
 ### Complex expectations
@@ -614,11 +630,30 @@ or, in dhall:
 ```dhall
 { hello = Replica.Minimal::
   { command = "echo \"Hello, world!\""
-  , stdOut = Replica.ComplexExpectation
+  , stdOut = Replica.Expectation
       { generated = True
       , consecutive = ["hello", "world"]
       , end = Some "!"
       }
+  }
+}
+```
+
+### Ignoring output
+
+By default, `stdOut` is expecting a golden value and `stdErr` is not checked.
+If you want, you can ignore `stdOut` explecitly:
+
+```json
+{ "hello": {"command": "echo \"hello, world!\"", "stdOut": false} }
+```
+
+or, in dhall:
+
+```dhall
+{ hello = Replica.Test ::
+  { command = "echo \"Hello, world!\""
+  , stdOut = Replica.Expectation.Ignored
   }
 }
 ```

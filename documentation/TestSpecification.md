@@ -34,11 +34,11 @@ Here is the list of available fields:
 corresponding expectation, see [Expectation](#Expectation) |
 
 The default value are infered in JSON.
-In Dhall, you need to use `Replica.Minimal` a schema that populate a test record with the default
+In Dhall, you need to use `Replica.Test` a schema that populate a test record with the default
 values.
 
-Aside `Minimal`, Dhall provides two other schema `Success` and `Failure`, that respectively
-set the `succeed` value to `Some True` and `Some False`.
+Aside `Test`, Dhall provides two other schema `Replica.Test.Success` and `Replicat.Test.Failure`,
+which respectively set the `succeed` value to `Some True` and `Some False`.
 
 ## Expectation
 
@@ -78,23 +78,9 @@ There is three types of values that are supported for expactations:
 ### Dhall
 
 The corresponding specification in dhall is the following:
-the type of `expectation` is `Optional Expectation`,
-where `Expectation `is a sum type, defined as follows:
 
 ```
-let Expectation
-    : Type
-    = < GeneratedExp : Bool
-      | ExactExp : Text
-      | ContainsExp : List Text
-      | ComplexExp : ComplexExpectationType
-      >
-```
-
-with this definition for `ComplexExpectationType`:
-
-```
-let ComplexExpectationType
+let Replica.Expectation
     : Type
     = { generated : Bool
       , exact : Optional Text
@@ -107,16 +93,16 @@ let ComplexExpectationType
 
 Reader may refer to the [JSON](#JSON) for the semantic of the fields.
 
-As using sum types out of the box is a bit verbose in dhall, some smart constructors are provided
+A few helper are available, to ease the definition of usual expectations:
 to ease their use:
 
-- `Generated : Bool -> Expectation` allows you to build an `Expectation.Generated`.
-- `Exact : Text -> Expectation` allows you to build an `Expectation.ExactExp`.
-- `Contains : List Text -> Expectation` allows you to build an `Expectation.ContainsExp`.
-- `Contains : List Text -> Expectation` allows you to build a complex expectation with only a list
+- `Golden : Expectation` allows you to use a golden value for the given entry.
+- `Ignored : Expectation` ignore this output.
+- `Exact : Text -> Expectation` allows you to check that the entry is exactly the given string.
+- `Contains : List Text -> Expectation` check that each value is in the output.
+- `Consecutive : List Text -> Expectation` check that each value is present in the output, in this
+  order (possibly separated by other parts of text)
   of consecutive values to check.
-
-For `ComplexExpectation` there is an empty template:  `EmptyExpectation`.
 
 ## How test are executed
 
