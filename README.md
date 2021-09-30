@@ -239,7 +239,7 @@ $ replica new hello.dhall
 Test file created (Dhall): hello.dhall
 
 $ cat hello.dhall
-let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/v0.1/package.dhall
+let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/v0.1.1/package.dhall
 let Prelude = Replica.Prelude
 let Test = Replica.Test
 let Status = Replica.Status
@@ -280,7 +280,7 @@ Now, edit the `hello.dhall` file and change the `stdOut` part so that your file 
 like this:
 
 ```dhall
-let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/v0.1/package.dhall
+let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/v0.1.1/package.dhall
 let Prelude = Replica.Prelude
 let Test = Replica.Test
 let Status = Replica.Status
