@@ -17,6 +17,10 @@
         projectName = "replica";
         src = ./.;
         idrisLibraries = [];
+        preBuild = ''
+          make
+        '';
+
       };
     in rec {
       packages = pkgs // idrisPkgs;

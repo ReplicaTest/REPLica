@@ -9,6 +9,9 @@ REPLICA_TESTS := $(REPLICA_TESTS_DHALL:.dhall=.json)
 
 DEST = ${HOME}/.local/bin
 
+build: src/Replica/Version.idr
+	idris2 --build replica.ipkg
+
 FORCE:
 
 src/Replica/Version.idr: FORCE # We force the update of the version on build
@@ -18,12 +21,9 @@ src/Replica/Version.idr: FORCE # We force the update of the version on build
 	echo "version : String" >> src/Replica/Version.idr
 	echo "version = \"`git describe --tags`\"" >> src/Replica/Version.idr
 
-build: src/Replica/Version.idr
-	idris2 --build replica.ipkg
-
 install: build
 	mkdir -p ${DEST}
-	${RM} ${DEST}/replica
+	# ${RM} ${DEST}/replica
 	cp -r build/exec/* ${DEST}
 
 clean-test:
