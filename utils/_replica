@@ -1,0 +1,105 @@
+#compdef replica
+typeset -A opt_args
+
+# local -a sub
+# sub=('info:get information about test suites' 'run:run test suite' 'new:create a test suite' 'help:get some help' 'version:show replica version' 'config:set replica default config')
+# _describe 'command' sub
+
+_arguments -C \
+  '1:command:->cmds' \
+  '*:: :->args' \
+&& ret=0
+
+local commands common
+
+commands=(
+  'run:run test suite'
+  'info:get information about test suites'
+  'new:create a test suite'
+  'set:set replica default config'
+  'help:get some help'
+  'version:show replica version'
+)
+
+common=(
+  '(-N --exclude)'{-n,--only}'[tests to run]:comma separated list' \
+  '(-n --only)'{-N,--exclude}'[tests to exclude]:comma separated list' \
+  {-t,-tags,--only-tags}'[tags to run]:comma separated list' \
+  {-T,--exclude-tags}'[tags to include]:comma separated list' \
+  {--last-fails,-l}'[select only failing tests]' \
+  '(-v --verbose)--log[log level]:log:(none critical warning info debug)' \
+  {-v,--verbose}'[verbose output (log info)]'
+  '--replica-dir[replica store directory]:replica dir:_files -/' \
+  '--golden-dir[golden values directory]:golden dir:_files -/' \
+  '(--no-color --no-colour)'{--color,--colour,-c}'[use coloured ouput]' \
+  '(--color --colour -c)'{--no-color,--no-colour}'[desactivate coloured ouput]' \
+  '(--ascii)--utf8[use emojis in reports]' \
+  "(--utf8)--ascii[reports don't use emojis]" \
+  '(--diff)--no-diff[dont show diff on errors]' \
+  '(--no-diff)--diff[define a diff command]:either a known or a custom command:(git diff native)'
+)
+
+case "$state" in
+  (cmds)
+    _describe -V -t commands 'command' commands && ret=0
+  ;;
+  (args)
+    case $line[1] in
+      (info)
+        _arguments \
+          {-e,--expectations}'[show expectations for each test]' \
+          $common \
+          '(-)*:tests files:_files' \
+        && ret=0
+      ;;
+    (run)
+        _arguments \
+          {--threads,-x}'[Number of threads to run the tests]' \
+          {--punitive,-p}'[Stop on first error]' \
+          $common \
+          '(-)*:tests files:_files -g *.json' \
+        && ret=0
+      ;;
+      (new)
+        _arguments \
+          '--format[type of the file to be created]:file format:(json dhall)' \
+          + sample \
+            '(noSample)'{-s,--includeSample}'[sample test included]:sample' \
+          + noSample \
+            '(sample)'{-S,--noSample}'[no sample test included]:no sample' \
+          '(-):created file:_files' \
+        && ret=0
+      ;;
+      (set)
+        _arguments \
+          '*'{-l,--local}'[Set local config value]:key=value pair:->kv' \
+          '*'{-g,--global}'[Set global config value]:key=value pair:->kv' \
+        && ret=0
+        case "$state" in
+          (kv)
+            _values 'replica configuration' \
+              'replicaDir:replica file location:_files' \
+              'goldenDir:golden values location:_files' \
+              'colour:coloured output:(true false)' \
+              'ascii:use only ascii in reports:(false true)' \
+              'diff:tool used to print diff' \
+              'log:specify a log level:(none critical warning info debug)' \
+              'testFile:name of the file to test:_files' \
+            && ret=0
+        esac
+      ;;
+      (help)
+        _arguments -C ':topic:->topic'
+        case "$state" in
+          (topic)
+            _describe -V -t topic 'topic' commands && ret=0
+        esac
+      ;;
+      (version)
+        ret=0
+      ;;
+    esac
+  ;;
+esac
+
+return 1
