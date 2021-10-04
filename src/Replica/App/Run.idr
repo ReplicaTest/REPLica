@@ -522,6 +522,7 @@ runAllTests plan = do
   putStrLn $ !bold "Running tests..."
   batchTests [] plan
   where
+    {-
     processTest : Test -> App e (Test, Either TestError TestResult)
     processTest x = do
       let False = x.pending
@@ -538,9 +539,11 @@ runAllTests plan = do
     processResult : TestPlan -> (Test, Either TestError TestResult) -> TestPlan
     processResult plan (t, Right Success) = validate t.name plan
     processResult plan (t, _) = fail t.name plan
+    -}
     batchTests : List (Test, Either TestError TestResult) ->
                  TestPlan -> App e (List (Test, Either TestError TestResult))
-    batchTests acc plan = do
+    batchTests acc plan = ?thh
+{-  do
       debug $ withOffset 4 $ "Run a batch"
       n <- threads <$> get RunContext
       case prepareBatch n plan of
@@ -564,6 +567,7 @@ runAllTests plan = do
                    let plan' = record {now = nextBatches} plan
                    debug $ displayPlan plan'
                    batchTests (acc ++ res) $ assert_smaller plan (foldl processResult plan' res)
+                   -}
 
 report : Console e => State GlobalConfig Global e => Stats -> App e ()
 report x = do
@@ -594,7 +598,7 @@ filterTests s r = do
   f <- filter <$> get RunContext
   debug $ "Filters: \{show f}"
   let (selected, rejected) = partition (keepTest f) s
-  pure $ foldl (\p, t => validate t.name p) (buildPlan selected) (r ++ rejected)
+  pure $ buildPlan selected (rejected ++ r)
 
 getLastFailures : FileSystem (FSError :: e) =>
   Has [ State GlobalConfig Global
