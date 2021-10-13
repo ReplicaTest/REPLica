@@ -13,6 +13,7 @@ import Replica.Other.String
 public export
 record SuitePlan where
   constructor SPlan
+  name : Maybe String
   now : List Test
   later : List Test
   skipped : List (String, Test)
@@ -20,12 +21,12 @@ record SuitePlan where
 public export
 record TestPlan where
   constructor Plan
-  ready : List (Maybe String, SuitePlan)
-  waitingOthers : List (Maybe String, SuitePlan)
+  ready : List SuitePlan
+  waitingOthers : List SuitePlan
 
 export
-displayTestPlan : SuitePlan -> String
-displayTestPlan x = removeTrailingNL $ unlines
+displaySuitePlan : SuitePlan -> String
+displaySuitePlan x = removeTrailingNL $ unlines
   [ "  Plan:"
   , "    Now: \{show $ map name x.now}"
   , "    Later: \{show $ map name x.later}"
@@ -35,12 +36,12 @@ displayTestPlan x = removeTrailingNL $ unlines
 export
 displayPlan : TestPlan -> String
 displayPlan plan = unlines $ ("Ready:"
-  :: (plan.ready >>= uncurry go))
+  :: (plan.ready >>= go))
   ++ ("Postponed:"
-  :: (plan.waitingOthers >>= uncurry go))
+  :: (plan.waitingOthers >>= go))
   where
-    go : Maybe String -> SuitePlan -> List String
-    go name p = ["\{fromMaybe "No suite" name}:", displayTestPlan p]
+    go : SuitePlan -> List String
+    go p = ["\{fromMaybe "No suite" p.name}:", displaySuitePlan p]
 
 
 public export
@@ -50,10 +51,10 @@ isReady = force . null . require
 dependsOnOther : List Test -> Bool
 dependsOnOther xs = any (not . flip elem (name <$> xs))  $ xs >>= require
 
-buildSuitePlan : List Test -> SuitePlan
-buildSuitePlan xs = let
-  (now, later) = partition (force . null . require) xs
-  in SPlan now later []
+buildSuitePlan : List1 Test -> SuitePlan
+buildSuitePlan (x:::xs) = let
+  (now, later) = partition (force . null . require) $ x::xs
+  in SPlan x.suite now later []
 
 removeRequirements : List String -> Test -> Test
 removeRequirements xs y
@@ -62,31 +63,35 @@ removeRequirements xs y
 export
 buildPlan : (available : List Test) -> (rejected : List Test) -> TestPlan
 buildPlan available rejected = uncurry Plan $
-  partition (not . dependsOnOther . later . snd) namedSuitePlan
+  partition (not . dependsOnOther . later) $ namedSuitePlan
   where
     cleantAvailable : List Test
     cleantAvailable
       = removeRequirements (name <$> rejected) <$> available
     suites : List (List1 Test)
     suites = groupBy ((==) `on` suite) $ sortBy (compare `on` suite) cleantAvailable
-    namedSuites : List (Maybe String, List Test)
-    namedSuites = map (\(t:::ts) => (t.suite, t::ts)) suites
-    namedSuitePlan : List (Maybe String, SuitePlan)
-    namedSuitePlan = map (map buildSuitePlan) namedSuites
+    namedSuitePlan : List SuitePlan
+    namedSuitePlan = map buildSuitePlan suites
 
+export
+sortResults : List (Test, Either TestError TestResult) -> (List String, List String)
+sortResults
+  = bimap (map (Test.name . fst)) (map (Test.name . fst))
+    . partition (either (const False) isSuccess . snd)
+
+export
 updateSuite : (successes, other : List String) -> SuitePlan -> SuitePlan
-updateSuite successes other (SPlan now later skipped) = let
-  (later', skipped') = partition (not . (`elem` other) . name) later
-  (now', later'') = partition (force . null . require) $ removeRequirements successes <$> later'
-  in SPlan (now ++ now') later'' (skipped ++ (map (\t => (t.name , t)) skipped'))
+updateSuite successes other (SPlan n now later skipped) = let
+  (now', later') = partition (force . null . require) $ removeRequirements successes <$> later
+  (later'', skipped') = partition (not . any (`elem` other) . require) later'
+  in SPlan n (now ++ now') later'' (skipped ++ (map (\t => (fromMaybe "unknown_test" $ head' t.require , t)) skipped'))
 
 export
 updateOnBatchResults : List (Test, Either TestError TestResult) -> TestPlan -> TestPlan
 updateOnBatchResults xs plan = let
-  (successes, other) = bimap (map (name . fst)) (map (name . fst))
-                     $ partition (either (const False) isSuccess . snd) $ xs
-  ready' = map (updateSuite successes other) <$> plan.ready
-  waiting' = map (updateSuite successes other) <$> plan.waitingOthers
+  (successes, other) = sortResults xs
+  ready' = updateSuite successes other <$> plan.ready
+  waiting' = updateSuite successes other <$> plan.waitingOthers
   (ready'', waitingOthers') =
-    partition (not . dependsOnOther . later . snd) waiting'
+    partition (not . dependsOnOther . later) waiting'
   in Plan (ready' ++ ready'') waitingOthers'

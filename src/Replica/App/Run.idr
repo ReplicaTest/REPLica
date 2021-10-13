@@ -447,6 +447,12 @@ runTest = do
       catchNew (createDir !getSingleTestGoldenDir) continueIfExists
       catchNew (createDir !getSingleTestGoldenFileDir) continueIfExists
 
+displaySuite :
+  Has [ State RunContext RunCommand
+      , State GlobalConfig Global
+      , Console
+      ] e => Maybe String -> App e ()
+displaySuite suite = putStrLn $ !bold $ maybe "No suite given:" ("Suite: " <+>) suite
 
 testOutput : SystemIO (SystemError :: e) =>
   Has [ State RunContext RunCommand
@@ -481,7 +487,7 @@ testOutput (Right (Fail xs)) = do
             None => multilineDisplay 8 x
             Native => multilineDisplay 8 x
             d' => showDiff d' 8 given x
-      in putStrLn (withOffset 4 "Exact expectation mismatch:") >> content
+      in putStrLn (withOffset 6 "Exact expectation mismatch:") >> content
     displayError given (MkDPair (StartsWith x) snd) =
       putStrLn (withOffset 6 "Start mismatch:") >> multilineDisplay 4 x
     displayError given (MkDPair (EndsWith x) snd) =
@@ -505,9 +511,11 @@ testOutput (Right (Fail xs)) = do
     writeFailure (ExpectedFileNotFound x) = pure ()
     writeFailure (WrongOutput x given ys) = do
       putStrLn $ withOffset 6 $ !bold "Error on \{displaySource x}:"
+      traverse_ (displayError given) ys
       putStrLn $ withOffset 6 $ "Given:"
       traverse_ (putStrLn . withOffset 8) $ lines given
-      traverse_ (displayError given) ys
+
+data SuiteProcess a = None | Partial a | Total a
 
 runAllTests : SystemIO (SystemError :: TestError :: e) =>
   SystemIO (SystemError :: e) =>
@@ -516,13 +524,24 @@ runAllTests : SystemIO (SystemError :: TestError :: e) =>
   Has [ State RunContext RunCommand
       , State GlobalConfig Global
       , Console
-      ] e =>  TestPlan -> App e (List (Test, Either TestError TestResult))
+      ] e =>  TestPlan -> App e (List (Maybe String, List (Test, Either TestError TestResult)))
 runAllTests plan = do
   putStrLn $ separator 80
-  putStrLn $ !bold "Running tests..."
+  putStrLn $ !bold "Running tests...\n"
   batchTests [] plan
   where
-    {-
+    selectNextSuite : TestPlan -> SuiteProcess (SuitePlan, TestPlan)
+    selectNextSuite (Plan (x :: xs) waitingOthers) = Total (x, Plan xs waitingOthers)
+    selectNextSuite (Plan [] waitingOthers)
+      = case sortBy (compare `on` (length . now)) waitingOthers of
+             [] => None
+             (w::ws) => Partial (w, Plan [] ws)
+
+    prepareBatch : Nat -> SuitePlan -> (List Test, SuitePlan)
+    prepareBatch n plan = if n == 0
+                             then (plan.now, record {now = []} plan)
+                             else map (\n' => record {now = n'} plan) $ splitAt n plan.now
+
     processTest : Test -> App e (Test, Either TestError TestResult)
     processTest x = do
       let False = x.pending
@@ -532,19 +551,17 @@ runAllTests plan = do
              (pure . MkPair x . Right)
              (\err : TestError => pure (x, Left err))
       pure r
-    prepareBatch : Nat -> TestPlan -> (List Test, List Test)
-    prepareBatch n plan = if n == 0
-                             then (plan.now, Prelude.Nil)
-                             else splitAt n plan.now
-    processResult : TestPlan -> (Test, Either TestError TestResult) -> TestPlan
-    processResult plan (t, Right Success) = validate t.name plan
-    processResult plan (t, _) = fail t.name plan
-    -}
-    batchTests : List (Test, Either TestError TestResult) ->
-                 TestPlan -> App e (List (Test, Either TestError TestResult))
-    batchTests acc plan = ?thh
-{-  do
-      debug $ withOffset 4 $ "Run a batch"
+
+    processResult : SuitePlan -> TestPlan -> List (Test, Either TestError TestResult) ->
+                    Either TestPlan (SuitePlan, TestPlan)
+    processResult (SPlan _ [] [] skipped) y xs = Left (updateOnBatchResults xs y)
+    processResult x y xs = case updateOnBatchResults xs (record {ready $= (x::)} y) of
+                                Plan (x'::now) later => Right (x', Plan now later)
+                                p => Left p
+
+    runTotalSuite : List (Test, Either TestError TestResult) -> SuitePlan ->
+                    App e (List (Test, Either TestError TestResult))
+    runTotalSuite acc plan = do
       n <- threads <$> get RunContext
       case prepareBatch n plan of
            ([], later) => do
@@ -556,7 +573,7 @@ runAllTests plan = do
              pure $ acc ++ errs
            (now, nextBatches) => do
              debug $ withOffset 4 "Now: \{show $ length now}"
-             debug $ withOffset 4 "Later: \{show $ length nextBatches}"
+             debug $ withOffset 4 "Later: \{show $ nextBatches.now ++ nextBatches.later}"
              res <- map await <$> traverse (map (fork . delay) . processTest) now
              when (not !(interactive <$> get RunContext))
                (traverse_ (\(t, r) => new t (testOutput r)) res)
@@ -564,10 +581,73 @@ runAllTests plan = do
              if p && any (not . isFullSuccess . snd) res
                 then pure res
                 else do
-                   let plan' = record {now = nextBatches} plan
-                   debug $ displayPlan plan'
-                   batchTests (acc ++ res) $ assert_smaller plan (foldl processResult plan' res)
-                   -}
+                   let (suc, fai) = sortResults res
+                   let newPlan = updateSuite suc fai nextBatches
+                   debug $ displaySuitePlan newPlan
+                   runTotalSuite (acc ++ res) $ assert_smaller plan newPlan
+
+    runPartialSuite : (List (Test, Either TestError TestResult)) -> SuitePlan ->
+                    App e (Maybe SuitePlan, List (Test, Either TestError TestResult))
+    runPartialSuite acc plan = do
+      n <- threads <$> get RunContext
+      case prepareBatch n plan of
+           ([], later) => case acc of
+             [] => do
+               let errs = join [ map (\t => (t, Left Inaccessible)) plan.later
+                               , map (\(reason, t) => (t, Left $ RequirementsFailed reason)) plan.skipped
+                               ]
+               when (not !(interactive <$> get RunContext))
+                 (traverse_ (\(t, r) => new t (testOutput r)) errs)
+               pure (Nothing, acc ++ errs)
+             _ => pure (Just plan, acc)
+           (now, nextBatches) => do
+             debug $ withOffset 4 "Now: \{show $ length now}"
+             debug $ withOffset 4 "Later: \{show $ nextBatches.now ++ nextBatches.later}"
+             res <- map await <$> traverse (map (fork . delay) . processTest) now
+             when (not !(interactive <$> get RunContext))
+               (traverse_ (\(t, r) => new t (testOutput r)) res)
+             p <- punitive <$> get RunContext
+             if p && any (not . isFullSuccess . snd) res
+                then pure (Nothing, res)
+                else do
+                   let (suc, fai) = sortResults res
+                   let newPlan = updateSuite suc fai nextBatches
+                   debug $ displaySuitePlan newPlan
+                   runPartialSuite (acc ++ res) $ assert_smaller plan newPlan
+
+    mergeResults : List (Maybe String, List (Test, Either TestError TestResult)) ->
+                   (Maybe String, List (Test, Either TestError TestResult)) ->
+                   List (Maybe String, List (Test, Either TestError TestResult))
+    mergeResults [] x = [x]
+    mergeResults (y :: xs) x = if fst y == fst x
+                                  then (map (++ snd x) y) :: xs
+                                  else y :: mergeResults xs x
+
+
+    batchTests : List (Maybe String, List (Test, Either TestError TestResult)) ->
+                 TestPlan -> App e (List (Maybe String, List (Test, Either TestError TestResult)))
+    batchTests acc plan = do
+      debug $ withOffset 4 $ "Run a batch"
+      p <- punitive <$> get RunContext
+      case selectNextSuite plan of
+           None => pure acc
+           Total (suite, plan') => do
+             displaySuite suite.name
+             suiteResults <- runTotalSuite [] suite
+             let acc' = mergeResults acc (suite.name, suiteResults)
+             if p && any (not . isFullSuccess . snd) suiteResults
+                then pure acc'
+                else
+                  batchTests acc' $ assert_smaller plan $ updateOnBatchResults suiteResults plan'
+           Partial (suite, plan') => do
+             displaySuite suite.name
+             (stuckPlan, suiteResults) <- runPartialSuite [] suite
+             let acc' = mergeResults acc (suite.name, suiteResults)
+             if p && any (not . isFullSuccess . snd) suiteResults
+                then pure acc'
+                else do
+                  let plan'' = record {waitingOthers $= maybe id (::) stuckPlan} plan'
+                  batchTests acc' $ assert_smaller plan $ updateOnBatchResults suiteResults plan''
 
 report : Console e => State GlobalConfig Global e => Stats -> App e ()
 report x = do
@@ -633,6 +713,21 @@ defineActiveTests = do
           pure (repl.tests, [])
   uncurry filterTests last
 
+extractReport : (Maybe String, List (Test, Either TestError TestResult)) ->
+                List (String, Either TestError TestResult)
+extractReport = map (mapFst name) . snd
+
+export
+suiteOutput : SystemIO (SystemError :: e) =>
+  Has [ State RunContext RunCommand
+      , State GlobalConfig Global
+      , Console
+      ] e =>
+  Maybe String -> List (Test, Either TestError TestResult) -> App e ()
+suiteOutput suite tests = do
+  displaySuite suite
+  traverse_ (uncurry (\t, r => new t (testOutput r))) tests
+
 export
 runReplica : SystemIO (SystemError :: TestError :: e) =>
   SystemIO (SystemError :: e) =>
@@ -651,12 +746,12 @@ runReplica = do
   log $ displayPlan plan
   result <- runAllTests plan
   let logFile = lastRunLog rDir
-  catchNew (writeFile logFile (show $ reportToJSON $ map (mapFst name)  result))
+  catchNew (writeFile logFile (show $ reportToJSON $ extractReport =<< result))
     (\err : FSError => throw $ CantAccessTestFile logFile)
   when !(interactive <$> get RunContext)
     (do putStrLn $ separator 80
         putStrLn $ !bold "Test results:"
-        traverse_ (uncurry (\t, r => new t (testOutput r))) result)
-  let stats = asStats $ snd <$> result
-  report $ stats
+        traverse_ (uncurry (\t, r => suiteOutput t r)) result)
+  let stats = asStats $ map snd $ snd =<< result
+  report stats
   pure stats
