@@ -108,6 +108,13 @@ validateTagList (Just (JArray ys)) = traverse validateTag ys
 validateTagList (Just x) = Error
   ["Tags must contain a tag (string) or an array of tags, found \{show x}"]
 
+validateSuite : Maybe JSON -> Validation (List String) (Maybe String)
+validateSuite Nothing = Valid empty
+validateSuite (Just JNull) = Valid empty
+validateSuite (Just (JString x)) = Valid $ Just $ x
+validateSuite (Just x)
+  = Error ["Test suite should be a string, found: \{show x}"]
+
 validateCommandItem : JSON -> Validation (List String) String
 validateCommandItem (JString x) = Valid x
 validateCommandItem x = Error ["An item must be a string, found \{show x}"]
@@ -166,6 +173,7 @@ jsonToTest str (JObject xs) =
   (validateRequireList $ lookup "require" xs)
   (validateWD $ lookup "workingDir" xs)
   (validateTagList $ lookup "tags" xs)
+  (validateSuite $ lookup "suite" xs)
   (validateBefore $ lookup "beforeTest" xs)
   (validateAfter $ lookup "afterTest" xs)
   (validateCommand $ lookup "command" xs)

@@ -57,6 +57,7 @@ record Test where
   require : List String
   workingDir : Maybe String
   tags: List String
+  suite : Maybe String
   beforeTest : List String
   afterTest : List String
   command: String

@@ -1,13 +1,16 @@
 --------------------------------------------------------------------------------
-[1mRunning tests...[0m
+[1mRunning tests...
+[0m
+[1mNo suite given:[0m
 --------------------------------------------------------------------------------
 [1mTest results:[0m
+[1mNo suite given:[0m
   [38;5;1m❌  mismatch:[0m
       [1mError on standard output:[0m
+      Exact expectation mismatch:
+        two
       Given:
         one
-    Exact expectation mismatch:
-        two
 --------------------------------------------------------------------------------
 [1mSummary:[0m
   ❌  (Failure): 1 / 1

@@ -1,6 +1,8 @@
 module Replica.App.Run.Dependencies
 
+import Data.Maybe
 import Data.List
+import Data.List1
 import Data.String
 
 import Replica.Core.Types
@@ -9,43 +11,87 @@ import Replica.Other.String
 %default total
 
 public export
-record TestPlan where
-  constructor Plan
+record SuitePlan where
+  constructor SPlan
+  name : Maybe String
   now : List Test
   later : List Test
   skipped : List (String, Test)
 
+public export
+record TestPlan where
+  constructor Plan
+  ready : List SuitePlan
+  waitingOthers : List SuitePlan
+
+export
+displaySuitePlan : SuitePlan -> String
+displaySuitePlan x = removeTrailingNL $ unlines
+  [ "  Plan:"
+  , "    Now: \{show $ map name x.now}"
+  , "    Later: \{show $ map name x.later}"
+  , "    Skipped: \{show $ map (name . snd) x.skipped}"
+  ]
+
 export
 displayPlan : TestPlan -> String
-displayPlan x = removeTrailingNL $ unlines
-  [ "Plan:"
-  , "  Now: \{show $ map name x.now}"
-  , "  Later: \{show $ map name x.later}"
-  , "  Skipped: \{show $ map (name . snd) x.skipped}"]
+displayPlan plan = unlines $ ("Ready:"
+  :: (plan.ready >>= go))
+  ++ ("Postponed:"
+  :: (plan.waitingOthers >>= go))
+  where
+    go : SuitePlan -> List String
+    go p = ["\{fromMaybe "No suite" p.name}:", displaySuitePlan p]
 
 
 public export
 isReady : Test -> Bool
 isReady = force . null . require
 
-export
-buildPlan : List Test -> TestPlan
-buildPlan xs = let
-  (now, later) = partition isReady xs
-  in Plan now later []
+dependsOnOther : List Test -> Bool
+dependsOnOther xs = any (not . flip elem (name <$> xs))  $ xs >>= require
+
+buildSuitePlan : List1 Test -> SuitePlan
+buildSuitePlan (x:::xs) = let
+  (now, later) = partition (force . null . require) $ x::xs
+  in SPlan x.suite now later []
+
+removeRequirements : List String -> Test -> Test
+removeRequirements xs y
+  = record {require $= filter (not . (`elem` xs))} y
 
 export
-validate : String -> TestPlan -> TestPlan
-validate x y = let
-  y' : TestPlan = record {later $= map (record {require $= filter (/= x)})} y
-  (now', later') = partition isReady y'.later
-  in record {now $= (++ now') . filter (not . (== x) . name), later = later'} y
+buildPlan : (available : List Test) -> (rejected : List Test) -> TestPlan
+buildPlan available rejected = uncurry Plan $
+  partition (not . dependsOnOther . later) $ namedSuitePlan
+  where
+    cleantAvailable : List Test
+    cleantAvailable
+      = removeRequirements (name <$> rejected) <$> available
+    suites : List (List1 Test)
+    suites = groupBy ((==) `on` suite) $ sortBy (compare `on` suite) cleantAvailable
+    namedSuitePlan : List SuitePlan
+    namedSuitePlan = map buildSuitePlan suites
 
 export
-fail : String -> TestPlan -> TestPlan
-fail x y = let
-  (skipped', later') = partition (elem x . require) y.later
-  y' = record { now $= filter (not . (== x) . name)
-              , later = later'
-              , skipped $= (map (MkPair x) skipped' ++)} y
-  in foldl (\tp, t => fail t.name $ assert_smaller y tp) y' skipped'
+sortResults : List (Test, Either TestError TestResult) -> (List String, List String)
+sortResults
+  = bimap (map (Test.name . fst)) (map (Test.name . fst))
+    . partition (either (const False) isSuccess . snd)
+
+export
+updateSuite : (successes, other : List String) -> SuitePlan -> SuitePlan
+updateSuite successes other (SPlan n now later skipped) = let
+  (now', later') = partition (force . null . require) $ removeRequirements successes <$> later
+  (later'', skipped') = partition (not . any (`elem` other) . require) later'
+  in SPlan n (now ++ now') later'' (skipped ++ (map (\t => (fromMaybe "unknown_test" $ head' t.require , t)) skipped'))
+
+export
+updateOnBatchResults : List (Test, Either TestError TestResult) -> TestPlan -> TestPlan
+updateOnBatchResults xs plan = let
+  (successes, other) = sortResults xs
+  ready' = updateSuite successes other <$> plan.ready
+  waiting' = updateSuite successes other <$> plan.waitingOthers
+  (ready'', waitingOthers') =
+    partition (not . dependsOnOther . later) waiting'
+  in Plan (ready' ++ ready'') waitingOthers'

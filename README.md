@@ -20,6 +20,7 @@ Golden tests for Command Line interfaces.
     * [`beforeTest` and `afterTest`](#beforetest-and-aftertest)
     * [`require`](#require)
     * [`input`](#input)
+    * [`suite`](#suite)
     * [`tags`](#tags)
     * [`description`](#description)
     * [`pending`](#description)
@@ -78,7 +79,7 @@ Other CLI testing frameworks
 - Test dependencies (test are run only if other tests succeed)
 - Check exit status
 - Multi-threads
-- Run only selected tests/tags
+- Run only selected tests/tags/suite
 - Expectation language
 - Can test standard output, standard error and file content
 
@@ -450,9 +451,31 @@ content.
   }
 }
 ```
+
+### `suite`
+
+The `suite` field helps you to organise your tests into suites.
+The tests are run suite by suite (if there is no cross-suite requirements).
+
+Test suite are optional. Tests with no suite belongs to a special suite with no name,
+which can't be specifically selected or excluded from a run
+
+```json
+{ "hello": {"command": "echo \"hello, world!\""}, "suite": "hello"}
+```
+
+or in dhall:
+
+```dhall
+{ hello = Replica.Test ::
+  { command = "echo \"Hello, world!\""
+  , suite = Some "hello"
+  }
+}
+```
 ### `tags`
 
-The `tags` field allow you to organise your test suites.
+The `tags` field allow you to select a group of tests in your test suites.
 Once you've defined tags for your tests, you can decide to run test that have (or didn't have) a
 given tags thanks to REPLica command line options.
 
