@@ -225,13 +225,5 @@ let tests : Replica.Type = toMap
 
 in tests
  # ./tests/parsing_errors.dhall
+ # ./tests/suite.dhall
  # ./tests/idris.dhall
-
-{-
-let parsing_errors = ./tests/parsing_errors.dhall
-let idris = ./tests/idris.dhall
-
-let tests : Replica.Replica = toMap
-
-in tests # parsing_errors # idris
--}

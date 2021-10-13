@@ -533,7 +533,7 @@ runAllTests plan = do
     selectNextSuite : TestPlan -> SuiteProcess (SuitePlan, TestPlan)
     selectNextSuite (Plan (x :: xs) waitingOthers) = Total (x, Plan xs waitingOthers)
     selectNextSuite (Plan [] waitingOthers)
-      = case sortBy (compare `on` (length . now)) waitingOthers of
+      = case sortBy (flip compare `on` (length . now)) waitingOthers of
              [] => None
              (w::ws) => Partial (w, Plan [] ws)
 
