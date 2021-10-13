@@ -221,7 +221,13 @@ let tests : Replica.Type = toMap
       with afterTest =
           [ "rm -rf .replica", "rm -f generated.json", "rm -f generated.dhall"]
       with tags = ["meta", "new"]
-  }
+  } # [ { mapKey = "test space"
+        , mapValue
+        = Test ::
+        { command = "echo \"Hello, World!\""
+        , description = Some "Test space in test name"
+        }
+      } ]
 
 in tests
  # ./tests/parsing_errors.dhall
