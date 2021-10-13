@@ -7,8 +7,10 @@
       If you have existing `dhall` tests that you don't want to change, you can use this
       url as an entry point for replica:
       https://raw.githubusercontent.com/ReplicaTest/REPLica/v0.4.0/dhall/replica.dhall
+    * Migration to Idris2 0.5.1
 - NEW:
     * `replica new` to create tests file templates
+    * `suite` to organise your test by suites
 - FIX:
     * `replica help` mentions `version`
     * skipped tests are displayed

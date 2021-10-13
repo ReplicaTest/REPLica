@@ -16,6 +16,8 @@ record Filter' (f : Type -> Type) where
   exclude : f (List String)
   onlyTags : f (List String)
   excludeTags : f (List String)
+  onlySuites : f (List String)
+  excludeSuites : f (List String)
   lastFailures : f Bool
 
 public export
@@ -29,6 +31,8 @@ TyMap Filter' where
     (func x.exclude)
     (func x.onlyTags)
     (func x.excludeTags)
+    (func x.onlySuites)
+    (func x.excludeSuites)
     (func x.lastFailures)
 
 export
@@ -38,6 +42,8 @@ TyTraversable Filter' where
     (func x.exclude)
     (func x.onlyTags)
     (func x.excludeTags)
+    (func x.onlySuites)
+    (func x.excludeSuites)
     (func x.lastFailures)
     |]
 
@@ -110,6 +116,35 @@ excludeTagsPart = inj $ MkOption
           [] => Right $ record {excludeTags $= Right . (++ xs) . either (const []) id} x
           xs => Left "Some tags were both included and excluded: \{show xs}"
 
+onlySuitesPart : Part (Builder Filter') (List String)
+onlySuitesPart = inj $ MkOption
+      (singleton $ MkMod ("suites" ::: ["only-suites"]) ['s']
+          (Right $ MkValue "SUITES" $ Just . go)
+          "a comma separated list of the suites to run")
+      [] compose
+      where
+        go : String -> List String
+        go = forget . split (== ',')
+        compose : List String -> Builder Filter' -> Either String (Builder Filter')
+        compose xs x = case either (const []) (intersect xs) x.excludeTags of
+          [] => Right $ record {onlySuites $= Right . (++ xs) . either (const []) id} x
+          xs => Left "Some tags were both included and excluded: \{show xs}"
+
+excludeSuitesPart : Part (Builder Filter') (List String)
+excludeSuitesPart = inj $ MkOption
+      (singleton $ MkMod (singleton "exclude-suites") ['S']
+          (Right $ MkValue "SUITES" $ Just . go)
+          "a comma separated list of the suites to exclude")
+      []
+      compose
+      where
+        go : String -> List String
+        go = forget . split (== ',')
+        compose : List String -> Builder Filter' -> Either String (Builder Filter')
+        compose xs x = case either (const []) (intersect xs) x.onlyTags of
+          [] => Right $ record {excludeSuites $= Right . (++ xs) . either (const []) id} x
+          xs => Left "Some tags were both included and excluded: \{show xs}"
+
 lastFailuresPart : Part (Builder Filter') Bool
 lastFailuresPart = inj $ MkOption
       (singleton $ MkMod (singleton "last-fails") ['l']
@@ -129,17 +164,21 @@ optParseFilter : OptParse (Builder Filter') (Done Filter')
 optParseFilter = [|MkFilter
   (liftAp onlyPart) (liftAp excludePart)
   (liftAp onlyTagsPart) (liftAp excludeTagsPart)
+  (liftAp onlySuitesPart) (liftAp excludeSuitesPart)
   (liftAp lastFailuresPart) |]
 
 export
 defaultFilter : Default Filter'
 defaultFilter = MkFilter (defaultPart onlyPart) (defaultPart excludePart)
   (defaultPart onlyTagsPart) (defaultPart excludeTagsPart)
+  (defaultPart onlySuitesPart) (defaultPart excludeSuitesPart)
   (defaultPart lastFailuresPart)
 
 export
 keepTest : Filter -> Test -> Bool
-keepTest x y = (null x.only        || (y.name `elem` x.only))
-            && (null x.exclude     || not (y.name `elem` x.exclude))
-            && (null x.onlyTags    || not (null $ y.tags `intersect` x.onlyTags))
-            && (null x.excludeTags || null (y.tags `intersect` x.excludeTags))
+keepTest x y = (null x.only          || (y.name `elem` x.only))
+            && (null x.exclude       || not (y.name `elem` x.exclude))
+            && (null x.onlyTags      || not (null $ y.tags `intersect` x.onlyTags))
+            && (null x.excludeTags   || null (y.tags `intersect` x.excludeTags))
+            && (null x.onlySuites    || maybe False (`elem` x.onlySuites) y.suite)
+            && (null x.excludeSuites || maybe True  (not . (`elem` x.excludeSuites)) y.suite)

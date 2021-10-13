@@ -14,6 +14,14 @@ let tests : Replica.Type = toMap
       with workingDir = Some "tests/replica/suite"
       with description = Some "require can work on different suites"
       with tags = ["suite"]
+  , includeSuite = (Meta.Run (["-s A"] : List Text) ["crossSuiteDependency.json"])
+      with workingDir = Some "tests/replica/suite"
+      with description = Some "require can work on different suites"
+      with tags = ["suite"]
+  , excludeSuite = (Meta.Run (["-S A"] : List Text) ["crossSuiteDependency.json"])
+      with workingDir = Some "tests/replica/suite"
+      with description = Some "require can work on different suites"
+      with tags = ["suite"]
   }
 
 in tests
