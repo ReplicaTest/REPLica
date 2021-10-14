@@ -1,6 +1,6 @@
 # REPLica changelog
 
-## Since version 0.4.0
+## version 0.5.0
 
 - CHANGE:
     * The dhall language for replica has changed and is now hosted in its own project.
