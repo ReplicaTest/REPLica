@@ -17,6 +17,7 @@ record RunCommand' (f : Type -> Type) where
   constructor MkRunCommand
   workingDir : f String
   interactive : f Bool
+  timing : f Bool
   threads : f Nat
   hideSuccess : f Bool
   punitive : f Bool
@@ -32,6 +33,7 @@ TyMap RunCommand' where
     MkRunCommand
       (func x.workingDir)
       (func x.interactive)
+      (func x.timing)
       (func x.threads)
       (func x.hideSuccess)
       (func x.punitive)
@@ -43,6 +45,7 @@ TyTraversable RunCommand' where
     MkRunCommand
       (func x.workingDir)
       (func x.interactive)
+      (func x.timing)
       (func x.threads)
       (func x.hideSuccess)
       (func x.punitive)
@@ -56,6 +59,7 @@ Show RunCommand where
     [ "MkRunCommand"
     , show x.workingDir
     , show x.interactive
+    , show x.timing
     , show x.threads
     , show x.hideSuccess
     , show x.punitive
@@ -74,6 +78,23 @@ interactivePart = inj $ MkOption
     go = ifSame interactive
                 (\x => record {interactive = Right x})
                 (const $ const "Contradictory values for interactive")
+
+timingPart : Part (Builder RunCommand') Bool
+timingPart = inj $ MkOption
+  (toList1
+     [ MkMod ("timing" ::: ["duration"]) ['d'] (Left True)
+            "display execution time of each tests"
+     , MkMod ("no-timing" ::: ["no-duration"]) ['D'] (Left False)
+            "hide execution time of each tests"
+     ]
+  )
+  True
+  go
+  where
+    go : Bool -> Builder RunCommand' -> Either String (Builder RunCommand')
+    go = ifSame interactive
+                (\x => record {timing = Right x})
+                (const $ const "Contradictory values for timing")
 
 workingDirPart : Part (Builder RunCommand') String
 workingDirPart = inj $ MkOption
@@ -133,6 +154,7 @@ optParseRun =
     [| MkRunCommand
        (liftAp workingDirPart)
        (liftAp interactivePart)
+       (liftAp timingPart)
        (liftAp threadsPart)
        (liftAp hideSuccessPart)
        (liftAp punitivePart)
@@ -144,6 +166,7 @@ defaultRun : Default RunCommand'
 defaultRun = MkRunCommand
        (defaultPart workingDirPart)
        (defaultPart interactivePart)
+       (defaultPart timingPart)
        (defaultPart threadsPart)
        (defaultPart hideSuccessPart)
        (defaultPart punitivePart)

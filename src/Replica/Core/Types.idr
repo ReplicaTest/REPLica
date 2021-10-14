@@ -4,6 +4,7 @@ import Data.String
 import Data.List
 import Data.List1
 import Language.JSON
+import System.Clock
 
 %default total
 
@@ -208,7 +209,7 @@ namespace FailReason
 
 public export
 data TestResult
-  = Success
+  = Success (Clock Duration)
   | Fail (List FailReason)
   | Skipped
 
@@ -216,13 +217,13 @@ namespace TestResult
 
   export
   toJSON : TestResult -> JSON
-  toJSON Success = JString "Success"
+  toJSON (Success d) = JObject [("Success", JString $ show d)]
   toJSON (Fail xs) = JObject [("Fail", JArray $ map toJSON xs)]
   toJSON Skipped = JString "Skipped"
 
   export
   isSuccess : TestResult -> Bool
-  isSuccess Success = True
+  isSuccess (Success _) = True
   isSuccess _ = False
 
 public export
@@ -258,7 +259,7 @@ displayTestError Inaccessible = "Test rely on other tests that weren't run"
 
 export
 isFullSuccess : Either TestError TestResult -> Bool
-isFullSuccess (Right Success) = True
+isFullSuccess (Right (Success _)) = True
 isFullSuccess _ = False
 
 public export
@@ -287,7 +288,7 @@ asStats = foldMap go
   where
     go : Either TestError TestResult -> Stats
     go (Left x) = record {errors = 1} neutral
-    go (Right Success) = record {successes = 1} neutral
+    go (Right (Success _)) = record {successes = 1} neutral
     go (Right (Fail xs)) = record {failures = 1} neutral
     go (Right Skipped) = record {skipped = 1} neutral
 
