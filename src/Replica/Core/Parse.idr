@@ -8,6 +8,7 @@ import Data.List1
 import Data.Maybe
 import Data.String
 import Language.JSON
+import System.Clock
 
 %default total
 
@@ -271,9 +272,18 @@ parseFailReason (JObject xs) = do
 parseFailReason json =
   Error ["Expecting a JSON object for a fail reason, got: \{show json}"]
 
+parseTime : String -> Maybe (Clock Duration)
+parseTime x = case assert_total words x of
+                   ["duration:", s, ns] => do
+                     s'  <- parseInteger $ fst $ break ('s' ==) s
+                     ns' <- parseInteger $ fst $ break ('n' ==) ns
+                     pure $ makeDuration s' ns'
+                   _ => Nothing
+
 parseTestResult : JSON -> Validation (List String) TestResult
 parseTestResult (JObject [("Fail", JArray cause)]) = map Fail $ traverse parseFailReason cause
-parseTestResult (JString "Success") = Valid Success
+parseTestResult (JObject [("Success", JString time)])
+  = maybe (Error ["Can't parse test duration"]) (Valid . Success) $ parseTime time
 parseTestResult (JString "Scekipped") = Valid Skipped
 parseTestResult x = Error ["\{show x} can't be a valid result"]
 
@@ -307,7 +317,8 @@ parseTestError json =
 parseResult : JSON -> Validation (List String) (Either TestError TestResult)
 parseResult (JObject [("Error", cause)]) = map Left $ parseTestError cause
 parseResult (JObject [("Fail", JArray cause)]) = map (Right . Fail) $ traverse parseFailReason cause
-parseResult (JString "Success") = Valid $ Right Success
+parseResult (JObject [("Success", JString time)])
+  = maybe (Error ["Can't parse test duration"]) (Valid . Right . Success) $ parseTime time
 parseResult x = Error ["\{show x} can't be a valid result"]
 
 export

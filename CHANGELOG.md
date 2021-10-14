@@ -11,6 +11,8 @@
 - NEW:
     * `replica new` to create tests file templates
     * `suite` to organise your test by suites
+    * test name with spaces are officially supported
+    * execution time of each test is tracked
 - FIX:
     * `replica help` mentions `version`
     * skipped tests are displayed

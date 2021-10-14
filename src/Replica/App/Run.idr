@@ -1,4 +1,4 @@
-||| Application of a `replica run` command
+||| Applitation of a `replica run` command
 module Replica.App.Run
 
 import Control.ANSI
@@ -17,6 +17,7 @@ import Language.JSON
 import System.Future
 import System.Path
 
+import Replica.App.Clock
 import Replica.App.FileSystem
 import Replica.App.Format
 import Replica.App.Log
@@ -35,11 +36,6 @@ import Replica.Other.Validation
 %default total
 
 data RunContext : Type where
-
-record TestOutput where
-  constructor MkTestOutput
-  status : Int
-  parts : List (Part, String)
 
 normalize : String -> String
 normalize = removeTrailingNL . unlines . map unwords . filter (not . force . null) . map (assert_total words) . lines
@@ -303,8 +299,9 @@ checkExpectations :  SystemIO (SystemError :: e) =>
       , Exception TestError
       , Console ] e =>
   (exitCode : Nat) ->
+  (duration : Clock Duration) ->
   App e TestResult
-checkExpectations exitCode = do
+checkExpectations exitCode duration = do
   log $ withOffset 2 "Checking expectations"
   t <- get CurrentTest
   ctx <- get RunContext
@@ -313,7 +310,7 @@ checkExpectations exitCode = do
   let failures = maybe id (::) statusCheck $ catMaybes expResults
   debug $ withOffset 4 "Check success"
   let (x :: xs) = failures
-    | _ => pure Success
+    | _ => pure $ Success duration
   let Nothing = statusCheck
     | _ => pure $ Fail failures
   debug $ withOffset 4
@@ -322,7 +319,7 @@ checkExpectations exitCode = do
     | _ =>  pure $ Fail failures
   [] <- map catMaybes $ traverse askForGolden failures
     | xs => pure $ Fail xs
-  pure Success
+  pure $ Success duration
   where
     askForGolden : FailReason -> App e (Maybe FailReason)
     askForGolden (WrongOutput x given ((Generated ** expected) ::: [])) =
@@ -349,21 +346,22 @@ generateOutputs : SystemIO (SystemError :: e) =>
   Has [ State CurrentTest Test
       , State GlobalConfig Global
       , State RunContext RunCommand
+      , SystemClock
       , Exception TestError
       , Console
-      ] e => App e (Either TestResult Nat)
+      ] e => App e (Either TestResult (Clock Duration, Nat))
 generateOutputs = do
   t <- get CurrentTest
   debug $ withOffset 2 "Check pending"
   let False = t.pending
     | True => pure $ Left Skipped
   statusFile <- getStatusFile
-  ignore $ runCommand !getOutputFile !getErrorFile statusFile
-  Right . fromMaybe 0 . parsePositive <$>
+  (d, _) <- runCommand !getOutputFile !getErrorFile statusFile
+  Right . MkPair d . fromMaybe 0 . parsePositive <$>
     catchNew (readFile statusFile) (\err : FSError => pure "0")
   where
-    runCommand : (outputFile, errorFile, statusFile : String) -> App e Int
-    runCommand outputFile errorFile statusFile = do
+    runCommand : (outputFile, errorFile, statusFile : String) -> App e (Clock Duration, Int)
+    runCommand outputFile errorFile statusFile = durationOf $ do
       t <- get CurrentTest
       inputFile <- generateInput
       let cmd = """
@@ -380,13 +378,14 @@ testCore : SystemIO (SystemError :: e) =>
   Has [ State CurrentTest Test
       , State GlobalConfig Global
       , State RunContext RunCommand
+      , SystemClock
       , Exception TestError
       , Console
       ] e => App e TestResult
 testCore = do
-  Right exitCode <- generateOutputs
+  Right (duration, exitCode) <- generateOutputs
     | Left res => pure res
-  checkExpectations exitCode
+  checkExpectations exitCode duration
 
 -- the whole test execution, including pre and post operation
 performTest : SystemIO (SystemError :: e) =>
@@ -394,6 +393,7 @@ performTest : SystemIO (SystemError :: e) =>
   Has [ State CurrentTest Test
       , State GlobalConfig Global
       , State RunContext RunCommand
+      , SystemClock
       , Exception TestError
       , Console
       ] e => App e TestResult
@@ -410,6 +410,7 @@ runTest : SystemIO (SystemError :: e) =>
   Has [ State CurrentTest Test
       , State RunContext RunCommand
       , State GlobalConfig Global
+      , SystemClock
       , Exception TestError
       , Console
       ] e => App e TestResult
@@ -467,11 +468,13 @@ testOutput (Left y) = do
 testOutput (Right Skipped) = do
   t <- get CurrentTest
   putStrLn $ withOffset 2 "\{!pending} \{t.name}"
-testOutput (Right Success) = do
+testOutput (Right (Success duration)) = do
+  displayTime <- timing <$> get RunContext
+  let time = if displayTime then " (\{showDuration duration})" else ""
   t <- get CurrentTest
   if !(hideSuccess <$> get RunContext)
      then pure ()
-     else putStrLn $ withOffset 2 "\{!ok} \{t.name}"
+     else putStrLn $ withOffset 2 "\{!ok} \{t.name}\{time}"
 testOutput (Right (Fail xs)) = do
   t <- get CurrentTest
   putStrLn $ withOffset 2 $ !red "\{!ko} \{t.name}:"
@@ -520,6 +523,7 @@ data SuiteProcess a = None | Partial a | Total a
 runAllTests : SystemIO (SystemError :: TestError :: e) =>
   SystemIO (SystemError :: e) =>
   FileSystem (FSError :: TestError :: e) =>
+  SystemClock (TestError :: e) =>
   Console (TestError :: e) =>
   Has [ State RunContext RunCommand
       , State GlobalConfig Global
@@ -733,6 +737,7 @@ runReplica : SystemIO (SystemError :: TestError :: e) =>
   SystemIO (SystemError :: e) =>
   FileSystem (FSError :: TestError :: e) =>
   FileSystem (FSError :: e) =>
+  SystemClock (TestError :: e) =>
   Console (TestError :: e) =>
   Has [ State RunContext RunCommand
       , State GlobalConfig Global

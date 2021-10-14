@@ -3,6 +3,7 @@ module Replica.App
 import public Control.App
 import public Control.App.Console
 
+import public Replica.App.Clock
 import public Replica.App.FileSystem
 import public Replica.App.Info
 import public Replica.App.Log
