@@ -27,11 +27,11 @@
         "nixpkgs-chez-racket": "nixpkgs-chez-racket"
       },
       "locked": {
-        "lastModified": 1632512335,
-        "narHash": "sha256-PfhOjUdPS9frBG2ouHdK5CvbS1jro25/uSVsGvMfcJ0=",
+        "lastModified": 1638814453,
+        "narHash": "sha256-knlyTFQJuRvXlrn+ymPqqOSx/aLbZ7/TSfstSrEw7Zg=",
         "owner": "idris-lang",
         "repo": "Idris2",
-        "rev": "a9ccf4db4f69677c5287a1278ab167247dac161d",
+        "rev": "3f3912e93429f4956809d5da866f0f32fba37ea5",
         "type": "github"
       },
       "original": {

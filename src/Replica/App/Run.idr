@@ -38,7 +38,7 @@ import Replica.Other.Validation
 data RunContext : Type where
 
 normalize : String -> String
-normalize = removeTrailingNL . unlines . map unwords . filter (not . force . null) . map (assert_total words) . lines
+normalize = removeTrailingNL . unlines . map unwords . filter (not . null) . map (assert_total words) . lines
 
 
 -- Create the folders needed by Replica (usually ./.replica/test and ./.replica/log)
@@ -470,7 +470,7 @@ testOutput (Right Skipped) = do
   putStrLn $ withOffset 2 "\{!pending} \{t.name}"
 testOutput (Right (Success duration)) = do
   displayTime <- timing <$> get RunContext
-  let time = if displayTime then " (\{showDuration duration})" else ""
+  let time : String := if displayTime then " (\{showDuration duration})" else ""
   t <- get CurrentTest
   if !(hideSuccess <$> get RunContext)
      then pure ()
