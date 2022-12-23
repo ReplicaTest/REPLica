@@ -8,7 +8,11 @@
 /tests/replica/*/.replica/test/*/status
 /tests/replica/*/.replica/test/*/error
 examples/.replica
+
+/.direnv
 /tests.json
 /.history
 /.replica.json
 src/Replica/Version.idr
+
+/build
