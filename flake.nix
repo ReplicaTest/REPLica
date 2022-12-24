@@ -31,7 +31,7 @@
         preBuild = "cd libs/papers";
       };
       my-papers = papersPkg.installLibrary;
-      pkgs = buildIdris {
+      replica_ = buildIdris {
         projectName = "replica";
         src = ./.;
         idrisLibraries = [ my-papers ];
@@ -39,9 +39,17 @@
           make
         '';
       };
+      replica = replica_.build.overrideAttrs (attrs: {
+        patchPhase = ''
+          sed "s/\`git describe --tags\`/unknown-${self.shortRev or "dirty"}/" -i Makefile
+        '';
+        buildPhase = ''
+          make
+        '';
+      });
     in rec {
-      packages = pkgs // idrisPkgs;
-      defaultPackage = pkgs.build;
+      packages = replica // idrisPkgs;
+      defaultPackage = replica.build;
       checks = {
          build = self.defaultPackage.${system};
          test  = npkgs.runCommand "runTests" {}
