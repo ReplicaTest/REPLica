@@ -4,8 +4,9 @@
   inputs.flake-utils.url = github:numtide/flake-utils;
   inputs.idris = {
     type = "github";
-    owner = "idris-lang";
+    owner = "berewt";
     repo = "Idris2";
+    ref = "flake-update";
     inputs.nixpkgs.follows = "nixpkgs";
     inputs.flake-utils.follows = "flake-utils";
   };
@@ -39,8 +40,15 @@
         '';
       };
     in rec {
-      packages = papersPkg // pkgs // idrisPkgs;
+      packages = pkgs // idrisPkgs;
       defaultPackage = pkgs.build;
+      checks = {
+         build = self.defaultPackage.${system};
+         test  = npkgs.runCommand "runTests" {}
+         ''
+         make test
+         '';
+      };
       devShell = npkgs.mkShell {
         packages = [ idrisPkgs.idris2 npkgs.rlwrap dhall dhall-json ];
         inputsFrom = [ papers ];
