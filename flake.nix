@@ -64,7 +64,7 @@
         shellHook = ''
           # awful hack to get the papers package in nix develop
           pushd ${papers}/libs/papers
-          idris2 --install papers.ipkg --build-dir /tmp
+          idris2 --install papers.ipkg --build-dir `mktemp -d` > /dev/null
           popd
           alias idris2="rlwrap -s 1000 idris2 --no-banner"
         '';
