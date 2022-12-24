@@ -38,7 +38,7 @@ import Replica.Other.Validation
 data RunContext : Type where
 
 normalize : String -> String
-normalize = removeTrailingNL . unlines . map unwords . filter (not . force . null) . map (assert_total words) . lines
+normalize = removeTrailingNL . unlines . map unwords . filter (not . null) . map (assert_total words) . lines
 
 
 -- Create the folders needed by Replica (usually ./.replica/test and ./.replica/log)
@@ -470,7 +470,7 @@ testOutput (Right Skipped) = do
   putStrLn $ withOffset 2 "\{!pending} \{t.name}"
 testOutput (Right (Success duration)) = do
   displayTime <- timing <$> get RunContext
-  let time = if displayTime then " (\{showDuration duration})" else ""
+  let time : String := if displayTime then " (\{showDuration duration})" else ""
   t <- get CurrentTest
   if !(hideSuccess <$> get RunContext)
      then pure ()
@@ -543,8 +543,8 @@ runAllTests plan = do
 
     prepareBatch : Nat -> SuitePlan -> (List Test, SuitePlan)
     prepareBatch n plan = if n == 0
-                             then (plan.now, record {now = []} plan)
-                             else map (\n' => record {now = n'} plan) $ splitAt n plan.now
+                             then (plan.now, {now := []} plan)
+                             else map (\n' => {now := n'} plan) $ splitAt n plan.now
 
     processTest : Test -> App e (Test, Either TestError TestResult)
     processTest x = do
@@ -559,7 +559,7 @@ runAllTests plan = do
     processResult : SuitePlan -> TestPlan -> List (Test, Either TestError TestResult) ->
                     Either TestPlan (SuitePlan, TestPlan)
     processResult (SPlan _ [] [] skipped) y xs = Left (updateOnBatchResults xs y)
-    processResult x y xs = case updateOnBatchResults xs (record {ready $= (x::)} y) of
+    processResult x y xs = case updateOnBatchResults xs ({ready $= (x::)} y) of
                                 Plan (x'::now) later => Right (x', Plan now later)
                                 p => Left p
 
@@ -650,7 +650,7 @@ runAllTests plan = do
              if p && any (not . isFullSuccess . snd) suiteResults
                 then pure acc'
                 else do
-                  let plan'' = record {waitingOthers $= maybe id (::) stuckPlan} plan'
+                  let plan'' = {waitingOthers $= maybe id (::) stuckPlan} plan'
                   batchTests acc' $ assert_smaller plan $ updateOnBatchResults suiteResults plan''
 
 report : Console e => State GlobalConfig Global e => Stats -> App e ()
