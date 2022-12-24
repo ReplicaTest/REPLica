@@ -48,8 +48,8 @@
         '';
       });
     in rec {
-      packages = replica // idrisPkgs;
-      defaultPackage = replica.build;
+      packages = replica_ // idrisPkgs;
+      defaultPackage = replica;
       checks = {
          build = self.defaultPackage.${system};
          test  = npkgs.runCommand "runTests" {}
