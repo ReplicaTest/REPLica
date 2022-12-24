@@ -76,7 +76,7 @@ interactivePart = inj $ MkOption
   where
     go : Bool -> Builder RunCommand' -> Either String (Builder RunCommand')
     go = ifSame interactive
-                (\x => record {interactive = Right x})
+                (\x => {interactive := Right x})
                 (const $ const "Contradictory values for interactive")
 
 timingPart : Part (Builder RunCommand') Bool
@@ -93,7 +93,7 @@ timingPart = inj $ MkOption
   where
     go : Bool -> Builder RunCommand' -> Either String (Builder RunCommand')
     go = ifSame interactive
-                (\x => record {timing = Right x})
+                (\x => {timing := Right x})
                 (const $ const "Contradictory values for timing")
 
 workingDirPart : Part (Builder RunCommand') String
@@ -106,7 +106,7 @@ workingDirPart = inj $ MkOption
   where
     go : String -> Builder RunCommand' -> Either String (Builder RunCommand')
     go = one workingDir
-             (\x => record {workingDir = Right x})
+             (\x => {workingDir := Right x})
              (\x, y => "More than one working directony were given: \{y}, \{x}")
 
 
@@ -120,7 +120,7 @@ threadsPart = inj $ MkOption
   where
     go : Nat -> Builder RunCommand' -> Either String (Builder RunCommand')
     go = one threads
-             (\x => record {threads = Right x})
+             (\x => {threads := Right x})
              (\x, y => "More than one threads values were given: \{show y}, \{show x}")
 
 punitivePart : Part (Builder RunCommand') Bool
@@ -133,7 +133,7 @@ punitivePart = inj $ MkOption
       where
         go : Bool -> Builder RunCommand' -> Either String (Builder RunCommand')
         go = ifSame punitive
-                    (\x => record {punitive = Right x})
+                    (\x => {punitive := Right x})
                     (const $ const "Contradictory values for punitive mode")
 
 hideSuccessPart : Part (Builder RunCommand') Bool
@@ -146,7 +146,7 @@ hideSuccessPart = inj $ MkOption
       where
         go : Bool -> Builder RunCommand' -> Either String (Builder RunCommand')
         go = ifSame hideSuccess
-                    (\x => record {hideSuccess = Right x})
+                    (\x => {hideSuccess := Right x})
                     (const $ const "Contradictory values for hide success mode")
 
 optParseRun : OptParse (Builder RunCommand') RunCommand
@@ -158,8 +158,8 @@ optParseRun =
        (liftAp threadsPart)
        (liftAp hideSuccessPart)
        (liftAp punitivePart)
-       (embed filter (\x => record {filter = x}) optParseFilter)
-       (embed global (\x => record {global = x}) optParseGlobal)
+       (embed filter (\x => {filter := x}) optParseFilter)
+       (embed global (\x => {global := x}) optParseGlobal)
     |]
 
 defaultRun : Default RunCommand'
@@ -174,7 +174,7 @@ defaultRun = MkRunCommand
        defaultGlobal
 
 withGivenGlobal : Default RunCommand' -> Default Global' -> Default RunCommand'
-withGivenGlobal x g = record {global = g <+> defaultGlobal} x
+withGivenGlobal x g = {global := g <+> defaultGlobal} x
 
 export
 parseRun : Default Global' -> List1 String -> ParseResult RunCommand

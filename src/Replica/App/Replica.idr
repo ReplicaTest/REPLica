@@ -70,7 +70,7 @@ setAbsoluteReplicaDir = do
      then pure ()
      else do
        pwd <- getCurrentDir
-       modify GlobalConfig (record {replicaDir = pwd </> rdir})
+       modify GlobalConfig ({replicaDir := pwd </> rdir})
 
 export
 getSingleTestDir : Has

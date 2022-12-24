@@ -46,7 +46,7 @@ runSet x = do
     (\err : ReplicaError => putStrLn (show err) >> pure 251)
   where
     noGlobal : Maybe Global
-    noGlobal = build $ initBuilder (record {files = Just []} defaultGlobal)
+    noGlobal = build $ initBuilder ({files := Just []} defaultGlobal)
 
 covering
 runNew : NewCommand -> IO Int

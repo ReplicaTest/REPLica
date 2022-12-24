@@ -65,7 +65,7 @@ formatPart = inj $ MkOption
     parseFormat x = Nothing
     go : FileFormat -> Builder NewCommand' -> Either String (Builder NewCommand')
     go = one format
-             (\x => record {format = Right x})
+             (\x => {format := Right x})
              (\x, y => "More than one format given: \{show y}, \{show x}")
 
 includeSamplePart : Part (Builder NewCommand') Bool
@@ -80,7 +80,7 @@ includeSamplePart = inj $ MkOption (toList1
   where
     go : Bool -> Builder NewCommand' -> Either String (Builder NewCommand')
     go = ifSame includeSample
-                (\x => record {includeSample = Right x})
+                (\x => {includeSample := Right x})
                 (const $ const "Contradictory values for includeSample")
 
 fileParamPart : Part (Builder NewCommand') String
@@ -91,9 +91,9 @@ fileParamPart = inj $ MkParam1 "NEW_TEST_FILE" Just go
     checkFileType "dhall" = Just Dhall
     checkFileType x = Nothing
     setFile : String -> Builder NewCommand' -> Builder NewCommand'
-    setFile f = record {file = Right f}
+    setFile f = {file := Right f}
     setFileAndFormat : String -> FileFormat -> Builder NewCommand' -> Builder NewCommand'
-    setFileAndFormat f fmt = record {file = Right f, format = Right fmt}
+    setFileAndFormat f fmt = {file := Right f, format := Right fmt}
     go : String -> Builder NewCommand' -> Either String (Builder NewCommand')
     go = one file
              (\x, cmd => case cmd.format of
