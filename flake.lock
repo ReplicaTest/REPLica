@@ -72,7 +72,7 @@
     "papers": {
       "flake": false,
       "locked": {
-        "dir": "/libs/papers",
+        "dir": "libs/papers",
         "lastModified": 1671813588,
         "narHash": "sha256-ZqtSvE2+36apjLyKaKPF68VJ3fZViaVWswInUNccgAY=",
         "owner": "idris-lang",
@@ -81,7 +81,7 @@
         "type": "github"
       },
       "original": {
-        "dir": "/libs/papers",
+        "dir": "libs/papers",
         "owner": "idris-lang",
         "repo": "Idris2",
         "type": "github"

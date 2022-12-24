@@ -3,12 +3,17 @@
 
   inputs.flake-utils.url = github:numtide/flake-utils;
   inputs.idris = {
-    url = github:idris-lang/Idris2;
+    type = "github";
+    owner = "idris-lang";
+    repo = "Idris2";
     inputs.nixpkgs.follows = "nixpkgs";
     inputs.flake-utils.follows = "flake-utils";
   };
   inputs.papers = {
-    url = github:idris-lang/Idris2?dir=/libs/papers;
+    type = "github";
+    owner = "idris-lang";
+    repo = "Idris2";
+    dir = "libs/papers";
     flake = false;
   };
   outputs = { self, nixpkgs, idris, papers, flake-utils }: flake-utils.lib.eachDefaultSystem (system:
@@ -30,7 +35,6 @@
         src = ./.;
         idrisLibraries = [ my-papers ];
         preBuild = ''
-          idris2 --paths
           make
         '';
       };
@@ -38,8 +42,14 @@
       packages = papersPkg // pkgs // idrisPkgs;
       defaultPackage = pkgs.build;
       devShell = npkgs.mkShell {
-        buildInputs = [ idrisPkgs.idris2 npkgs.rlwrap dhall dhall-json ];
+        packages = [ idrisPkgs.idris2 npkgs.rlwrap dhall dhall-json ];
+        inputsFrom = [ papers ];
+
         shellHook = ''
+          # awful hack to get the papers package in nix develop
+          pushd ${papers}/libs/papers
+          idris2 --install papers.ipkg --build-dir /tmp
+          popd
           alias idris2="rlwrap -s 1000 idris2 --no-banner"
         '';
       };
