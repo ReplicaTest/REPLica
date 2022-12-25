@@ -22,6 +22,7 @@
       npkgs = import nixpkgs { inherit system; };
       inherit (npkgs) dhall;
       inherit (npkgs.haskellPackages) dhall-json;
+      inherit (npkgs) zsh;
       idrisPkgs = idris.packages.${system};
       buildIdris = idris.buildIdris.${system};
       papersPkg = buildIdris {
@@ -35,9 +36,6 @@
         projectName = "replica";
         src = ./.;
         idrisLibraries = [ my-papers ];
-        preBuild = ''
-          make
-        '';
       };
       replica = replica_.build.overrideAttrs (attrs: {
         patchPhase = ''
@@ -47,17 +45,22 @@
           make
         '';
       });
+      replicaTest = replica_.build.overrideAttrs (attrs: {
+        buildInputs = [ dhall dhall-json zsh ];
+        patchPhase = ''
+          sed "s/\`git describe --tags\`/unknown-${self.shortRev or "dirty"}/" -i Makefile
+        '';
+        buildPhase = ''
+          XDG_CACHE_HOME=`mktemp -d` make test
+        '';
+      });
     in rec {
       packages = replica_ // idrisPkgs;
       defaultPackage = replica;
       checks = {
-         build = self.defaultPackage.${system};
-         test  = npkgs.runCommand "runTests" {}
-         ''
-         make test
-         '';
+         makeFileTest  = replicaTest;
       };
-      devShell = npkgs.mkShell {
+      devShells.default = npkgs.mkShell {
         packages = [ idrisPkgs.idris2 npkgs.rlwrap dhall dhall-json ];
         inputsFrom = [ papers ];
 
