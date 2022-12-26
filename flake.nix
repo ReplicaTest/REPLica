@@ -37,19 +37,18 @@
         src = ./.;
         idrisLibraries = [ my-papers ];
       };
-      replica = replica_.build.overrideAttrs (attrs: {
+      replicaPatched = replica_.build.overrideAttrs (attrs: {
         patchPhase = ''
           sed "s/\`git describe --tags\`/unknown-${self.shortRev or "dirty"}/" -i Makefile
         '';
+      });
+      replica = replicaPatched.overrideAttrs (attrs: {
         buildPhase = ''
           make
         '';
       });
-      replicaTest = replica_.build.overrideAttrs (attrs: {
+      replicaTest = replicaPatched.overrideAttrs (attrs: {
         buildInputs = [ dhall dhall-json zsh ];
-        patchPhase = ''
-          sed "s/\`git describe --tags\`/unknown-${self.shortRev or "dirty"}/" -i Makefile
-        '';
         buildPhase = ''
           XDG_CACHE_HOME=`mktemp -d` make test
         '';
