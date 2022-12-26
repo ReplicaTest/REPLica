@@ -1,4 +1,6 @@
-let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
+let Replica
+  = env:REPLICA_DHALL
+  ? https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
 let Test = Replica.Test
 let Command/show = Replica.Command.show
 let toCommand = ./toCommand.dhall

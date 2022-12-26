@@ -23,7 +23,6 @@ src/Replica/Version.idr: FORCE # We force the update of the version on build
 
 install: build
 	mkdir -p ${DEST}
-	# ${RM} ${DEST}/replica
 	cp -r build/exec/* ${DEST}
 
 clean-test:
@@ -34,6 +33,7 @@ clean: clean-test
 	${RM} -r build
 
 .dhall.json:
+	echo ${REPLICA_DHALL}
 	dhall-to-json --file $? --output $@
 
 generate: ${REPLICA_TESTS} ${TEST} build

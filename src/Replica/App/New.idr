@@ -51,7 +51,9 @@ jsonContent withSample =
 
 dhallContent : (withSample : Bool) -> String
 dhallContent withSample = removeTrailingNL $ unlines
-  [ "let Replica = \{replicaURL}"
+  [ "let Replica"
+  , "  = env:REPLICA_DHALL"
+  , "  ? \{replicaURL}"
   , "let Prelude = Replica.Prelude"
   , "let Test = Replica.Test"
   , "let Status = Replica.Status"

@@ -1,4 +1,7 @@
-let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
+let Replica
+  = env:REPLICA_DHALL
+  ? https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
+
 
 let Meta = ./Meta/package.dhall
 
