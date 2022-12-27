@@ -50,8 +50,8 @@
       replicaTest = replicaPatched.overrideAttrs (attrs: {
         buildInputs = [ dhall dhall-json zsh ];
         buildPhase = ''
-          export REPLICA_DHALL="$PWD/replica-dhall/package.dhall"
-          ls -l $REPLICA_DHALL
+          export REPLICA_DHALL="$PWD/submodules/replica-dhall/package.dhall"
+          export DHALL_PRELUDE="$PWD/submodules/dhall-prelude/Prelude/package.dhall"
           XDG_CACHE_HOME=`mktemp -d` make test
         '';
       });

@@ -16,3 +16,4 @@ examples/.replica
 src/Replica/Version.idr
 
 /build
+/submodules
