@@ -51,7 +51,7 @@
         buildInputs = [ dhall dhall-json zsh ];
         buildPhase = ''
           export REPLICA_DHALL="$PWD/submodules/replica-dhall/package.dhall"
-          export DHALL_PRELUDE="$PWD/submodules/dhall-prelude/Prelude/package.dhall"
+          export DHALL_PRELUDE="$PWD/submodules/dhall-lang/Prelude/package.dhall"
           XDG_CACHE_HOME=`mktemp -d` make test
         '';
       });
