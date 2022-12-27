@@ -3,8 +3,11 @@ on:
   pull_request:
   push:
 jobs:
-  tests:
-    runs-on: ubuntu-latest
+  test-matrix:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v3
     - uses: cachix/install-nix-action@v18
@@ -12,4 +15,5 @@ jobs:
       with:
           name: replica
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+    - run: nix build
     - run: nix flake check --show-trace '.?submodules=1'
