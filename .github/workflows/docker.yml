@@ -8,18 +8,20 @@ on:
 
 jobs:
   push_to_registry:
-    name: Publish replica on Dcoker Hub
+    name: Publish replica on Docker Hub
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+      - name: Build docker image
+        run: |
+          nix build .#docker.x86_64-linux
       - name: Login to Docker Hub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-      - name: Build and push (latest)
-        uses: docker/build-push-action@v2
-        with:
-          push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/replica:latest
+      - name: Push docker image to DockerHub
+        run: |
+          docker load < result
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/replica:latest

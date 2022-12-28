@@ -55,12 +55,21 @@
           XDG_CACHE_HOME=`mktemp -d` make test
         '';
       });
-    in rec {
-      packages = replica_ // idrisPkgs;
-      defaultPackage = replica;
-      checks = {
-         makeFileTest  = replicaTest;
+      dockerImage = npkgs.dockerTools.buildImage {
+         name = "replica";
+         config = {
+            Cmd = [ "${replica}/bin/replica" ];
+         };
       };
+    in rec {
+
+      packages = {
+        default = replica;
+        docker = dockerImage;
+      };
+
+      checks.tests = replicaTest;
+
       devShells.default = npkgs.mkShell {
         packages = [ idrisPkgs.idris2 npkgs.rlwrap dhall dhall-json ];
         inputsFrom = [ papers ];
