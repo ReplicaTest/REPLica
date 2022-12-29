@@ -107,7 +107,7 @@ replicaDirPart = inj $ MkOption
   go
   where
     go : String -> Builder Global' -> Either String (Builder Global')
-    go = one replicaDir (\x => record {replicaDir = Right x})
+    go = one replicaDir (\x => {replicaDir := Right x})
                  (\x, y => "More than one replica dir were given: \{y}, \{x}")
 
 goldenDirPart : Part (Builder Global') (Maybe String)
@@ -119,7 +119,7 @@ goldenDirPart = inj $ MkOption
   go
   where
     go : Maybe String -> Builder Global' -> Either String (Builder Global')
-    go = one goldenDir (\x => record {goldenDir = Right x})
+    go = one goldenDir (\x => {goldenDir := Right x})
                  (\x, y => "More than one replica dir were given: \{show y}, \{show x}")
 
 export
@@ -151,7 +151,7 @@ logLevelPart = inj $ MkOption
     logLevelValue : Value (Maybe LogLevel)
     logLevelValue = MkValue "logLevel" (readLogLevel . toLower)
     go : Maybe LogLevel -> Builder Global' -> Either String (Builder Global')
-    go = ifSame logLevel (\x => record {logLevel = Right $ x})
+    go = ifSame logLevel (\x => {logLevel := Right $ x})
                          (const $ const "Contradictory log level")
 
 colourPart : Part (Builder Global') Bool
@@ -166,7 +166,7 @@ colourPart = inj $ MkOption
       go
     where
     go : Bool -> Builder Global' -> Either String (Builder Global')
-    go = ifSame colour (\x => record {colour = Right $ x})
+    go = ifSame colour (\x => {colour := Right $ x})
                        (const $ const "Contradictory colour settings")
 
 asciiPart : Part (Builder Global') Bool
@@ -181,7 +181,7 @@ asciiPart = inj $ MkOption
       go
       where
       go : Bool -> Builder Global' -> Either String (Builder Global')
-      go = ifSame ascii (\x => record {ascii = Right $ x})
+      go = ifSame ascii (\x => {ascii := Right $ x})
                         (const $ const "Contradictory ascii settings")
 
 export
@@ -212,7 +212,7 @@ diffPart = inj $ MkOption
     parseDiff : Value DiffCommand
     parseDiff = MkValue "CMD" (Just . readDiffCommand)
     compose : DiffCommand -> Builder Global' -> Either String (Builder Global')
-    compose = one diff (\x => record {diff = Right x})
+    compose = one diff (\x => {diff := Right x})
                   (\x, y => "More than one diff command were given: \{show y}, \{show x}")
 
 export
@@ -223,7 +223,7 @@ filesParamPart = inj $ MkParam "JSON_FILE(S)" (traverse checkNotOption) go
     checkNotOption x = guard (not $ "-" `isPrefixOf` x) $> x
     go : List String -> Builder Global' -> Either String (Builder Global')
     go = one files
-             (\x => record {files = Right x})
+             (\x => {files := Right x})
              (\x, y => "More than one set of test files were given: \{show y}, \{show x}")
 
 

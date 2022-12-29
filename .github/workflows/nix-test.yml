@@ -1,0 +1,26 @@
+name: "nix test"
+on:
+  pull_request:
+  push:
+    branchen:
+      - 'main'
+jobs:
+  test-matrix:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Set up nix
+      uses: cachix/install-nix-action@v18
+    - name: Start cachix
+      uses: cachix/cachix-action@v12
+      with:
+          name: replica
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+    - name: Test build
+      run: nix build
+    - name: Run tests
+      run: nix flake check --show-trace '.?submodules=1'

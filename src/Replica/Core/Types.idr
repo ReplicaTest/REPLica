@@ -287,10 +287,10 @@ asStats : List (Either TestError TestResult) -> Stats
 asStats = foldMap go
   where
     go : Either TestError TestResult -> Stats
-    go (Left x) = record {errors = 1} neutral
-    go (Right (Success _)) = record {successes = 1} neutral
-    go (Right (Fail xs)) = record {failures = 1} neutral
-    go (Right Skipped) = record {skipped = 1} neutral
+    go (Left x) = {errors := 1} neutral
+    go (Right (Success _)) = {successes := 1} neutral
+    go (Right (Fail xs)) = {failures := 1} neutral
+    go (Right Skipped) = {skipped := 1} neutral
 
 export
 countTests : Stats -> Nat

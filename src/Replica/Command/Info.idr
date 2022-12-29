@@ -51,15 +51,15 @@ showExpectationPart = inj $ MkOption
   where
     go : Bool -> Builder InfoCommand' -> Either String (Builder InfoCommand')
     go = ifSame showExpectation
-                (\x => record {showExpectation = Right x})
+                (\x => {showExpectation := Right x})
                 (const $ const "Contradictory values for expectations")
 
 
 optParseInfo : OptParse (Builder InfoCommand') InfoCommand
 optParseInfo = [|MkInfo
   (liftAp showExpectationPart)
-  (embed filter (\x => record {filter = x}) optParseFilter)
-  (embed global (\x => record {global = x}) optParseGlobal)
+  (embed filter (\x => {filter := x}) optParseFilter)
+  (embed global (\x => {global := x}) optParseGlobal)
   |]
 
 defaultInfo : Default InfoCommand'
@@ -70,7 +70,7 @@ defaultInfo = MkInfo
 
 export
 withGivenGlobal : Default InfoCommand' -> Default Global' -> Default InfoCommand'
-withGivenGlobal x g = record {global = g <+> defaultGlobal} x
+withGivenGlobal x g = {global := g <+> defaultGlobal} x
 
 export
 parseInfo : Default Global' ->  List1 String -> ParseResult InfoCommand

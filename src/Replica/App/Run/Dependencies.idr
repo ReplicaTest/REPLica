@@ -46,19 +46,19 @@ displayPlan plan = unlines $ ("Ready:"
 
 public export
 isReady : Test -> Bool
-isReady = force . null . require
+isReady = null . require
 
 dependsOnOther : List Test -> Bool
 dependsOnOther xs = any (not . flip elem (name <$> xs))  $ xs >>= require
 
 buildSuitePlan : List1 Test -> SuitePlan
 buildSuitePlan (x:::xs) = let
-  (now, later) = partition (force . null . require) $ x::xs
+  (now, later) = partition (null . require) $ x::xs
   in SPlan x.suite now later []
 
 removeRequirements : List String -> Test -> Test
 removeRequirements xs y
-  = record {require $= filter (not . (`elem` xs))} y
+  = {require $= filter (not . (`elem` xs))} y
 
 export
 buildPlan : (available : List Test) -> (rejected : List Test) -> TestPlan
@@ -82,7 +82,7 @@ sortResults
 export
 updateSuite : (successes, other : List String) -> SuitePlan -> SuitePlan
 updateSuite successes other (SPlan n now later skipped) = let
-  (now', later') = partition (force . null . require) $ removeRequirements successes <$> later
+  (now', later') = partition (null . require) $ removeRequirements successes <$> later
   (later'', skipped') = partition (not . any (`elem` other) . require) later'
   in SPlan n (now ++ now') later'' (skipped ++ (map (\t => (fromMaybe "unknown_test" $ head' t.require , t)) skipped'))
 

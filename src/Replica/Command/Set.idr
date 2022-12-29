@@ -73,7 +73,7 @@ targetPart = inj $ MkOption
   go
   where
     go : TargetConfig -> Builder SetCommand' -> Either String (Builder SetCommand')
-    go = ifSame target (\x => record {target = Right $ x})
+    go = ifSame target (\x => {target := Right $ x})
                        (const $ const "Contradictory target")
 
 setterPart : Part (Builder SetCommand') Setter
@@ -83,7 +83,7 @@ setterPart = inj $ MkParam1
   go
   where
     go : Setter -> Builder SetCommand' -> Either String (Builder SetCommand')
-    go s x = Right $ record {setter = Right $ s} x
+    go s = Right . {setter := Right $ s}
 
     buildSetter : ConfigValue -> (String, String) -> Maybe Setter
     buildSetter x = map (uncurry MkSetter) . jsonFor x
@@ -121,7 +121,7 @@ parseSet xs = InvalidOption xs
 
 export
 helpSet : Help
-helpSet = record {lastWords = Just footer} baseCommand
+helpSet = {lastWords := Just footer} baseCommand
   where
     baseCommand : Help
     baseCommand = commandHelp {b = Builder SetCommand'}
