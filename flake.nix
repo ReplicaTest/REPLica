@@ -60,6 +60,7 @@
          config = {
             Cmd = [ "${replica}/bin/replica" ];
          };
+         tag = "latest";
       };
     in rec {
 
