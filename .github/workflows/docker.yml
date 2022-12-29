@@ -31,4 +31,5 @@ jobs:
       - name: Push docker image to DockerHub
         run: |
           docker load < result
+          docker tag replica ${{ secrets.DOCKER_HUB_USERNAME }}/replica:latest
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/replica:latest
