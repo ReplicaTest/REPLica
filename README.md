@@ -10,8 +10,8 @@ Golden tests for Command Line interfaces.
     * [Why REPLica](#why-replica)
     * [Features](#features)
 * [Install](#install)
-    * [Requirements](#requirements)
-    * [Steps](#steps)
+    * [With `nix`](#with-nix)
+    * [Without `nix`](#without-nix)
 * [Quickstart](#quickstart)
     * [JSON](#json)
     * [dhall](#dhall)
@@ -85,13 +85,21 @@ Other CLI testing frameworks
 
 ## Install
 
-### Requirements
+### With `nix`
+
+`REPLica` is available as a `flake`.
+You can either reuse it as an input to your own `flake`s or use it directly with
+`nix run github:replicatest/replica`.
+
+### Without `nix`
+
+#### Requirements
 
 - [idris2](https://idris-lang.org) (v0.6.0);
 - [git](https://git-scm.com);
 - while you can go with it and use JSON, we recommand to use [dhall][] and [dhall-to-json][].
 
-### Steps
+#### Steps
 
 ```shell
 # clone repo
@@ -707,7 +715,7 @@ If you think that something is missing, don't hesitate to submit a feature reque
 
 ## Help and support
 
-PR are welcome.
+PR are welcome, you can take a look at the [contribution guidelines][].
 If you use the tool, I'd be happy to know about it, drop me a line on
 [twitter](https://twitter.com/berewt).
 
@@ -719,3 +727,4 @@ If you use the tool, I'd be happy to know about it, drop me a line on
 [test file]: https://github.com/ReplicaTest/REPLica/blob/main/tests.dhall
 [gitlab ci]: https://docs.gitlab.com/ee/ci/README.html
 [github actions]: https://github.com/features/actions
+[contribution guidelines]: ./CONTRIBUTING.md
