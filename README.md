@@ -87,7 +87,7 @@ Other CLI testing frameworks
 
 ### Requirements
 
-- [idris2](https://idris-lang.org) (v0.5.1);
+- [idris2](https://idris-lang.org) (v0.6.0);
 - [git](https://git-scm.com);
 - while you can go with it and use JSON, we recommand to use [dhall][] and [dhall-to-json][].
 
@@ -715,7 +715,6 @@ If you use the tool, I'd be happy to know about it, drop me a line on
 [dhall-to-json]: https://github.com/dhall-lang/dhall-haskell/blob/master/dhall-json/README.md
 [idris tests]: https://github.com/idris-lang/Idris2/tree/master/tests
 [idris_repo]: https://github.com/idris-lang/Idris2
-[idris_docker]: https://hub.docker.com/r/snazzybucket/idris2
 [golden]: https://ro-che.info/articles/2017-12-04-golden-tests
 [test file]: https://github.com/ReplicaTest/REPLica/blob/main/tests.dhall
 [gitlab ci]: https://docs.gitlab.com/ee/ci/README.html
