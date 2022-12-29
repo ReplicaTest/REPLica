@@ -2,7 +2,7 @@ name: "nix test"
 on:
   pull_request:
   push:
-    branchen:
+    branches:
       - 'main'
 jobs:
   test-matrix:
