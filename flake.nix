@@ -23,6 +23,7 @@
       inherit (npkgs) dhall;
       inherit (npkgs.haskellPackages) dhall-json;
       inherit (npkgs) zsh;
+      version = import ./version.nix;
       idrisPkgs = idris.packages.${system};
       buildIdris = idris.buildIdris.${system};
       papersPkg = buildIdris {
@@ -39,7 +40,7 @@
       };
       replicaPatched = replica_.build.overrideAttrs (attrs: {
         patchPhase = ''
-          sed "s/\`git describe --tags\`/unknown-${self.shortRev or "dirty"}/" -i Makefile
+          sed "s/\`git describe --tags\`/${version}-${self.shortRev or "dirty"}/" -i Makefile
         '';
       });
       replica = replicaPatched.overrideAttrs (attrs: {
