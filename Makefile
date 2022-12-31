@@ -6,6 +6,7 @@ TEST := tests.json
 
 REPLICA_TESTS_DHALL := $(wildcard ./tests/replica/*/*.dhall)
 REPLICA_TESTS := $(REPLICA_TESTS_DHALL:.dhall=.json)
+REPLICA_EXE := build/exec/replica
 
 DEST = ${HOME}/.local/bin
 
@@ -37,15 +38,9 @@ clean: clean-test
 	dhall-to-json --file $? --output $@
 
 generate: ${REPLICA_TESTS} ${TEST} build
-	build/exec/replica ${GLOBAL} run ${RUN} --interactive ${TEST}
+	${REPLICA_EXE} ${GLOBAL} run ${RUN} --interactive ${TEST}
 
 test: ${REPLICA_TESTS} ${TEST} build
-	build/exec/replica ${GLOBAL} run ${RUN} ${TEST}
+	${REPLICA_EXE} ${GLOBAL} run ${RUN} ${TEST}
 
-docker-build:
-	docker build . -t berewt/replica
-
-docker-run:
-	docker run berewt/replica
-
-all: test install docker-build
+all: test install
