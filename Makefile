@@ -14,12 +14,12 @@ build: src/Replica/Version.idr
 
 FORCE:
 
-src/Replica/Version.idr: FORCE # We force the update of the version on build
+src/Replica/Version.idr: version.nix
 	echo "module Replica.Version" > src/Replica/Version.idr
 	echo "" >> src/Replica/Version.idr
 	echo "export" >> src/Replica/Version.idr
 	echo "version : String" >> src/Replica/Version.idr
-	echo "version = \"`git describe --tags`\"" >> src/Replica/Version.idr
+	echo "version = `cat version.nix`" >> src/Replica/Version.idr
 
 install: build
 	mkdir -p ${DEST}
