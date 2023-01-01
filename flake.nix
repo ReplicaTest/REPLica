@@ -38,19 +38,14 @@
         src = ./.;
         idrisLibraries = [ my-papers ];
       };
-      replicaPatched = replica_.build.overrideAttrs (attrs: {
-        patchPhase = ''
-          sed "s/\`git describe --tags\`/${version}-${self.shortRev or "dirty"}/" -i Makefile
-        '';
-      });
-      replica = replicaPatched.overrideAttrs (attrs: {
+      replica = replica_.build.overrideAttrs (attrs: {
         pname = "replica";
         version = version;
         buildPhase = ''
           make
         '';
       });
-      replicaTest = replicaPatched.overrideAttrs (attrs: {
+      replicaTest = replica_.build.overrideAttrs (attrs: {
         buildInputs = [ dhall dhall-json zsh ];
         buildPhase = ''
           export REPLICA_DHALL="$PWD/submodules/replica-dhall/package.dhall"
