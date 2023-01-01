@@ -20,51 +20,54 @@
   outputs = { self, nixpkgs, idris, papers, flake-utils }: flake-utils.lib.eachDefaultSystem (system:
     let
       npkgs = import nixpkgs { inherit system; };
-      inherit (npkgs) dhall;
-      inherit (npkgs.haskellPackages) dhall-json;
-      inherit (npkgs) zsh;
-      version = import ./version.nix;
+      inherit (npkgs)
+        dhall
+        zsh;
+      inherit (npkgs.haskellPackages)
+        dhall-json;
       idrisPkgs = idris.packages.${system};
       buildIdris = idris.buildIdris.${system};
+
+      version = import ./version.nix;
+
       papersPkg = buildIdris {
         projectName = "papers";
         src = papers;
         idrisLibraries = [];
         preBuild = "cd libs/papers";
       };
-      my-papers = papersPkg.installLibrary;
+      papersLib = papersPkg.installLibrary;
+
       replica_ = buildIdris {
         projectName = "replica";
         src = ./.;
-        idrisLibraries = [ my-papers ];
+        idrisLibraries = [ papersLib ];
       };
-      replicaPatched = replica_.build.overrideAttrs (attrs: {
-        patchPhase = ''
-          sed "s/\`git describe --tags\`/${version}-${self.shortRev or "dirty"}/" -i Makefile
-        '';
-      });
-      replica = replicaPatched.overrideAttrs (attrs: {
+      replica = replica_.build.overrideAttrs (attrs: {
         pname = "replica";
         version = version;
         buildPhase = ''
           make
         '';
       });
-      replicaTest = replicaPatched.overrideAttrs (attrs: {
+
+      replicaTest = replica_.build.overrideAttrs (attrs: {
         buildInputs = [ dhall dhall-json zsh ];
         buildPhase = ''
-          export REPLICA_DHALL="$PWD/submodules/replica-dhall/package.dhall"
-          export DHALL_PRELUDE="$PWD/submodules/dhall-lang/Prelude/package.dhall"
+          REPLICA_DHALL="$PWD/submodules/replica-dhall/package.dhall" \
+          DHALL_PRELUDE="$PWD/submodules/dhall-lang/Prelude/package.dhall" \
           XDG_CACHE_HOME=`mktemp -d` make test
         '';
       });
+
       dockerImage = npkgs.dockerTools.buildImage {
          name = "replica";
          config = {
             Cmd = [ "${replica}/bin/replica" ];
          };
-         tag = "latest";
+         tag = "v${version}";
       };
+
     in rec {
 
       packages = {
@@ -75,17 +78,12 @@
       checks.tests = replicaTest;
 
       devShells.default = npkgs.mkShell {
-        packages = [ idrisPkgs.idris2 npkgs.rlwrap dhall dhall-json ];
-        inputsFrom = [ papers ];
-
+        packages = [ idrisPkgs.idris2 papersLib npkgs.rlwrap dhall dhall-json ];
         shellHook = ''
-          # awful hack to get the papers package in nix develop
-          pushd ${papers}/libs/papers
-          idris2 --install papers.ipkg --build-dir `mktemp -d` > /dev/null
-          popd
           alias idris2="rlwrap -s 1000 idris2 --no-banner"
         '';
       };
+
     }
   );
 }
