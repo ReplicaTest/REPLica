@@ -44,6 +44,8 @@
         '';
       });
       replica = replicaPatched.overrideAttrs (attrs: {
+        pname = "replica";
+        version = version;
         buildPhase = ''
           make
         '';

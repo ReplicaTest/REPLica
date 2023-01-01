@@ -1,6 +1,6 @@
 # REPLica
 
-[![ci](https://github.com/ReplicaTest/REPLica/actions/workflows/ci.yml/badge.svg)](https://github.com/ReplicaTest/REPLica/actions/workflows/ci.yml)
+[![ci](https://github.com/ReplicaTest/REPLica/actions/workflows/nix-test.yml/badge.svg)](https://github.com/ReplicaTest/REPLica/actions/workflows/nix-test.yml)
 
 Golden tests for Command Line interfaces.
 
