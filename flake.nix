@@ -20,12 +20,16 @@
   outputs = { self, nixpkgs, idris, papers, flake-utils }: flake-utils.lib.eachDefaultSystem (system:
     let
       npkgs = import nixpkgs { inherit system; };
-      inherit (npkgs) dhall;
-      inherit (npkgs.haskellPackages) dhall-json;
-      inherit (npkgs) zsh;
-      version = import ./version.nix;
+      inherit (npkgs)
+        dhall
+        zsh;
+      inherit (npkgs.haskellPackages)
+        dhall-json;
       idrisPkgs = idris.packages.${system};
       buildIdris = idris.buildIdris.${system};
+
+      version = import ./version.nix;
+
       papersPkg = buildIdris {
         projectName = "papers";
         src = papers;
@@ -33,6 +37,7 @@
         preBuild = "cd libs/papers";
       };
       papersLib = papersPkg.installLibrary;
+
       replica_ = buildIdris {
         projectName = "replica";
         src = ./.;
@@ -45,6 +50,7 @@
           make
         '';
       });
+
       replicaTest = replica_.build.overrideAttrs (attrs: {
         buildInputs = [ dhall dhall-json zsh ];
         buildPhase = ''
@@ -53,13 +59,15 @@
           XDG_CACHE_HOME=`mktemp -d` make test
         '';
       });
+
       dockerImage = npkgs.dockerTools.buildImage {
          name = "replica";
          config = {
             Cmd = [ "${replica}/bin/replica" ];
          };
-         tag = "latest";
+         tag = "v${version}";
       };
+
     in rec {
 
       packages = {
@@ -71,11 +79,11 @@
 
       devShells.default = npkgs.mkShell {
         packages = [ idrisPkgs.idris2 papersLib npkgs.rlwrap dhall dhall-json ];
-
         shellHook = ''
           alias idris2="rlwrap -s 1000 idris2 --no-banner"
         '';
       };
+
     }
   );
 }
