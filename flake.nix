@@ -32,11 +32,11 @@
         idrisLibraries = [];
         preBuild = "cd libs/papers";
       };
-      my-papers = papersPkg.installLibrary;
+      papersLib = papersPkg.installLibrary;
       replica_ = buildIdris {
         projectName = "replica";
         src = ./.;
-        idrisLibraries = [ my-papers ];
+        idrisLibraries = [ papersLib ];
       };
       replica = replica_.build.overrideAttrs (attrs: {
         pname = "replica";
@@ -48,8 +48,8 @@
       replicaTest = replica_.build.overrideAttrs (attrs: {
         buildInputs = [ dhall dhall-json zsh ];
         buildPhase = ''
-          export REPLICA_DHALL="$PWD/submodules/replica-dhall/package.dhall"
-          export DHALL_PRELUDE="$PWD/submodules/dhall-lang/Prelude/package.dhall"
+          REPLICA_DHALL="$PWD/submodules/replica-dhall/package.dhall" \
+          DHALL_PRELUDE="$PWD/submodules/dhall-lang/Prelude/package.dhall" \
           XDG_CACHE_HOME=`mktemp -d` make test
         '';
       });
@@ -70,14 +70,9 @@
       checks.tests = replicaTest;
 
       devShells.default = npkgs.mkShell {
-        packages = [ idrisPkgs.idris2 npkgs.rlwrap dhall dhall-json ];
-        inputsFrom = [ papers ];
+        packages = [ idrisPkgs.idris2 papersLib npkgs.rlwrap dhall dhall-json ];
 
         shellHook = ''
-          # awful hack to get the papers package in nix develop
-          pushd ${papers}/libs/papers
-          idris2 --install papers.ipkg --build-dir `mktemp -d` > /dev/null
-          popd
           alias idris2="rlwrap -s 1000 idris2 --no-banner"
         '';
       };
