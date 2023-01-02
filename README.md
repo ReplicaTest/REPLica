@@ -13,7 +13,6 @@ Golden tests for Command Line interfaces.
     * [With `nix`](#with-nix)
     * [Without `nix`](#without-nix)
 * [Quickstart](#quickstart)
-    * [dhall](#dhall)
 * [Writing tests](#writing-tests)
     * [`command`](#command)
     * [`beforeTest` and `afterTest`](#beforetest-and-aftertest)
