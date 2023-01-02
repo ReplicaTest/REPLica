@@ -1,4 +1,4 @@
-# REPLica
+# REPLica (using JSON)
 
 [![ci](https://github.com/ReplicaTest/REPLica/actions/workflows/nix-test.yml/badge.svg)](https://github.com/ReplicaTest/REPLica/actions/workflows/nix-test.yml)
 
@@ -13,7 +13,6 @@ Golden tests for Command Line interfaces.
     * [With `nix`](#with-nix)
     * [Without `nix`](#without-nix)
 * [Quickstart](#quickstart)
-    * [dhall](#dhall)
 * [Writing tests](#writing-tests)
     * [`command`](#command)
     * [`beforeTest` and `afterTest`](#beforetest-and-aftertest)
@@ -49,8 +48,8 @@ If you want a more detailed introduction to golden testing, here is a [nice intr
 The idea comes from the way tests are implemented in [idris2][idris tests].
 
 Its approach is similar to the one proposed by CI/CD tools like [github actions][] or [gitlab ci][]:
-a tests suite is described in a [dhall][] configuration file (you can also use json, in this case,
-move to the [json documentation](/documentation/README_JSON.md)) that is processed by the tool to generate tests.
+a tests suite is described in a JSON configuration file (you can also use [dhall][], in this case,
+move to the [dhall documentation](/README.md)) that is processed by the tool to generate tests.
 
 ### Why REPLica?
 
@@ -96,9 +95,6 @@ You can either reuse it as an input to your own `flake`s or use it directly with
 
 - [idris2](https://idris-lang.org) (v0.6.0);
 - [git](https://git-scm.com);
-- [dhall][] and [dhall-to-json][].
-
-#### Steps
 
 ```shell
 # clone repo
@@ -116,44 +112,42 @@ replica help
 ## Quickstart
 
 ```shell
-replica new hello.dhall
+replica new hello.json
 ```
 
-This command creates a `hello.dhall` file that contains a sample test:
+This command creates a `hello.json` file that contains a sample test:
 
 ```
-$ replica new hello.dhall
-Test file created (Dhall): hello.dhall
+$ replica new hello.json
+Test file created (JSON): hello.json
 
-$ cat hello.dhall
-let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/v0.1.1/package.dhall
-let Prelude = Replica.Prelude
-let Test = Replica.Test
-let Status = Replica.Status
-let Expectation = Replica.Expectation
-
-let hello = Test.Success ::
-   { command = "echo \"Hello, World!\""
-   , description = Some "This test is a placeholder, you can edit it."
-   , spaceSensitive = False
-   , stdOut = Expectation ::
-       {consecutive = ["Hello", "World"], end = Some "!"}
-   }
-
-let tests : Replica.Type = toMap { hello }
-
-in tests
+$ cat hello.json
+{
+  "hello": {
+    "command": "echo \"Hello, World!\"",
+    "description": "This test is a placeholder, you can edit it.",
+    "spaceSensitive": false,
+    "status": true,
+    "stdOut": {
+      "generated": false,
+      "consecutive": [
+        "Hello",
+        "World"
+      ],
+      "end": "!"
+    }
+  }
+}
 ```
 
 The given test checks that the output of `echo "Hello, World!"` contains consecutively
 `Hello` and "World", and ends with an exclamation mark (`'!'`).
 
-At this stage, `replica` isn't able to process `dhall` files directlyr.
-We have to generate a JSON file first and then to execute it.
+You can directly run replica on it: `replica run hello.json`.
+You should obtain the following result:
 
 
 ```
-$ dhall-to-json --output hello.json --file hello.dhall
 $ replica run hello.json
 --------------------------------------------------------------------------------
 Running tests...
@@ -163,35 +157,27 @@ Summary:
   ✅  (Success): 1 / 1
 ```
 
-Now, edit the `hello.dhall` file and change the `stdOut` part so that your file looks
+Now, edit the `hello.json` file and change the `stdOut` part so that your file looks
 like this:
 
-```dhall
-let Replica = https://raw.githubusercontent.com/ReplicaTest/replica-dhall/v0.1.1/package.dhall
-let Prelude = Replica.Prelude
-let Test = Replica.Test
-let Status = Replica.Status
-let Expectation = Replica.Expectation
-
-let hello = Test.Success ::
-   { command = "echo \"Hello, World!\""
-   , description = Some "This test is a placeholder, you can edit it."
-   , spaceSensitive = False
-   , stdOut = Replica.Generated True
-   }
-
-let tests : Replica.Type = toMap { hello }
-
-in tests
+```json
+{
+  "hello": {
+    "command": "echo \"Hello, World!\"",
+    "description": "This test is a placeholder, you can edit it.",
+    "spaceSensitive": false,
+    "status": true,
+    "stdOut": true
+  }
+}
 ```
 
 Instead of providing an expectation, we now rely on a golden value:
 a previously saved value of the output of the tested command.
-Unfortunately, we didn't save any yet... and thus **if we recompile**
-`hello.json`, `replica run hello.json` fails now:
+Unfortunately, we didn't save any yet... and thus `replica run hello.json`
+fails now:
 
 ```
-$ dhall-to-json --output hello.json --file hello.dhall
 $ replica run hello.json
 --------------------------------------------------------------------------------
 Running tests...
@@ -240,18 +226,19 @@ Summary:
 
 TADA... it works.
 
-If you want to see it fails again, you can modify the command in `hello.dhall`.
-
-The main motivation of using dhall is:
-- type safety;
-- ease the generation of a set of similar tests.
-
+If you want to see it fails again, you can modify the command in `hello.json`.
 
 ## Writing tests
 
 ### `command`
 
 The [Quickstart](#quickstart) section introduced a first, minimal test:
+
+```json
+{ "hello": {"command": "echo \"hello, world!\""} }
+```
+
+or in dhall:
 
 ```dhall
 { hello = Replica.Test :: {command = "echo \"Hello, world!\""}}
@@ -275,12 +262,11 @@ and an error will be emited if a command of `beforeTest` or `afterTest` failed.
 REPLica distinguish an error (when something went wrong during the execution of a test)
 and a failure (when the test doesn't meet the expectations).
 
-```dhall
-{ test_cat = Replica.Test ::
-  { beforeTest = ["echo \"test\" > foo.txt"]
-  , command = "cat foo.txt"
-  , afterTest = ["rm foo.txt"]
-  }
+```json
+{ "test cat":
+  { "beforeTest": ["echo \"test\" > foo.txt"]
+  , "command": ["cat foo.txt"]
+  , "afterTest": ["rm foo.txt"]
 }
 ```
 
@@ -290,11 +276,11 @@ The `require` field ensure that a test will be executed only if the given list o
 tests succeed.
 If one of the required tests failed, the test will be marked as ignore.
 
-```dhall
-{ test_first = {command = "echo \"Hello, \""}
-, test_then =
-   { command =  "echo \"world!\""
-   , require = ["test_first"]
+```json
+{ "test_first": {"command": "echo \"Hello, \""}
+, "test_then":
+   { "command":  "echo \"world!\""
+   , "require": ["test_first"]
    }
 }
 ```
@@ -304,10 +290,10 @@ If one of the required tests failed, the test will be marked as ignore.
 The `input` field allows you to define inputs for your command, repacing the standard input by it's
 content.
 
-```dhall
-{ send_text_to_cat = Replica.Test ::
-  { command = "cat"
-  , input = Some "hello, wold!"
+```json
+{ "send_text_to_cat":
+  { "command": "cat"
+  , "input" = "hello, wold!"
   }
 }
 ```
@@ -320,16 +306,12 @@ The tests are run suite by suite (if there is no cross-suite requirements).
 Test suite are optional. Tests with no suite belongs to a special suite with no name,
 which can't be specifically selected or excluded from a run
 
-```dhall
-{ hello = Replica.Test ::
-  { command = "echo \"Hello, world!\""
-  , suite = Some "hello"
-  }
-}
-```
-
 You can run a specific suite with the `-s` option: `replica run -s hello` and
 you can exclude a suite with `-S`.
+
+```json
+{ "hello": {"command": "echo \"hello, world!\""}, "suite": "hello"}
+```
 
 ### `tags`
 
@@ -337,16 +319,12 @@ The `tags` field allow you to select a group of tests in your test suites.
 Once you've defined tags for your tests, you can decide to run test that have (or didn't have) a
 given tags thanks to REPLica command line options.
 
-```dhall
-{ hello = Replica.Test ::
-  { command = "echo \"Hello, world!\""
-  , tags = ["example", "hello"]
-  }
-}
+```json
+{ "hello": {"command": "echo \"hello, world!\""}, "tags": ["example", "hello"]}
 ```
 
-And then you can run `replica -t example your_file.json` to include tests tagged with `example`
-or `replica -T example your_file.json` to exclude them.
+And then you can run `replica run -t example your_file.json` to include tests tagged with `example`
+or `replica run -T example your_file.json` to exclude them.
 
 ### `description`
 
@@ -364,12 +342,12 @@ You can either set the value to a boolean,
 to check if the command succeeded (`true`) or failed (`false`),
 or to a natural, to check if the exit code was exactly the one provided.
 
-```dhall
-{ "success1": Replica.Test::{command = "true", status = Replica.Status.Success}
-, "success2": Replica.Test::{command = "true", status = Replica.Status.Exactly 0}
-, "success3": Replica.Test::{command = "false", status = Replica.Status.Failure}
-, "success4": Replica.Test::{command = "false", status = Replica.Status.Exactly 1}
-, "failure":  Replica.Test::{command = "false", status = Replica.Status.Exactly 2}
+```json
+{ "success1": {"command": "true", "status": true}
+, "success2": {"command": "true", "status": 0}
+, "success3": {"command": "false", "status": false}
+, "success4": {"command": "false", "status": 1}
+, "failure":  {"command": "false", "status": 2}
 }
 ```
 
@@ -411,12 +389,8 @@ The simpliest expectation is a golden value.
 A test expecting a golden value will fail, as long as you don't set this golden value using
 the interactive mode (`replica run --interactive`)
 
-```dhall
-{ hello = Replica.Test ::
-  { command = "echo \"Hello, world!\""
-  , stdOut = Replica.Expectation.Golden
-  }
-}
+```json
+{ "hello": {"command": "echo \"hello, world!\"", "stdOut": true} }
 ```
 
 ### Exact value
@@ -424,12 +398,8 @@ the interactive mode (`replica run --interactive`)
 If you set a string as an expectation, the content of the corresponding source is expected to be
 exactly this string.
 
-```dhall
-{ hello = Replica.Test ::
-  { command = "echo \"Hello, world!\""
-  , stdOut = Replica.Expectation.Exact "Hello, world!"
-  }
-}
+```json
+{ "hello": {"command": "echo \"hello, world!\"", "stdOut": "hello, world!\n"} }
 ```
 
 ### Contains
@@ -437,12 +407,8 @@ exactly this string.
 If you set a list of strings as a value, the source must contains all the values of the list, in any
 order.
 
-```dhall
-{ hello = Replica.Minimal ::
-  { command = "echo \"Hello, world!\""
-  , stdOut = Replica.Expectations.Contains ["world, hello"]
-  }
-}
+```json
+{ "hello": {"command": "echo \"hello, world!\"", "stdOut": ["world", "hello"]} }
 ```
 
 ### Complex expectations
@@ -458,15 +424,14 @@ A complex expectation is an object where the following fields are considered:
 - `contains`: a list of string, that must be found in the source.
 - `consecutive`: a list of string, that must be found in this order (optionnaly with some text in between) in the source.
 
-```dhall
-{ hello = Replica.Minimal::
-  { command = "echo \"Hello, world!\""
-  , stdOut = Replica.Expectation
-      { generated = True
-      , consecutive = ["hello", "world"]
-      , end = Some "!"
-      }
-  }
+```json
+{ "hello":
+    {"command": "echo \"hello, world!\"",
+      "stdOut": { "generated": true
+                , "consecutive": ["hello", "world"]
+                , "end": "!"
+                }
+    }
 }
 ```
 
@@ -475,12 +440,8 @@ A complex expectation is an object where the following fields are considered:
 By default, `stdOut` is expecting a golden value and `stdErr` is not checked.
 If you want, you can ignore `stdOut` explicitly:
 
-```dhall
-{ hello = Replica.Test ::
-  { command = "echo \"Hello, world!\""
-  , stdOut = Replica.Expectation.Ignored
-  }
-}
+```json
+{ "hello": {"command": "echo \"hello, world!\"", "stdOut": false} }
 ```
 
 ## Going further
@@ -511,7 +472,7 @@ If you think that something is missing, don't hesitate to submit a feature reque
 
 PR are welcome, you can take a look at the [contribution guidelines][].
 If you use the tool, I'd be happy to know about it, drop me a line on
-[twitter](https://twitter.com/berewt).
+[mastodon](https://piaille.fr/@berewt).
 
 [dhall]: https://dhall-lang.org
 [dhall-to-json]: https://github.com/dhall-lang/dhall-haskell/blob/master/dhall-json/README.md
