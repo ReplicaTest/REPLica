@@ -147,7 +147,7 @@ in tests
 The given test checks that the output of `echo "Hello, World!"` contains consecutively
 `Hello` and "World", and ends with an exclamation mark (`'!'`).
 
-At this stage, `replica` isn't able to process `dhall` files directlyr.
+At this stage, `replica` isn't able to process `dhall` files directly.
 We have to generate a JSON file first and then to execute it.
 
 
