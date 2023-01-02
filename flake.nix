@@ -17,7 +17,13 @@
     dir = "libs/papers";
     flake = false;
   };
-  outputs = { self, nixpkgs, idris, papers, flake-utils }: flake-utils.lib.eachDefaultSystem (system:
+  inputs.replicadhall = {
+    type = "github";
+    owner = "ReplicaTest";
+    repo = "replica-dhall";
+  };
+  outputs = { self, nixpkgs, idris, papers, flake-utils, replicadhall }:
+    flake-utils.lib.eachDefaultSystem (system:
     let
       npkgs = import nixpkgs { inherit system; };
       inherit (npkgs)
@@ -26,6 +32,8 @@
       inherit (npkgs.haskellPackages)
         dhall-json;
       idrisPkgs = idris.packages.${system};
+      replica_dhall = replicadhall.packages.${system}.default;
+
       buildIdris = idris.buildIdris.${system};
 
       version = import ./version.nix;
@@ -52,10 +60,9 @@
       });
 
       replicaTest = replica_.build.overrideAttrs (attrs: {
-        buildInputs = [ dhall dhall-json zsh ];
+        buildInputs = [ replica_dhall dhall dhall-json zsh ];
         buildPhase = ''
           REPLICA_DHALL="$PWD/submodules/replica-dhall/package.dhall" \
-          DHALL_PRELUDE="$PWD/submodules/dhall-lang/Prelude/package.dhall" \
           XDG_CACHE_HOME=`mktemp -d` make test
         '';
       });

@@ -1,7 +1,0 @@
-[submodule "submodules/dhall-lang"]
-	path = submodules/dhall-lang
-	url = https://github.com/dhall-lang/dhall-lang
-  branch = v20.2.0
-[submodule "submodules/replica-dhall"]
-	path = submodules/replica-dhall
-	url = https://github.com/ReplicaTest/replica-dhall
