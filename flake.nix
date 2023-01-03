@@ -62,8 +62,9 @@
       replicaTest = replica_.build.overrideAttrs (attrs: {
         buildInputs = [ replica_dhall dhall dhall-json zsh ];
         buildPhase = ''
-          REPLICA_DHALL="$PWD/submodules/replica-dhall/package.dhall" \
-          XDG_CACHE_HOME=`mktemp -d` make test
+          cp -r ${replica_dhall}/.cache .cache
+          chmod -R u+w .cache
+          XDG_CACHE_HOME=.cache make test
         '';
       });
 
