@@ -3,7 +3,7 @@
 .SUFFIXES: .dhall .json
 
 TEST_DHALL := tests.dhall
-TEST := tests.json
+TEST := $(TEST_DHALL:.dhall=.json)
 
 REPLICA_TESTS_DHALL := $(wildcard ./tests/replica/*/*.dhall)
 REPLICA_TESTS := $(REPLICA_TESTS_DHALL:.dhall=.json)
@@ -37,8 +37,8 @@ clean: clean-test
 .dhall.json:
 	dhall-to-json --file $? --output $@
 
-freeze: ${REPLICA_TESTS_DHALL} ${TEST_DHALL}
-	dhall freeze $?
+freeze:
+	find . -name "*.dhall" -exec dhall freeze {} \;
 
 generate: ${REPLICA_TESTS} ${TEST} build
 	${REPLICA_EXE} ${GLOBAL} run ${RUN} --interactive ${TEST}

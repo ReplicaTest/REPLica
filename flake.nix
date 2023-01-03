@@ -64,7 +64,10 @@
         buildPhase = ''
           cp -r ${replica_dhall}/.cache .cache
           chmod -R u+w .cache
-          XDG_CACHE_HOME=.cache make test
+          export XDG_CACHE_HOME=.cache
+          # We remove the replica dhall url here to force cache resolution
+          sed 's/https.*$/missing/' -i tests.dhall
+          make test
         '';
       });
 
