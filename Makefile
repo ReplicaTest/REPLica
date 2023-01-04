@@ -2,11 +2,15 @@
 
 .SUFFIXES: .dhall .json
 
-TEST := tests.json
+TEST_DHALL := tests.dhall
+TEST := $(TEST_DHALL:.dhall=.json)
 
 REPLICA_TESTS_DHALL := $(wildcard ./tests/replica/*/*.dhall)
 REPLICA_TESTS := $(REPLICA_TESTS_DHALL:.dhall=.json)
 REPLICA_EXE := build/exec/replica
+
+META_DHALL := $(wildcard ./tests/META/*.dhall)
+TEST_INCLUDE_DHALL := $(wildcard ./tests/*.dhall)
 
 DEST = ${HOME}/.local/bin
 
@@ -34,8 +38,10 @@ clean: clean-test
 	${RM} -r build
 
 .dhall.json:
-	echo ${REPLICA_DHALL}
 	dhall-to-json --file $? --output $@
+
+freeze: ${TEST_DHALL} ${META_DHALL} ${TEST_INCLUDE_DHALL}
+	dhall freeze $?
 
 generate: ${REPLICA_TESTS} ${TEST} build
 	${REPLICA_EXE} ${GLOBAL} run ${RUN} --interactive ${TEST}

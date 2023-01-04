@@ -1,5 +1,5 @@
-let Replica
-  = env:REPLICA_DHALL
-  ? https://raw.githubusercontent.com/ReplicaTest/REPLica/main/dhall/replica.dhall
+let Replica =
+        env:REPLICA_DHALL
+      ? https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
 
-in { hello = Replica.Minimal::{command = "echo \"Hello, world!\""}}
+in  { hello = Replica.Test::{ command = "echo \"Hello, world!\"" } }
