@@ -1,17 +1,11 @@
+let Meta = ./Meta/package.dhall
+
 let Replica =
         env:REPLICA_DHALL
       ? https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
           sha256:b11ac5d5195183145bbff03ba7b99e98b4e1bce32c725af5bedf01b4b328a741
 
-let Meta = ./Meta/package.dhall
-
-let Test = Replica.Test
-
 let Status = Replica.Status
-
-let Expectation = Replica.Expectation
-
-let runTestsJSON = Meta.Run ([] : List Text) [ "tests.json" ]
 
 let tests
     : Replica.Type

@@ -7,12 +7,6 @@ let Idris =
       Replica.Command.Idris
       with default.executable = "${env:PWD as Text}/build/exec/replica"
 
-let Test = Replica.Test
-
-let Status = Replica.Status
-
-let Expectation = Replica.Expectation
-
 let Context = Idris.Context
 
 let tests
