@@ -23,4 +23,4 @@ jobs:
     - name: Test build
       run: nix build
     - name: Run tests
-      run: nix flake check --show-trace '.?submodules=1'
+      run: nix flake check --show-trace
