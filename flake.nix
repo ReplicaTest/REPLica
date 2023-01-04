@@ -65,9 +65,7 @@
           cp -r ${replica_dhall}/.cache .cache
           chmod -R u+w .cache
           export XDG_CACHE_HOME=.cache
-          # We remove the replica dhall url here to force cache resolution
-          sed 's/https.*$/missing/' -i tests.dhall
-          make test
+          make test RUN="-T online" 
         '';
       });
 

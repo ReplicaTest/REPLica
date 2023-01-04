@@ -9,6 +9,9 @@ REPLICA_TESTS_DHALL := $(wildcard ./tests/replica/*/*.dhall)
 REPLICA_TESTS := $(REPLICA_TESTS_DHALL:.dhall=.json)
 REPLICA_EXE := build/exec/replica
 
+META_DHALL := $(wildcard ./tests/META/*.dhall)
+TEST_INCLUDE_DHALL := $(wildcard ./tests/*.dhall)
+
 DEST = ${HOME}/.local/bin
 
 build: src/Replica/Version.idr
@@ -37,8 +40,8 @@ clean: clean-test
 .dhall.json:
 	dhall-to-json --file $? --output $@
 
-freeze:
-	find . -name "*.dhall" -exec dhall freeze {} \;
+freeze: ${TEST_DHALL} ${META_DHALL} ${TEST_INCLUDE_DHALL}
+	dhall freeze $?
 
 generate: ${REPLICA_TESTS} ${TEST} build
 	${REPLICA_EXE} ${GLOBAL} run ${RUN} --interactive ${TEST}

@@ -255,7 +255,7 @@ let tests
               , "rm -f generated.json"
               , "rm -f generated.dhall"
               ]
-            with tags = [ "meta", "new" ]
+            with tags = [ "meta", "new", "online" ]
           , new_dhall_empty_template =
               (Meta.Run ([] : List Text) [ "generated.json" ])
             with workingDir = Some "tests/replica/new"
@@ -272,7 +272,7 @@ let tests
               , "rm -f generated.json"
               , "rm -f generated.dhall"
               ]
-            with tags = [ "meta", "new" ]
+            with tags = [ "meta", "new", "online" ]
           }
       # [ { mapKey = "test space"
           , mapValue = Test::{
