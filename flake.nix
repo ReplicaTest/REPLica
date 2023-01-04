@@ -17,12 +17,13 @@
     dir = "libs/papers";
     flake = false;
   };
+  inputs.pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
   inputs.replicadhall = {
     type = "github";
     owner = "ReplicaTest";
     repo = "replica-dhall";
   };
-  outputs = { self, nixpkgs, idris, papers, flake-utils, replicadhall }:
+  outputs = { self, nixpkgs, idris, papers, flake-utils, pre-commit-hooks, replicadhall }:
     flake-utils.lib.eachDefaultSystem (system:
     let
       npkgs = import nixpkgs { inherit system; };
@@ -65,7 +66,7 @@
           cp -r ${replica_dhall}/.cache .cache
           chmod -R u+w .cache
           export XDG_CACHE_HOME=.cache
-          make test RUN="-T online" 
+          make test RUN="-T online"
         '';
       });
 
@@ -84,7 +85,16 @@
         docker = dockerImage;
       };
 
-      checks.tests = replicaTest;
+      checks = {
+        tests = replicaTest;
+        pre-commit-check = pre-commit-hooks.lib.${system}.run {
+            src = ./.;
+            hooks = {
+              nixpkgs-fmt.enable = true;
+              dhall-format = true;
+            };
+          };
+      };
 
       devShells.default = npkgs.mkShell {
         packages = [ idrisPkgs.idris2 papersLib npkgs.rlwrap dhall dhall-json ];
