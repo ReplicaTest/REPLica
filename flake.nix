@@ -25,84 +25,85 @@
   };
   outputs = { self, nixpkgs, idris, papers, flake-utils, pre-commit-hooks, replicadhall }:
     flake-utils.lib.eachDefaultSystem (system:
-    let
-      npkgs = import nixpkgs { inherit system; };
-      inherit (npkgs)
-        dhall
-        zsh;
-      inherit (npkgs.haskellPackages)
-        dhall-json;
-      idrisPkgs = idris.packages.${system};
-      replica_dhall = replicadhall.packages.${system}.default;
+      let
+        npkgs = import nixpkgs { inherit system; };
+        inherit (npkgs)
+          dhall
+          zsh;
+        inherit (npkgs.haskellPackages)
+          dhall-json;
+        idrisPkgs = idris.packages.${system};
+        replica_dhall = replicadhall.packages.${system}.default;
 
-      buildIdris = idris.buildIdris.${system};
+        buildIdris = idris.buildIdris.${system};
 
-      version = import ./version.nix;
+        version = import ./version.nix;
 
-      papersPkg = buildIdris {
-        projectName = "papers";
-        src = papers;
-        idrisLibraries = [];
-        preBuild = "cd libs/papers";
-      };
-      papersLib = papersPkg.installLibrary;
+        papersPkg = buildIdris {
+          projectName = "papers";
+          src = papers;
+          idrisLibraries = [ ];
+          preBuild = "cd libs/papers";
+        };
+        papersLib = papersPkg.installLibrary;
 
-      replica_ = buildIdris {
-        projectName = "replica";
-        src = ./.;
-        idrisLibraries = [ papersLib ];
-      };
-      replica = replica_.build.overrideAttrs (attrs: {
-        pname = "replica";
-        version = version;
-        buildPhase = ''
-          make
-        '';
-      });
+        replica_ = buildIdris {
+          projectName = "replica";
+          src = ./.;
+          idrisLibraries = [ papersLib ];
+        };
+        replica = replica_.build.overrideAttrs (attrs: {
+          pname = "replica";
+          version = version;
+          buildPhase = ''
+            make
+          '';
+        });
 
-      replicaTest = replica_.build.overrideAttrs (attrs: {
-        buildInputs = [ replica_dhall dhall dhall-json zsh ];
-        buildPhase = ''
-          cp -r ${replica_dhall}/.cache .cache
-          chmod -R u+w .cache
-          export XDG_CACHE_HOME=.cache
-          make test RUN="-T online"
-        '';
-      });
+        replicaTest = replica_.build.overrideAttrs (attrs: {
+          buildInputs = [ replica_dhall dhall dhall-json zsh ];
+          buildPhase = ''
+            cp -r ${replica_dhall}/.cache .cache
+            chmod -R u+w .cache
+            export XDG_CACHE_HOME=.cache
+            make test RUN="-T online"
+          '';
+        });
 
-      dockerImage = npkgs.dockerTools.buildImage {
-         name = "replica";
-         config = {
+        dockerImage = npkgs.dockerTools.buildImage {
+          name = "replica";
+          config = {
             Cmd = [ "${replica}/bin/replica" ];
-         };
-         tag = "v${version}";
-      };
+          };
+          tag = "v${version}";
+        };
 
-    in rec {
+      in
+      rec {
 
-      packages = {
-        default = replica;
-        docker = dockerImage;
-      };
+        packages = {
+          default = replica;
+          docker = dockerImage;
+        };
 
-      checks = {
-        tests = replicaTest;
-        pre-commit-check = pre-commit-hooks.lib.${system}.run {
+        checks = {
+          tests = replicaTest;
+          pre-commit-check = pre-commit-hooks.lib.${system}.run {
             src = ./.;
             hooks = {
               nixpkgs-fmt.enable = true;
-              dhall-format = true;
+              dhall-format.enable = true;
             };
           };
-      };
+        };
 
-      devShells.default = npkgs.mkShell {
-        packages = [ idrisPkgs.idris2 papersLib npkgs.rlwrap dhall dhall-json ];
-        shellHook = ''
-          alias idris2="rlwrap -s 1000 idris2 --no-banner"
-        '';
-      };
+        devShells.default = npkgs.mkShell {
+          packages = [ idrisPkgs.idris2 papersLib npkgs.rlwrap dhall dhall-json ];
+          shellHook = self.checks.${system}.pre-commit-check.shellHook + ''
+            alias idris2="rlwrap -s 1000 idris2 --no-banner"
+          '';
+        };
 
-    }
-  );
+      }
+    );
 }
