@@ -140,6 +140,11 @@ namespace Parser
     | InvalidMix String -- reason
     | Done a
 
+  public export
+  data ParsingFailure : ParseResult a -> Type where
+    OptionFailure : ParsingFailure (InvalidOption xs)
+    MixFailure : ParsingFailure (InvalidMix reason)
+
   export
   Functor ParseResult where
     map func (InvalidOption xs) = InvalidOption xs
