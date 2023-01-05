@@ -6,70 +6,78 @@ Golden tests for Command Line interfaces.
 
 ## Table of Content
 
-* [Purpose](#purpose)
-    * [Why REPLica](#why-replica)
-    * [Features](#features)
-* [Install](#install)
-    * [With `nix`](#with-nix)
-    * [Without `nix`](#without-nix)
-* [Quickstart](#quickstart)
-* [Writing tests](#writing-tests)
-    * [`command`](#command)
-    * [`beforeTest` and `afterTest`](#beforetest-and-aftertest)
-    * [`require`](#require)
-    * [`input`](#input)
-    * [`suite`](#suite)
-    * [`tags`](#tags)
-    * [`description`](#description)
-    * [`pending`](#description)
-    * [`status`](#status)
-    * [`spaceSensitive`](#spacesensitive)
-    * [`stdOut` and `stdErr`](#stdout-and-stderr)
-    * [`files`](#files)
-* [Expectations](#expectations)
-    * [Golden value](#golden-value)
-    * [Exact value](#exact-value)
-    * [Contains](#contains)
-    * [Complex expectations](#complex-expectations)
-    * [Ignoring output](#ignoring-output)
-* [Going further](#going-further)
-    * [REPLica in my project?](#replica-in-my-project)
-* [Roadmap](#roadmap)
-* [Help and support](#help-and-support)
+- [Purpose](#purpose)
+  - [Why REPLica](#why-replica)
+  - [Features](#features)
+- [Install](#install)
+  - [With `nix`](#with-nix)
+  - [Without `nix`](#without-nix)
+- [Quickstart](#quickstart)
+- [Writing tests](#writing-tests)
+  - [`command`](#command)
+  - [`beforeTest` and `afterTest`](#beforetest-and-aftertest)
+  - [`require`](#require)
+  - [`input`](#input)
+  - [`suite`](#suite)
+  - [`tags`](#tags)
+  - [`description`](#description)
+  - [`pending`](#description)
+  - [`status`](#status)
+  - [`spaceSensitive`](#spacesensitive)
+  - [`stdOut` and `stdErr`](#stdout-and-stderr)
+  - [`files`](#files)
+- [Expectations](#expectations)
+  - [Golden value](#golden-value)
+  - [Exact value](#exact-value)
+  - [Contains](#contains)
+  - [Complex expectations](#complex-expectations)
+  - [Ignoring output](#ignoring-output)
+- [Going further](#going-further)
+  - [REPLica in my project?](#replica-in-my-project)
+- [Roadmap](#roadmap)
+- [Help and support](#help-and-support)
 
 ## Purpose
 
-Replica aims at managing tests suites composed of command line interfaces calls.
+Replica aims at managing tests suites composed of command line interfaces
+calls.
 
-It compares the output of the command line to a "golden value": a stored value of the expected
-outcome of the command line call.
-If you want a more detailed introduction to golden testing, here is a [nice introduction][golden].
+It compares the output of the command line to a "golden value":
+a stored value of the expected outcome of the command line call.
+If you want a more detailed introduction to golden testing,
+here is a [nice introduction][golden].
 
 The idea comes from the way tests are implemented in [idris2][idris tests].
 
-Its approach is similar to the one proposed by CI/CD tools like [github actions][] or [gitlab ci][]:
-a tests suite is described in a [dhall][] configuration file (you can also use json, in this case,
-move to the [json documentation](/documentation/README_JSON.md)) that is processed by the tool to generate tests.
+Its approach is similar to the one proposed by CI/CD tools
+like [github actions][] or [gitlab ci][]:
+a tests suite is described in a [dhall][] configuration file
+(you can also use json, in this case, visit the
+[json documentation][]) that is processed by the tool to generate tests.
 
 ### Why REPLica?
 
 There are few frameworks that are dedicated to CLI tests.
-None of them, to my knowledge, mix of a structured document to document the test
-and of interactive golden value generation to specify the expectation.
+None of them, to my knowledge, mix of a structured document to document the
+test and of interactive golden value generation to specify the expectation.
 
-This approach ease the modification of the CLI output in the early development phases and
-provide a clear syntax for test development and maintenance.
+This approach ease the modification of the CLI output in the early development
+phases and provide a clear syntax for test development and maintenance.
 
 Other CLI testing frameworks
 
-- [Idris2 test package][idris tests]: REPLica's daddy. REPLica was created with the idea to provide
-  a more structured way to write tests (the JSON/Dhall specification) and to develop the
+- [Idris2 test package][idris tests]: REPLica's daddy.
+  REPLica was created with the idea to provide a more structured way to write
+  tests (the JSON/Dhall specification) and to develop the
   functionalities (see the [features])
-- [Pester](https://github.com/pester/Pester): By far more mature than REPLica, thought for
-  powershell, it includes test coverage, test discovery, complex expectations DSL and so on.
-  Pester doesn't, however, provides a way to generate expectation from previous run.
-- [shelltestrunner](https://hackage.haskell.org/package/shelltestrunner): another minimal tool to
-  test CLI, but without golden value generation or test tags.
+- [Pester](https://github.com/pester/Pester): By far more mature than REPLica,
+  thought for powershell, it includes test coverage, test discovery,
+  complex expectations DSL and so on.
+  Pester doesn't, however, provides a way to generate expectation from previous
+  run.
+- [shelltestrunner](https://hackage.haskell.org/package/shelltestrunner):
+  another minimal tool to test CLI, but without golden value generation or test
+  tags.
 
 ### Features
 
@@ -86,8 +94,8 @@ Other CLI testing frameworks
 ### With `nix`
 
 `REPLica` is available as a `flake`.
-You can either reuse it as an input to your own `flake`s or use it directly with
-`nix run github:replicatest/replica`.
+You can either reuse it as an input to your own `flake`s or use it directly
+with `nix run github:replicatest/replica`.
 
 ### Without `nix`
 
@@ -120,7 +128,7 @@ replica new hello.dhall
 
 This command creates a `hello.dhall` file that contains a sample test:
 
-```
+```txt
 $ replica new hello.dhall
 Test file created (Dhall): hello.dhall
 
@@ -150,8 +158,7 @@ The given test checks that the output of `echo "Hello, World!"` contains consecu
 At this stage, `replica` isn't able to process `dhall` files directly.
 We have to generate a JSON file first and then to execute it.
 
-
-```
+```txt
 $ dhall-to-json --output hello.json --file hello.dhall
 $ replica run hello.json
 --------------------------------------------------------------------------------
@@ -189,7 +196,7 @@ a previously saved value of the output of the tested command.
 Unfortunately, we didn't save any yet... and thus **if we recompile**
 `hello.json`, `replica run hello.json` fails now:
 
-```
+```txt
 $ dhall-to-json --output hello.json --file hello.dhall
 $ replica run hello.json
 --------------------------------------------------------------------------------
@@ -206,11 +213,13 @@ Summary:
   ❌  (Failure): 1 / 1
 ```
 
-It's totally fine: `replica` has no golden value for this test yet, we need to build one.
-To do so, we will rerun the test in the interactive mode: `replica run --interactive hello.json`.
+It's totally fine: `replica` has no golden value for this test yet,
+we need to build one.
+To do so, we will rerun the test in the interactive mode:
+`replica run --interactive hello.json`.
 Now you should be prompted if you want to set the golden value for the test:
 
-```
+```txt
 $ replica run --interactive hello.json
 --------------------------------------------------------------------------------
 Running tests...
@@ -223,10 +232,11 @@ Do you want to set the golden value? [N/y]
 ```
 
 Answer `y` (or `yes`) and the test should pass.
-Now that the golden value is set, we can retry to run the suite in a non interactive mode:
+Now that the golden value is set,
+we can retry to run the suite in a non interactive mode:
 `replica run hello.json`...
 
-```
+```txt
 $ replica run hello.json
 --------------------------------------------------------------------------------
 Running tests...
@@ -236,15 +246,14 @@ Summary:
   ✅  (Success): 1 / 1
 ```
 
-
 TADA... it works.
 
 If you want to see it fails again, you can modify the command in `hello.dhall`.
 
 The main motivation of using dhall is:
+
 - type safety;
 - ease the generation of a set of similar tests.
-
 
 ## Writing tests
 
@@ -259,7 +268,8 @@ The [Quickstart](#quickstart) section introduced a first, minimal test:
 We have declared the only mandatory field of a test: `command`.
 
 It defines the command that will be tested.
-REPLica will save the exit code of the command, the standard output and the standard error.
+REPLica will save the exit code of the command,
+the standard output and the standard error.
 By default, REPLica will only check the output,
 comparing it to the golden value that will be stored in the `interactive` mode.
 
@@ -271,7 +281,8 @@ It means that you can't share (at the moment), variables between `beforeTest`, `
 and `afterTest`.
 `command` won't be executed if `beforeTest` failed,
 and an error will be emited if a command of `beforeTest` or `afterTest` failed.
-REPLica distinguish an error (when something went wrong during the execution of a test)
+REPLica distinguish an error
+(when something went wrong during the execution of a test)
 and a failure (when the test doesn't meet the expectations).
 
 ```dhall
@@ -300,8 +311,8 @@ If one of the required tests failed, the test will be marked as ignore.
 
 ### `input`
 
-The `input` field allows you to define inputs for your command, repacing the standard input by it's
-content.
+The `input` field allows you to define inputs for your command,
+repacing the standard input by it's content.
 
 ```dhall
 { send_text_to_cat = Replica.Test ::
@@ -333,8 +344,8 @@ you can exclude a suite with `-S`.
 ### `tags`
 
 The `tags` field allow you to select a group of tests in your test suites.
-Once you've defined tags for your tests, you can decide to run test that have (or didn't have) a
-given tags thanks to REPLica command line options.
+Once you've defined tags for your tests, you can decide to run test that have
+(or didn't have) a given tags thanks to REPLica command line options.
 
 ```dhall
 { hello = Replica.Test ::
@@ -344,7 +355,8 @@ given tags thanks to REPLica command line options.
 }
 ```
 
-And then you can run `replica -t example your_file.json` to include tests tagged with `example`
+And then you can run `replica -t example your_file.json`
+to include tests tagged with `example`
 or `replica -T example your_file.json` to exclude them.
 
 ### `description`
@@ -374,10 +386,12 @@ or to a natural, to check if the exit code was exactly the one provided.
 
 ### `spaceSensitive`
 
-If this field is set to `false`, all text comparisons that are performed in this test are
-space insensitive: it means that the content that the given and expected content are
-"normalized" before the comparison: consecutive space-like characters are replaced by a
-single space ands consecutive new lines are replaced by a single new line.
+If this field is set to `false`,
+all text comparisons that are performed in this test are space insensitive:
+it means that the content that the given and expected content are
+"normalized" before the comparison: consecutive space-like characters are
+replaced by a single space ands consecutive new lines are replaced by
+a single new line.
 
 ### `stdOut` and `stdErr`
 
@@ -386,17 +400,18 @@ to a (previously generated) golden value,
 and ignores totally the output of the standard error (`stdErr`).
 
 The fields `stdOut` and `stdErr` allow you to modify this behaviour.
-The possible values for these fields are describe in the [expectations](#expectations)
-section.
+The possible values for these fields are describe in the
+[expectations](#expectations) section.
 
 ### `files`
 
 Aside the standard output and error,
-REPLica can also check contents of files, as it can be useful to check the result of
-a command.
+REPLica can also check contents of files, as it can be useful to check
+the result of a command.
 To do so, we can use the `files` field,
-which expects an object where keys must be relative paths to the fields to check and
-[expectations](#expectations) as a value, to define what is expected for the fields.
+which expects an object where keys must be relative paths to the fields
+to check and [expectations](#expectations) as a value,
+to define what is expected for the fields.
 
 ## Expectations
 
@@ -407,7 +422,8 @@ ease the pain.
 ### Golden value
 
 The simpliest expectation is a golden value.
-A test expecting a golden value will fail, as long as you don't set this golden value using
+A test expecting a golden value will fail,
+as long as you don't set this golden value using
 the interactive mode (`replica run --interactive`)
 
 ```dhall
@@ -420,8 +436,8 @@ the interactive mode (`replica run --interactive`)
 
 ### Exact value
 
-If you set a string as an expectation, the content of the corresponding source is expected to be
-exactly this string.
+If you set a string as an expectation,
+the content of the corresponding source is expected to be exactly this string.
 
 ```dhall
 { hello = Replica.Test ::
@@ -433,8 +449,8 @@ exactly this string.
 
 ### Contains
 
-If you set a list of strings as a value, the source must contains all the values of the list, in any
-order.
+If you set a list of strings as a value, the source must contains
+all the values of the list, in any order.
 
 ```dhall
 { hello = Replica.Minimal ::
@@ -446,16 +462,18 @@ order.
 
 ### Complex expectations
 
-Complex expectations are a solutions that allows you to compose the solutions given before
-and that enables a few other types of expectations.
+Complex expectations are a solutions that allows you to compose the solutions
+given before and that enables a few other types of expectations.
 A complex expectation is an object where the following fields are considered:
 
-- `generated`: true or false, depending on whether you want to use a golden value or not.
+- `generated`: true or false, depending on whether you want to use
+  a golden value or not.
 - `exact`: if set, the exact expectation for this source.
 - `start`: if set, the source must start with this string.
 - `end`: if set, the source must end with this string.
 - `contains`: a list of string, that must be found in the source.
-- `consecutive`: a list of string, that must be found in this order (optionnaly with some text in between) in the source.
+- `consecutive`: a list of string, that must be found in this order
+  (optionnaly with some text in between) in the source.
 
 ```dhall
 { hello = Replica.Minimal::
@@ -484,8 +502,8 @@ If you want, you can ignore `stdOut` explicitly:
 
 ## Going further
 
-REPLica is tested with itelf, you can check the [test file][] to have an overview of the
-possibilities.
+REPLica is tested with itelf, you can check the [test file][] to have
+an overview of the possibilities.
 
 The [documentation](/documentation) folder also contain useful pieces of information:
 
@@ -505,7 +523,6 @@ I keep track of the things I want to implement in a
 [dedicated project](https://github.com/ReplicaTest/REPLica/projects/3).
 If you think that something is missing, don't hesitate to submit a feature request.
 
-
 ## Help and support
 
 PR are welcome, you can take a look at the [contribution guidelines][].
@@ -515,9 +532,9 @@ If you use the tool, I'd be happy to know about it, drop me a line on
 [dhall]: https://dhall-lang.org
 [dhall-to-json]: https://github.com/dhall-lang/dhall-haskell/blob/master/dhall-json/README.md
 [idris tests]: https://github.com/idris-lang/Idris2/tree/master/tests
-[idris_repo]: https://github.com/idris-lang/Idris2
 [golden]: https://ro-che.info/articles/2017-12-04-golden-tests
 [test file]: https://github.com/ReplicaTest/REPLica/blob/main/tests.dhall
 [gitlab ci]: https://docs.gitlab.com/ee/ci/README.html
 [github actions]: https://github.com/features/actions
 [contribution guidelines]: /CONTRIBUTING.md
+[json documentation]: /documentation/README_JSON.md

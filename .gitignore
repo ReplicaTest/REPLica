@@ -9,6 +9,8 @@
 /tests/replica/*/.replica/test/*/error
 examples/.replica
 
+/.pre-commit-config.yaml
+
 /.direnv
 /tests.json
 /.history
@@ -17,3 +19,4 @@ src/Replica/Version.idr
 
 /build
 /submodules
+
