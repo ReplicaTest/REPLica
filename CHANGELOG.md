@@ -1,5 +1,21 @@
 # REPLica changelog
 
+## next version
+
+- INTERNAL:
+  - pre-commit hooks
+
+## version 0.5.2
+
+- INTERNAL:
+  - Explicit version management
+
+## version 0.5.1
+
+- INTERNAL:
+  - Port the code base to Idris2 0.6.0
+  - Upgrade nix flake (`nix check` and `nix develop` works)
+
 ## version 0.5.0
 
 - CHANGE:
