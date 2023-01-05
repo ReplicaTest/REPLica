@@ -100,7 +100,9 @@
                   it in pre-commit
                 '';
                 enable = true;
-                entry = "make test -t online";
+                entry = ''
+                  make test RUN="-t online"
+                '';
                 pass_filenames = false;
                 stages = [ "push" ];
               };
