@@ -38,7 +38,7 @@ data ReplicaError
 export
 Show ReplicaError where
   show (CantAccessTestFile x) = "Can't access file \{x}"
-  show (InvalidJSON xs) = removeTrailingNL $ unlines $ "Can't parse JSON:" ::xs
+  show (InvalidJSON xs) = removeTrailingNL $ unlines $ "Can't parse JSON:" :: xs
 
 export
 testDir : String -> String

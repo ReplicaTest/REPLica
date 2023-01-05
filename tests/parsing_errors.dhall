@@ -15,7 +15,7 @@ let tests
                 Meta::{ command = "tagada", testFiles = [ "tests.json" ] }
             )
           with description = Some "Unknown commands are rejected, showing help"
-          with status = Status.Exactly 254
+          with status = Status.Exactly 253
           with tags = [ "meta", "parser" ]
         , unknown_parameter =
             (Meta.Run [ "--oops" ] [ "tests.json" ])

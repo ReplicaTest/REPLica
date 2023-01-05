@@ -20,42 +20,82 @@ import Replica.Other.Validation
 
 %default total
 
-covering
-runRun : RunCommand -> IO Int
-runRun ctx = run $ new ctx.global $ new ctx $ handle runReplica
-    (\stats => pure (cast $ stats.failures + stats.errors))
-    (\err : ReplicaError => putStrLn (show err) >> pure 253)
+data ReplicaExit : Type where
+  HasReplicaError : ReplicaError -> ReplicaExit
+  HasTestErrors : (n : Int) -> (notZ : So (not $ n == 0)) -> ReplicaExit
+  HasArgParsingError : (res : ParseResult a) -> (0 isErr : ParsingFailure res) => ReplicaExit
+  HasEnvInitialisationError : ReplicaExit
+  Success : ReplicaExit
 
-covering
-runInfo : InfoCommand -> IO Int
-runInfo info = run $ new info.global $ new info $ handle infoReplica
-    (const $ pure 0)
-    (\err : ReplicaError => putStrLn (show err) >> pure 252)
+exitCode : ReplicaExit -> ExitCode
+exitCode (HasReplicaError (CantAccessTestFile str)) = ExitFailure 255
+exitCode (HasReplicaError (InvalidJSON strs)) = ExitFailure 254
+exitCode (HasTestErrors n notZ) = if n > 127
+  then ExitFailure 128
+  else ExitFailure n
+exitCode (HasArgParsingError (InvalidOption xs)) = ExitFailure 253
+exitCode (HasArgParsingError (InvalidMix str)) = ExitFailure 252
+exitCode HasEnvInitialisationError = ExitFailure 255
+exitCode Success = ExitSuccess
 
 runHelp : Help -> IO ()
+
+displayExit : ReplicaExit -> IO ()
+displayExit (HasReplicaError x) = print x
+displayExit (HasTestErrors n notZ) = pure ()
+displayExit (HasArgParsingError (InvalidOption xs)) = do
+  putStrLn "Invalid command : \{xs.head}"
+  runHelp help
+displayExit (HasArgParsingError (InvalidMix str)) = do
+  putStrLn str
+  runHelp help
+displayExit HasEnvInitialisationError =
+  putStrLn "Can't init env"
+displayExit Success = pure ()
+
+exitReplica : ReplicaExit -> IO ()
+exitReplica x = displayExit x >> exitWith (exitCode x)
+
+covering
+runRun : RunCommand -> IO ReplicaExit
+runRun ctx = run $ new ctx.global $ new ctx $ handle runReplica
+    (\stats => do
+     let nbErrs = cast $ stats.failures + stats.errors
+     pure $ case choose (nbErrs == 0) of
+          Left _ => Success
+          Right notZ => HasTestErrors nbErrs notZ
+    )
+    (pure . HasReplicaError)
+
+covering
+runInfo : InfoCommand -> IO ReplicaExit
+runInfo info = run $ new info.global $ new info $ handle infoReplica
+    (const $ pure Success)
+    (pure . HasReplicaError)
+
 runHelp = putStrLn . display
 
 covering
-runSet : SetCommand -> IO Int
+runSet : SetCommand -> IO ReplicaExit
 runSet x = do
   home <- getEnv "HOME"
   let Just gb = noGlobal
-    | Nothing => putStrLn "Can't init env" >> pure 128
+    | Nothing => putStrLn "Can't init env" >> pure HasEnvInitialisationError
   run $ new x $ new gb $ new home $ handle setReplica
-    (const $ pure 0)
-    (\err : ReplicaError => putStrLn (show err) >> pure 251)
+    (const $ pure Success)
+    (pure . HasReplicaError)
   where
     noGlobal : Maybe Global
     noGlobal = build $ initBuilder ({files := Just []} defaultGlobal)
 
 covering
-runNew : NewCommand -> IO Int
+runNew : NewCommand -> IO ReplicaExit
 runNew ctx = run $ new ctx $ handle newReplica
-  (const $ pure 0)
-  (\err : ReplicaError => putStrLn (show err) >> pure 252)
+  (const $ pure Success)
+  (pure . HasReplicaError)
 
 covering
-runCommand : Commands -> IO Int
+runCommand : Commands -> IO ReplicaExit
 runCommand a0 = let
   Left a1 = decomp a0
     | Right cmd => runRun cmd
@@ -66,9 +106,9 @@ runCommand a0 = let
   Left a4 = decomp a3
     | Right cmd => runNew cmd
   Left a5 = decomp a4
-    | Right h => runHelp h $> 0
+    | Right h => runHelp h $> Success
   MkVersion v = (decomp0 a5)
-  in putStrLn v $> 0
+  in putStrLn v $> Success
 
 covering
 main : IO ()
@@ -80,16 +120,10 @@ main = do
   gc <- givenConfig
   let x = parseArgs gc args'
   case x of
-       InvalidMix e => do
-         putStrLn e
-         runHelp help
-         exitWith $ ExitFailure 254
-       InvalidOption ys => do
-         putStrLn "Invalid command : \{ys.head}"
-         runHelp help
-         exitWith $ ExitFailure 254
+       InvalidMix _ => do
+         exitReplica $ HasArgParsingError x
+       InvalidOption _ => do
+         exitReplica $ HasArgParsingError x
        Done cmd => do
-         exitCode <- runCommand cmd
-         exitWith $ case choose (exitCode == 0) of
-           Right x => ExitFailure exitCode
-           Left  x => ExitSuccess
+         result <- runCommand cmd
+         exitReplica result
