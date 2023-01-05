@@ -80,7 +80,6 @@
 
       in
       rec {
-
         packages = {
           default = replica;
           docker = dockerImage;
@@ -93,14 +92,27 @@
             hooks = {
               nixpkgs-fmt.enable = true;
               dhall-format.enable = true;
+              markdownlint.enable = true;
+              online-tests = {
+                name = "REPLica online tests";
+                description = ''
+                  We don't run online tests in the CI, so we check
+                  it in pre-commit
+                '';
+                enable = true;
+                entry = "make test -t online";
+                pass_filenames = false;
+                stages = [ "push" ];
+              };
             };
           };
         };
 
         devShells.default = npkgs.mkShell {
           packages = [ idrisPkgs.idris2 papersLib npkgs.rlwrap dhall dhall-json ];
-          shellHook = self.checks.${system}.pre-commit-check.shellHook + ''
+          shellHook = ''
             alias idris2="rlwrap -s 1000 idris2 --no-banner"
+            ${self.checks.${system}.pre-commit-check.shellHook}
           '';
         };
 
