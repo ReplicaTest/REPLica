@@ -167,6 +167,13 @@ let tests
             , stdErr = Expectation.Golden
             , tags = [ "expectation", "run", "error" ]
             }
+          , too_many_error =
+              runTestsJSON
+            with workingDir = Some "tests/replica/tooManyError"
+            with description = Some "test error code with too many error"
+            with status = Status.Exactly 128
+            with stdOut = Expectation.Ignored
+            with tags = [ "run", "error", "meta" ]
           , whatever_partial_expectation_match = Test.Success::{
             , command = "echo \"Hello, World!\""
             , description = Some
