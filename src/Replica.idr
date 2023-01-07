@@ -9,6 +9,7 @@ import Data.OpenUnion
 
 
 import System
+import System.File
 
 import Replica.App
 import Replica.Core
@@ -38,19 +39,22 @@ exitCode (HasArgParsingError (InvalidMix str)) = ExitFailure 252
 exitCode HasEnvInitialisationError = ExitFailure 255
 exitCode Success = ExitSuccess
 
-runHelp : Help -> IO ()
+runHelp : File -> Help -> IO ()
+
+toStdErr : String -> IO ()
+toStdErr = ignore . fPutStrLn stderr
 
 displayExit : ReplicaExit -> IO ()
-displayExit (HasReplicaError x) = print x
+displayExit (HasReplicaError x) = ignore $ fPutStrLn stderr $ show x
 displayExit (HasTestErrors n notZ) = pure ()
 displayExit (HasArgParsingError (InvalidOption xs)) = do
-  putStrLn "Invalid command : \{xs.head}"
-  runHelp help
+  ignore $ fPutStrLn stderr "Invalid command : \{xs.head}"
+  runHelp stderr help
 displayExit (HasArgParsingError (InvalidMix str)) = do
-  putStrLn str
-  runHelp help
+  ignore $ fPutStrLn stderr str
+  runHelp stderr help
 displayExit HasEnvInitialisationError =
-  putStrLn "Can't init env"
+  ignore $ fPutStrLn stderr "Can't init env"
 displayExit Success = pure ()
 
 exitReplica : ReplicaExit -> IO ()
@@ -73,7 +77,7 @@ runInfo info = run $ new info.global $ new info $ handle infoReplica
     (const $ pure Success)
     (pure . HasReplicaError)
 
-runHelp = putStrLn . display
+runHelp h = ignore . fPutStrLn h . display
 
 covering
 runSet : SetCommand -> IO ReplicaExit
@@ -106,7 +110,7 @@ runCommand a0 = let
   Left a4 = decomp a3
     | Right cmd => runNew cmd
   Left a5 = decomp a4
-    | Right h => runHelp h $> Success
+    | Right h => runHelp stdout h $> Success
   MkVersion v = (decomp0 a5)
   in putStrLn v $> Success
 
@@ -116,7 +120,7 @@ main = do
   (cmd::args) <- getArgs
     | _ => putStrLn "Error"
   let Just args' = toList1' args
-    | Nothing => runHelp help
+    | Nothing => runHelp stdout help
   gc <- givenConfig
   let x = parseArgs gc args'
   case x of

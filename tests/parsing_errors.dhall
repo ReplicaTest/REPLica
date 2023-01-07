@@ -15,6 +15,7 @@ let tests
                 Meta::{ command = "tagada", testFiles = [ "tests.json" ] }
             )
           with description = Some "Unknown commands are rejected, showing help"
+          with stdErr = Replica.Expectation.Golden
           with status = Status.Exactly 253
           with tags = [ "meta", "parser" ]
         , unknown_parameter =
@@ -22,12 +23,16 @@ let tests
           with description = Some
               "If a parameter doesn't exist, display an error message and the help"
           with workingDir = Some "tests/replica/two"
+          with stdErr = Replica.Expectation.Golden
+          with status = Status.Exactly 253
           with tags = [ "meta", "parser" ]
         , opposite_include_exclude =
             (Meta.Run [ "--only one", "--exclude one" ] [ "tests.json" ])
-          with workingDir = Some "tests/replica/two"
           with description = Some
               "If a test is both included and rejected, the command fails"
+          with workingDir = Some "tests/replica/two"
+          with stdErr = Replica.Expectation.Golden
+          with status = Status.Exactly 252
           with tags = [ "meta", "parser" ]
         , opposite_include_exclude_tags =
             ( Meta.Run
@@ -37,6 +42,8 @@ let tests
           with workingDir = Some "tests/replica/two"
           with description = Some
               "If a tag is both included and rejected, the command fails"
+          with stdErr = Replica.Expectation.Golden
+          with status = Status.Exactly 252
           with tags = [ "meta", "parser" ]
         }
 

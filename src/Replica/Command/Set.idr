@@ -115,7 +115,7 @@ parseSet : List1 String -> ParseResult SetCommand
 parseSet ("set":::xs) = do
     case parse (initBuilder $ defaultSet) optParseSet xs of
          InvalidMix reason => InvalidMix reason
-         InvalidOption ys  => InvalidMix $ "Unknown option: " ++ ys.head
+         InvalidOption ys  => InvalidOption $ singleton $ "Unknown option(s): " ++ show ys.head
          Done builder      => maybe (InvalidMix "No test file given") Done $ build builder
 parseSet xs = InvalidOption xs
 

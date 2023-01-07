@@ -220,6 +220,7 @@ let tests
             with workingDir = Some "tests/replica/multi"
             with description = Some "test several json files"
             with status = Status.Failure
+            with stdErr = Replica.Expectation.Golden
             with tags = [ "multi", "meta" ]
           , new_json_template =
               (Meta.Run ([] : List Text) [ "generated.json" ])
