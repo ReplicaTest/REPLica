@@ -46,10 +46,10 @@ ${TEST}: ${TEST_DHALL} ${TEST_INCLUDE_DHALL}
 freeze: ${TEST_DHALL} ${META_DHALL} ${TEST_INCLUDE_DHALL}
 	dhall freeze $?
 
-generate: ${REPLICA_TESTS} ${TEST} freeze build
+generate: ${REPLICA_TESTS} ${TEST} build
 	${REPLICA_EXE} ${GLOBAL} run ${RUN} --interactive ${TEST}
 
-test: ${REPLICA_TESTS} ${TEST} freeze build
+test: ${REPLICA_TESTS} ${TEST} build
 	${REPLICA_EXE} ${GLOBAL} run ${RUN} ${TEST}
 
 all: test install
