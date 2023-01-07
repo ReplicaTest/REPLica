@@ -1,3 +1,7 @@
+||| Entry point of the Replica application.
+||| It's where we call the parser,
+||| call the corresponding command
+||| and handle the result.
 module Replica
 
 import Data.So

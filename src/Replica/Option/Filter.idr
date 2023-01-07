@@ -1,3 +1,4 @@
+||| Filter options that are common to a set of replica commands
 module Replica.Option.Filter
 
 import Data.List

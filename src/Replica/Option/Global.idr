@@ -1,3 +1,4 @@
+||| Replica options that can be applied to any command
 module Replica.Option.Global
 
 import Data.List

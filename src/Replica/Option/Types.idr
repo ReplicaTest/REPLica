@@ -1,3 +1,4 @@
+||| Define types for CLI options
 module Replica.Option.Types
 
 import Data.List

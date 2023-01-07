@@ -1,3 +1,4 @@
+||| `Validation` an either applicative that accumulates error
 module Replica.Other.Validation
 
 %default total
