@@ -1,6 +1,6 @@
 # REPLica changelog
 
-## version 0.5.3
+## version 0.6.0
 
 - CHANGE:
   - exit error code has changed:
