@@ -30,5 +30,5 @@ parseHelp ("help" ::: [command]) = maybe
   Done $ do
     commands <- "Commands" `lookup` help.chapter
     lookup command $ map (\h => (h.name, h)) $ forget commands
-parseHelp ("help" ::: xs) = InvalidMix $ "Too many arguments for help"
+parseHelp ("help" ::: _) = InvalidMix $ "Too many arguments for help"
 parseHelp xs = InvalidOption xs
