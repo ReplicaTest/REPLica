@@ -105,6 +105,11 @@ with `nix run github:replicatest/replica`.
 - [git](https://git-scm.com);
 - [dhall][] and [dhall-to-json][].
 
+Idris2 dependencies:
+
+- the [`papers`](https://github.com/idris-lang/Idris2/tree/main/libs/papers)
+  package.
+
 #### Steps
 
 ```shell
