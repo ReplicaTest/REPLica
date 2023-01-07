@@ -104,6 +104,11 @@ You can either reuse it as an input to your own `flake`s or use it directly with
 - [idris2](https://idris-lang.org) (v0.6.0);
 - [git](https://git-scm.com);
 
+Idris2 dependencies:
+
+- the [`papers`](https://github.com/idris-lang/Idris2/tree/main/libs/papers)
+  package.
+
 ```shell
 # clone repo
 git clone git@github.com:ReplicaTest/REPLica.git
