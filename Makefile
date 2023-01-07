@@ -1,4 +1,4 @@
-.PHONY: build all FORCE clean clean-test generate tests docker-run docker-build
+.PHONY: build all FORCE clean clean-test generate test freeze docker-run docker-build
 
 .SUFFIXES: .dhall .json
 
@@ -40,13 +40,16 @@ clean: clean-test
 .dhall.json:
 	dhall-to-json --file $? --output $@
 
+${TEST}: ${TEST_DHALL} ${TEST_INCLUDE_DHALL}
+	dhall-to-json --file ${TEST_DHALL} --output $@
+
 freeze: ${TEST_DHALL} ${META_DHALL} ${TEST_INCLUDE_DHALL}
 	dhall freeze $?
 
-generate: ${REPLICA_TESTS} ${TEST} build
+generate: ${REPLICA_TESTS} ${TEST} freeze build
 	${REPLICA_EXE} ${GLOBAL} run ${RUN} --interactive ${TEST}
 
-test: ${REPLICA_TESTS} ${TEST} build
+test: ${REPLICA_TESTS} ${TEST} freeze build
 	${REPLICA_EXE} ${GLOBAL} run ${RUN} ${TEST}
 
 all: test install
