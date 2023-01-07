@@ -5,8 +5,6 @@ let Replica =
 
 let Test = Replica.Test
 
-let Success = Replica.Status.Success
-
 in  { one = Test::{ command = "echo \"one\"" }
     , two = Test::{ command = "echo \"two\"", tags = [ "shiny" ] }
     }

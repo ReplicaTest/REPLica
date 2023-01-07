@@ -127,7 +127,7 @@ parseNew : List1 String -> ParseResult NewCommand
 parseNew ("new":::xs) = do
   case parse (initBuilder defaultNew) optParseNew xs of
          InvalidMix reason => InvalidMix reason
-         InvalidOption ys  => InvalidMix $ "Unknown option: " ++ ys.head
+         InvalidOption ys  => InvalidOption $ singleton $ "Unknown option(s): " ++ show ys.head
          Done builder      => maybe (InvalidMix "No test file given") Done $ build builder
 parseNew xs = InvalidOption xs
 
