@@ -1,3 +1,4 @@
+||| Free applicative
 module Replica.Other.Free
 
 %default total

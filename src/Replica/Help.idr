@@ -1,3 +1,4 @@
+||| Help building consistent help for a command line interface
 module Replica.Help
 
 import Data.List

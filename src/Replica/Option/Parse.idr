@@ -1,3 +1,4 @@
+||| JSON parser for tests
 module Replica.Option.Parse
 
 import Replica.Other.Validation

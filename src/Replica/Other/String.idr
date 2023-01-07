@@ -1,3 +1,4 @@
+||| Some utils for string manipulation
 module Replica.Other.String
 
 import Data.List

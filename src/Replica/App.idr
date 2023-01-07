@@ -1,3 +1,5 @@
+||| Re-export the `App` submodules that provide the logic for the different
+||| command
 module Replica.App
 
 import public Control.App
