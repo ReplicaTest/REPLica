@@ -76,7 +76,7 @@ export
 parseInfo : Default Global' ->  List1 String -> ParseResult InfoCommand
 parseInfo g ("info":::xs) = case parse (initBuilder $ defaultInfo `withGivenGlobal` g) optParseInfo xs of
   InvalidMix reason => InvalidMix reason
-  InvalidOption ys => InvalidMix "Unknown option: \{ys.head}"
+  InvalidOption ys => InvalidOption $ singleton $ "Unknown option(s): \{show $ toList ys}"
   Done x => maybe (InvalidMix "File is not set") Done $ build x
 parseInfo _ xs = InvalidOption xs
 
