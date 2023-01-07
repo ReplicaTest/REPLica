@@ -1,6 +1,12 @@
 # REPLica changelog
 
-## next version
+## version 0.5.3
+
+- CHANGE:
+  - exit error code has changed:
+    - we don't count error after 128
+    - error code semantic is more precise and documented
+    - error text when calling replica is sent to `stderr`
 
 - INTERNAL:
   - pre-commit hooks
