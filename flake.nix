@@ -21,46 +21,30 @@
         pkgs = import nixpkgs { inherit system; };
         inherit (pkgs)
           dhall
-          zsh;
+          lib;
         inherit (pkgs.haskellPackages)
           dhall-json;
-        idrisPkgs = idris.packages.${system};
-        replica_dhall = replicadhall.packages.${system}.default;
-
-        buildIdris = idris.buildIdris.${system};
 
         version = import ./version.nix;
+        idrisPkgs = idris.packages.${system};
 
-        papersPkg = buildIdris {
-          projectName = "papers";
-          src = papers;
-          idrisLibraries = [ ];
-          preBuild = "cd libs/papers";
+        callPackage = lib.callPackageWith (pkgs // packages);
+
+        packages = {
+          inherit version;
+          buildIdris = idris.buildIdris.${system};
+          papersLib = callPackage ./nix/papersLib.nix { inherit papers; };
+          replica_dhall = replicadhall.packages.${system}.default;
+          buildReplica = callPackage ./nix/buildReplica.nix { };
+          replica = callPackage ./nix/replica.nix { };
+          replicaTest = callPackage ./nix/replica.nix { };
         };
-        papersLib = papersPkg.installLibrary;
 
-        replica_ = buildIdris {
-          projectName = "replica";
-          src = ./.;
-          idrisLibraries = [ papersLib ];
-        };
-        replica = replica_.build.overrideAttrs (attrs: {
-          pname = "replica";
-          version = version;
-          buildPhase = ''
-            make
-          '';
-        });
-
-        replicaTest = replica_.build.overrideAttrs (attrs: {
-          buildInputs = [ replica_dhall dhall dhall-json zsh ];
-          buildPhase = ''
-            cp -r ${replica_dhall}/.cache .cache
-            chmod -R u+w .cache
-            export XDG_CACHE_HOME=.cache
-            make test RUN="-T online"
-          '';
-        });
+        inherit (packages)
+          replica
+          replicaTest
+          replica_dhall
+          papersLib;
 
         dockerImage = pkgs.dockerTools.buildImage {
           name = "replica";
@@ -71,9 +55,10 @@
         };
 
       in
-      rec {
+      {
         packages = {
           default = replica;
+          replica = replica;
           docker = dockerImage;
         };
 
@@ -85,19 +70,7 @@
               nixpkgs-fmt.enable = true;
               dhall-format.enable = true;
               markdownlint.enable = true;
-              online-tests = {
-                name = "REPLica online tests";
-                description = ''
-                  We don't run online tests in the CI, so we check
-                  it in pre-commit
-                '';
-                enable = true;
-                entry = ''
-                  make test RUN="-t online"
-                '';
-                pass_filenames = false;
-                stages = [ "push" ];
-              };
+              online-tests = import ./nix/online-tests.nix;
             };
           };
         };
