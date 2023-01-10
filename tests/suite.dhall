@@ -18,16 +18,19 @@ let tests
           with workingDir = Some "tests/replica/suite"
           with description = Some "require can work on different suites"
           with tags = [ "suite" ]
+          with suite = Some "ordering"
         , includeSuite =
             (Meta.Run ([ "-s A" ] : List Text) [ "crossSuiteDependency.json" ])
           with workingDir = Some "tests/replica/suite"
-          with description = Some "require can work on different suites"
+          with description = Some "can select only a given suite"
           with tags = [ "suite" ]
+          with suite = Some "filter"
         , excludeSuite =
             (Meta.Run ([ "-S A" ] : List Text) [ "crossSuiteDependency.json" ])
           with workingDir = Some "tests/replica/suite"
-          with description = Some "require can work on different suites"
+          with description = Some "can exclude a give suite"
           with tags = [ "suite" ]
+          with suite = Some "filter"
         }
 
 in  tests
