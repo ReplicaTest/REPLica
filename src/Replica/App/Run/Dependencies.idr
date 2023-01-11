@@ -18,6 +18,11 @@ record SuitePlan where
   later : List Test
   skipped : List (String, Test)
 
+export
+emptySuite : SuitePlan -> Bool
+emptySuite (SPlan _ [] [] []) = True
+emptySuite _ = False
+
 public export
 record TestPlan where
   constructor Plan
