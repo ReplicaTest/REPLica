@@ -16,7 +16,10 @@ modules = Replica
         , Replica.App.Log
         , Replica.App.Replica
         , Replica.App.Run
+        , Replica.App.Run.Display
         , Replica.App.Run.Dependencies
+        , Replica.App.Run.RunOne
+        , Replica.App.Run.Types
         , Replica.App.System
 
         , Replica.Command
