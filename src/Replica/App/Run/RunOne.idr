@@ -123,8 +123,7 @@ getPartExpectation : SystemIO (SystemError :: e) =>
   (part: Part) ->
   App e (Maybe String)
 getPartExpectation part =
-  catchNew (Just <$> readFile !(getExpectationFile part)) (\err : FSError => pure Nothing)
-
+  catchNew (Just <$> readFile !(getExpectationFile part)) (\_ : FSError => pure Nothing)
 
 -- on mismatch, check if we should replace the golden value
 interactiveGolden : SystemIO (SystemError :: e) =>
@@ -155,12 +154,10 @@ interactiveGolden source given expected = do
        (\x => WrongOutput source given $ singleton (Generated ** Just x))
        expected
   where
-
     readAnswer : App e Bool
     readAnswer = do
       answer <- getLine
       pure $ toLower answer `elem` ["y", "yes"]
-
     showExpectedAndGiven : App e ()
     showExpectedAndGiven = do
       let Just str = expected
@@ -172,7 +169,6 @@ interactiveGolden source given expected = do
                    None => Native
                    d' => d'
       showDiff d 0 str given
-
 
 checkStatus : Maybe (Either Bool Nat) -> Nat -> Maybe FailReason
 checkStatus Nothing y = Nothing
@@ -195,6 +191,18 @@ checkContains : List String -> String -> Maybe (List1 String)
 checkContains xs given =
   fromList $ catMaybes $ map (\exp => guard (not $ isInfixOf exp given) $> exp) xs
 
+checkContentWith :
+   Alternative m =>
+   (String -> String -> Bool) ->
+   (spaceSensitive : Bool) ->
+   (expected, given : String) ->
+   m ()
+checkContentWith f spaceSensitive expected given =
+  guard $ f (normalizeContent expected) (normalizeContent given)
+  where
+    normalizeContent : String -> String
+    normalizeContent c = if spaceSensitive then c else normalize c
+
 checkContent : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
@@ -206,19 +214,15 @@ checkContent : SystemIO (SystemError :: e) =>
   (given : String) ->
   (expected : Maybe String) ->
   Expectation ->
-  Maybe (e : Expectation ** ExpectationError e)
-checkContent spaceSensitive given _ exp@(Exact expected) = let
-  e : String = if spaceSensitive then expected else normalize expected
-  g : String = if spaceSensitive then given else normalize given
-  in guard (e /= g) $> (exp ** ())
-checkContent spaceSensitive given _ exp@(StartsWith expected) = let
-  e : String = if spaceSensitive then expected else normalize expected
-  g : String = if spaceSensitive then given else normalize given
-  in guard (not $ e `isPrefixOf` g) $> (exp ** ())
-checkContent spaceSensitive given _ exp@(EndsWith expected) = let
-  e : String = if spaceSensitive then expected else normalize expected
-  g : String = if spaceSensitive then given else normalize given
-  in guard (not $ e `isSuffixOf` g) $> (exp ** ())
+  Maybe (exp : Expectation ** ExpectationError exp)
+checkContent spaceSensitive given _ exp@(Exact expected) =
+  checkContentWith (/=) spaceSensitive expected given $> (exp ** ())
+checkContent spaceSensitive given _ exp@(StartsWith expected) =
+  checkContentWith (\e, g => not $ e `isPrefixOf` g)
+    spaceSensitive expected given $> (exp ** ())
+checkContent spaceSensitive given _ exp@(EndsWith expected) =
+  checkContentWith (\e, g => not $ e `isSuffixOf` g)
+    spaceSensitive expected given $> (exp ** ())
 checkContent spaceSensitive given _ exp@(Partial Ordered xs) = let
   es = if spaceSensitive then xs else map normalize xs
   g : String = if spaceSensitive then given else normalize given
@@ -229,10 +233,9 @@ checkContent spaceSensitive given _ exp@(Partial Whatever xs) = let
   in MkDPair exp <$> checkContains es given
 checkContent spaceSensitive given Nothing Generated =
   Just (Generated ** Nothing)
-checkContent spaceSensitive given (Just expected) Generated = let
-  e : String = if spaceSensitive then expected else normalize expected
-  g : String = if spaceSensitive then given else normalize given
-  in guard (e /= g) $> (Generated ** Just expected)
+checkContent spaceSensitive given (Just expected) Generated =
+  checkContentWith (/=) spaceSensitive expected given $>
+    (Generated ** Just expected)
 
 checkOutput : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
@@ -256,7 +259,6 @@ checkOutput part expectations = do
   pure $ map (WrongOutput part given) result
 
 
-
 checkExpectations :  SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
@@ -271,20 +273,20 @@ checkExpectations exitCode duration = do
   log $ withOffset 2 "Checking expectations"
   t <- get CurrentTest
   ctx <- get RunContext
-  let statusCheck = checkStatus t.status exitCode
+  let statusError = checkStatus t.status exitCode
   expResults <- traverse (uncurry checkOutput) t.expectations
-  let failures = maybe id (::) statusCheck $ catMaybes expResults
+  let failures = maybe id (::) statusError $ catMaybes expResults
   debug $ withOffset 4 "Check success"
   let (x :: xs) = failures
-    | _ => pure $ Success duration
-  let Nothing = statusCheck
-    | _ => pure $ Fail failures
+    | _ => pure $ Success duration -- exit on success
+  let Nothing = statusError
+    | _ => pure $ Fail failures -- quick exit on exit status error
   debug $ withOffset 4
-        "Check interactive: \{show $ isNothing statusCheck} \{show ctx.interactive}"
-  let (Nothing, True) = (statusCheck, ctx.interactive)
-    | _ =>  pure $ Fail failures
+        "Check interactive: \{show $ isNothing statusError} \{show ctx.interactive}"
+  let True = ctx.interactive
+    | _ =>  pure $ Fail failures -- exit on failure on non interactive mode
   [] <- map catMaybes $ traverse askForGolden failures
-    | xs => pure $ Fail xs
+    | xs => pure $ Fail xs -- fail if we didn't accept all the new golden values
   pure $ Success duration
   where
     askForGolden : FailReason -> App e (Maybe FailReason)
@@ -317,10 +319,13 @@ runAll :
   List String -> App e ()
 runAll phase liftError [] = pure ()
 runAll phase liftError (x :: xs) = do
-  maybe (pure ()) (\p => log "\{p}: \{x}") phase
+  logPhase phase
   handle (system "(\{x}) 1> /dev/null 2> /dev/null")
     (const $ runAll phase liftError xs)
     (\err : SystemError => throw $ liftError x)
+  where
+    logPhase : Maybe String -> App e ()
+    logPhase = maybe (pure ()) (\p => log "\{p}: \{x}")
 
 -- the whole test execution, including pre and post operation
 performTest : SystemIO (SystemError :: e) =>
@@ -340,8 +345,8 @@ performTest = do
   pure res
 
 -- move to the right directory and perform the test
-export
-runTest : SystemIO (SystemError :: e) =>
+runTest :
+  SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State CurrentTest Test
       , State RunContext RunCommand
@@ -356,13 +361,19 @@ runTest = do
   createTestDir
   createGoldenDir
   let wd = fromMaybe ctx.workingDir t.workingDir
-  log "Executing \{t.name}"
-  debug $ withOffset 2 $ show t
-  log   $ withOffset 2 "Working directory: \{show wd}"
+  logTestStart t wd
   catchNew (inDir wd performTest)
     (\err : FSError => throw $ FileSystemError
       "Error: cannot enter or exit test working directory \{show wd}")
   where
+
+    logTestStart :
+      Has [ Log ] e => Test -> String -> App e ()
+    logTestStart t wd = do
+      log "Executing \{t.name}"
+      debug $ withOffset 2 $ show t
+      log   $ withOffset 2 "Working directory: \{show wd}"
+
     inDir : (dir : String) -> App e a -> App (FSError :: e) a
     inDir dir exec = do
       pwd <- getCurrentDir
@@ -372,15 +383,36 @@ runTest = do
         | Left err => changeDir pwd >> lift (throw err)
       changeDir pwd
       pure res
+
     continueIfExists : FSError -> App e ()
     continueIfExists (FileExists _) = pure ()
     continueIfExists _ = throw $ FileSystemError "Cant't create or access test directory"
+
     createTestDir : App e ()
     createTestDir = do
       catchNew (createDir !getSingleTestDir) continueIfExists
       catchNew (createDir !getSingleTestFileDir) continueIfExists
+
     createGoldenDir : App e ()
     createGoldenDir = do
       catchNew (createDir !getSingleTestGoldenDir) continueIfExists
       catchNew (createDir !getSingleTestGoldenFileDir) continueIfExists
 
+-- run a test if ready
+export
+processTest :
+  SystemIO (SystemError :: TestError :: e) =>
+  FileSystem (FSError :: TestError :: e) =>
+  SystemClock (TestError :: e) =>
+  Console (TestError :: e) =>
+  Has [ State RunContext RunCommand
+      , State GlobalConfig Global
+      , Console
+      ] e =>
+  Test -> App e (Test, Either TestError TestResult)
+processTest x = do
+  let False = x.pending
+    | True => pure (x, Right Skipped)
+  handle (new x runTest)
+    (pure . MkPair x . Right)
+    (\err : TestError => pure (x, Left err))

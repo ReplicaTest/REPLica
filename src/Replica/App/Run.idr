@@ -74,6 +74,20 @@ mergeResults (y :: xs) x@(suiteName, results)
        then (map (++ results) y) :: xs
        else y :: mergeResults xs x
 
+selectNextSuite : TestPlan -> SuiteProcess (SuitePlan, TestPlan)
+selectNextSuite (Plan (x :: xs) waitingOthers) = Total (x, Plan xs waitingOthers)
+selectNextSuite (Plan [] waitingOthers)
+  = case sortBy (flip compare `on` (length . now)) waitingOthers of
+         {- if all tests have at least one test waiting for another one to
+            succeed,
+            take the suite that has the more tests ready for execution
+         -}
+         [] => None
+         (w::ws) => Partial (w, Plan [] ws)
+
+prepareBatch : Nat -> SuitePlan -> (List Test, SuitePlan)
+prepareBatch 0 plan = (plan.now, {now := []} plan)
+prepareBatch n plan = map (\remains => {now := remains} plan) $ splitAt n plan.now
 
 runAllTests : SystemIO (SystemError :: TestError :: e) =>
   SystemIO (SystemError :: e) =>
@@ -89,37 +103,10 @@ runAllTests plan = do
   putStrLn $ !bold "Running tests...\n"
   batchTests [] plan
   where
-    selectNextSuite : TestPlan -> SuiteProcess (SuitePlan, TestPlan)
-    selectNextSuite (Plan (x :: xs) waitingOthers) = Total (x, Plan xs waitingOthers)
-    selectNextSuite (Plan [] waitingOthers)
-      = case sortBy (flip compare `on` (length . now)) waitingOthers of
-             [] => None
-             (w::ws) => Partial (w, Plan [] ws)
 
-    prepareBatch : Nat -> SuitePlan -> (List Test, SuitePlan)
-    prepareBatch n plan = if n == 0
-                             then (plan.now, {now := []} plan)
-                             else map (\n' => {now := n'} plan) $ splitAt n plan.now
-
-    processTest : Test -> App e (Test, Either TestError TestResult)
-    processTest x = do
-      let False = x.pending
-        | True => pure (x, Right Skipped)
-      r <- handle
-             (new x runTest)
-             (pure . MkPair x . Right)
-             (\err : TestError => pure (x, Left err))
-      pure r
-
-    processResult : SuitePlan -> TestPlan -> List (Test, Either TestError TestResult) ->
-                    Either TestPlan (SuitePlan, TestPlan)
-    processResult (SPlan _ [] [] skipped) y xs = Left (updateOnBatchResults xs y)
-    processResult x y xs = case updateOnBatchResults xs ({ready $= (x::)} y) of
-                                Plan (x'::now) later => Right (x', Plan now later)
-                                p => Left p
-
-    runTotalSuite : List (Test, Either TestError TestResult) -> SuitePlan ->
-                    App e (List (Test, Either TestError TestResult))
+    runTotalSuite :
+      List (Test, Either TestError TestResult) -> SuitePlan ->
+      App e (List (Test, Either TestError TestResult))
     runTotalSuite acc plan = do
       n <- threads <$> get RunContext
       case prepareBatch n plan of
@@ -145,8 +132,9 @@ runAllTests plan = do
                    debug $ displaySuitePlan newPlan
                    runTotalSuite (acc ++ res) $ assert_smaller plan newPlan
 
-    runPartialSuite : (List (Test, Either TestError TestResult)) -> SuitePlan ->
-                    App e (Maybe SuitePlan, List (Test, Either TestError TestResult))
+    runPartialSuite :
+      (List (Test, Either TestError TestResult)) -> SuitePlan ->
+      App e (Maybe SuitePlan, List (Test, Either TestError TestResult))
     runPartialSuite acc plan = do
       n <- threads <$> get RunContext
       case prepareBatch n plan of
@@ -206,9 +194,9 @@ filterTests : FileSystem (FSError :: e) =>
       , Console
       ] e => (s, r : List Test) -> App e TestPlan
 filterTests s r = do
-  f <- filter <$> get RunContext
-  debug $ "Filters: \{show f}"
-  let (selected, rejected) = partition (keepTest f) s
+  activeFilters <- filter <$> get RunContext
+  debug $ "Filters: \{show activeFilters}"
+  let (selected, rejected) = partition (keepTest activeFilters) s
   pure $ buildPlan selected (rejected ++ r)
 
 getLastFailures : FileSystem (FSError :: e) =>
