@@ -61,8 +61,11 @@ prepareReplicaDir = do
     (\err : SystemError => throw $ CantAccessTestFile "\{show gd}")
   pure rDir
 
-data SuiteProcess a = None | Partial a | Total a
+data RunType = Partial | Total
 
+data RunningPlan =
+    None
+  | Running RunType SuitePlan TestPlan
 
 -- add result to an existing suite or create a new one
 mergeResults : List (Maybe String, List (Test, Either TestError TestResult)) ->
@@ -74,20 +77,23 @@ mergeResults (y :: xs) x@(suiteName, results)
        then (map (++ results) y) :: xs
        else y :: mergeResults xs x
 
-selectNextSuite : TestPlan -> SuiteProcess (SuitePlan, TestPlan)
-selectNextSuite (Plan (x :: xs) waitingOthers) = Total (x, Plan xs waitingOthers)
-selectNextSuite (Plan [] waitingOthers)
-  = case sortBy (flip compare `on` (length . now)) waitingOthers of
-         {- if all tests have at least one test waiting for another one to
-            succeed,
-            take the suite that has the more tests ready for execution
-         -}
-         [] => None
-         (w::ws) => Partial (w, Plan [] ws)
+selectNextSuite : TestPlan -> RunningPlan
+selectNextSuite (Plan (x :: xs) waitingOthers) =
+  Running Total x (Plan xs waitingOthers)
+selectNextSuite (Plan [] waitingOthers) =
+  case sortBy (flip compare `on` (length . now)) waitingOthers of
+    {- if all tests have at least one test waiting for another one to
+       succeed,
+       take the suite that has the more tests ready for execution
+    -}
+    [] => None
+    (w::ws) => Running Partial w (Plan [] ws)
 
 prepareBatch : Nat -> SuitePlan -> (List Test, SuitePlan)
 prepareBatch 0 plan = (plan.now, {now := []} plan)
-prepareBatch n plan = map (\remains => {now := remains} plan) $ splitAt n plan.now
+prepareBatch n plan =
+  map (\remains => {now := remains} plan) $
+  splitAt n plan.now
 
 runAllTests : SystemIO (SystemError :: TestError :: e) =>
   SystemIO (SystemError :: e) =>
@@ -104,63 +110,51 @@ runAllTests plan = do
   batchTests [] plan
   where
 
-    runTotalSuite :
-      List (Test, Either TestError TestResult) -> SuitePlan ->
-      App e (List (Test, Either TestError TestResult))
-    runTotalSuite acc plan = do
-      n <- threads <$> get RunContext
-      case prepareBatch n plan of
-           ([], later) => do
-             let errs = join [ map (\t => (t, Left Inaccessible)) plan.later
-                             , map (\(reason, t) => (t, Left $ RequirementsFailed reason)) plan.skipped
-                             ]
-             when (not !(interactive <$> get RunContext))
-               (traverse_ (\(t, r) => new t (testOutput r)) errs)
-             pure $ acc ++ errs
-           (now, nextBatches) => do
-             debug $ withOffset 4 "Now: \{show $ length now}"
-             debug $ withOffset 4 "Later: \{show $ nextBatches.now ++ nextBatches.later}"
-             res <- map await <$> traverse (map (fork . delay) . processTest) now
-             when (not !(interactive <$> get RunContext))
-               (traverse_ (\(t, r) => new t (testOutput r)) res)
-             p <- punitive <$> get RunContext
-             if p && any (not . isFullSuccess . snd) res
-                then pure res
-                else do
-                   let (suc, fai) = sortResults res
-                   let newPlan = updateSuite suc fai nextBatches
-                   debug $ displaySuitePlan newPlan
-                   runTotalSuite (acc ++ res) $ assert_smaller plan newPlan
 
-    runPartialSuite :
-      (List (Test, Either TestError TestResult)) -> SuitePlan ->
+    handleInaccessibleTests :
+      List (Test, Either TestError TestResult) -> SuitePlan ->
       App e (Maybe SuitePlan, List (Test, Either TestError TestResult))
-    runPartialSuite acc plan = do
+    handleInaccessibleTests acc plan = do
+      let errs = join
+            [ map (\t => (t, Left Inaccessible)) plan.later
+            , map (\(reason, t) => (t, Left $ RequirementsFailed reason)) plan.skipped
+            ]
+      when (not !(interactive <$> get RunContext))
+        (traverse_ (\(t, r) => new t (testOutput r)) errs)
+      pure (Nothing, acc ++ errs)
+
+    runSuite :
+      RunType -> (List (Test, Either TestError TestResult)) -> SuitePlan ->
+      App e (Maybe SuitePlan, List (Test, Either TestError TestResult))
+    runSuite mode acc plan = do
       n <- threads <$> get RunContext
       case prepareBatch n plan of
-           ([], later) => case acc of
-             [] => do
-               let errs = join [ map (\t => (t, Left Inaccessible)) plan.later
-                               , map (\(reason, t) => (t, Left $ RequirementsFailed reason)) plan.skipped
-                               ]
-               when (not !(interactive <$> get RunContext))
-                 (traverse_ (\(t, r) => new t (testOutput r)) errs)
-               pure (Nothing, acc ++ errs)
-             _ => pure (guard (not $ emptySuite plan) $> plan, acc)
+           -- No new tests are ready
+           ([], later) => case (mode, acc) of
+             -- On a total run, remainintests must be in error
+             (Total, _) => handleInaccessibleTests acc later
+             {- On a partial run, tests may be stuck because they're waiting for
+                tests of another suite.
+                It can be the case if we ran at least one test in this run,
+                Otherwise, we're just stuck
+             -}
+             (Partial, []) => handleInaccessibleTests acc later
+             (Partial, _) => pure (guard (not $ emptySuite later) $> later, acc)
            (now, nextBatches) => do
              debug $ withOffset 4 "Now: \{show $ length now}"
              debug $ withOffset 4 "Later: \{show $ nextBatches.now ++ nextBatches.later}"
              res <- map await <$> traverse (map (fork . delay) . processTest) now
              when (not !(interactive <$> get RunContext))
-               (traverse_ (\(t, r) => new t (testOutput r)) res)
+               (traverse_ (\(t, r) => new t $ testOutput r) res)
              p <- punitive <$> get RunContext
+             -- stop on error in in punitive mode
              if p && any (not . isFullSuccess . snd) res
                 then pure (Nothing, res)
                 else do
                    let (suc, fai) = sortResults res
                    let newPlan = updateSuite suc fai nextBatches
                    debug $ displaySuitePlan newPlan
-                   runPartialSuite (acc ++ res) $ assert_smaller plan newPlan
+                   runSuite mode (acc ++ res) $ assert_smaller plan newPlan
 
     batchTests : List (Maybe String, List (Test, Either TestError TestResult)) ->
                  TestPlan -> App e (List (Maybe String, List (Test, Either TestError TestResult)))
@@ -169,17 +163,9 @@ runAllTests plan = do
       p <- punitive <$> get RunContext
       case selectNextSuite plan of
            None => pure acc
-           Total (suite, plan') => do
+           Running mode suite plan' => do
              displaySuite suite.name
-             suiteResults <- runTotalSuite [] suite
-             let acc' = mergeResults acc (suite.name, suiteResults)
-             if p && any (not . isFullSuccess . snd) suiteResults
-                then pure acc'
-                else
-                  batchTests acc' $ assert_smaller plan $ updateOnBatchResults suiteResults plan'
-           Partial (suite, plan') => do
-             displaySuite suite.name
-             (stuckPlan, suiteResults) <- runPartialSuite [] suite
+             (stuckPlan, suiteResults) <- runSuite mode [] suite
              let acc' = mergeResults acc (suite.name, suiteResults)
              if p && any (not . isFullSuccess . snd) suiteResults
                 then pure acc'
@@ -225,12 +211,12 @@ defineActiveTests : FileSystem (FSError :: e) =>
       , Console
       ] e => App e TestPlan
 defineActiveTests = do
-  last <- if !((.filter.lastFailures) <$> get RunContext)
+  tests <- if !((.filter.lastFailures) <$> get RunContext)
         then getLastFailures
         else do
           repl <- getReplica
           pure (repl.tests, [])
-  uncurry filterTests last
+  uncurry filterTests tests
 
 extractReport : (Maybe String, List (Test, Either TestError TestResult)) ->
                 List (String, Either TestError TestResult)
