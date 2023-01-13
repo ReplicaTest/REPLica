@@ -1,0 +1,13 @@
+--------------------------------------------------------------------------------
+[1mRunning tests...
+[0m
+[1mNo suite given:[0m
+  [38;5;1m❌  start_fail:[0m
+      [1mError on standard output:[0m
+      Start mismatch:
+    Hella
+      Given:
+        Hello, World!
+--------------------------------------------------------------------------------
+[1mSummary:[0m
+  ❌  (Failure): 1 / 1

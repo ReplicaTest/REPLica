@@ -1,4 +1,4 @@
-.PHONY: build all FORCE clean clean-test generate test freeze docker-run docker-build
+.PHONY: build all clean clean-test generate test freeze docker-run docker-build
 
 .SUFFIXES: .dhall .json
 
@@ -16,8 +16,6 @@ DEST = ${HOME}/.local/bin
 
 build: src/Replica/Version.idr
 	idris2 --build replica.ipkg
-
-FORCE:
 
 src/Replica/Version.idr: version.nix
 	echo "module Replica.Version" > src/Replica/Version.idr
@@ -53,3 +51,8 @@ test: ${REPLICA_TESTS} ${TEST} build
 	${REPLICA_EXE} ${GLOBAL} run ${RUN} ${TEST}
 
 all: test install
+
+tests/replica/%/:
+	mkdir $@
+	${REPLICA_EXE} new -f dhall -s $@/tests.dhall
+

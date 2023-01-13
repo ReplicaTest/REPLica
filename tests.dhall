@@ -161,6 +161,34 @@ let skipExecutionTests
             }
         )
 
+let configTests
+    : Replica.Type
+    = Replica.Suite
+        "config"
+        ( toMap
+            { custom_golden_dir =
+                (Meta.Run [ "--golden-dir golden" ] [ "tests.json" ])
+              with workingDir = Some "tests/replica/goldenDir"
+              with description = Some "test --goldenDir"
+              with status = Status.Success
+              with tags = [ "golden", "meta" ]
+            , custom_golden_dir_for_file =
+                (Meta.Run [ "--golden-dir golden" ] [ "tests.json" ])
+              with workingDir = Some "tests/replica/goldenDirFile"
+              with require = [ "file_expectation1" ]
+              with description = Some "test --goldenDir for files"
+              with status = Status.Success
+              with tags = [ "golden", "meta" ]
+            , local_config =
+                runTestsJSON
+              with workingDir = Some "tests/replica/localConfig"
+              with require = [ "custom_golden_dir" ]
+              with description = Some "test localConfig"
+              with status = Status.Success
+              with tags = [ "local", "meta" ]
+            }
+        )
+
 let expectationsTests
     : Replica.Type
     = Replica.Suite
@@ -184,11 +212,40 @@ let expectationsTests
               with require = [ "testOutputMismatch" ]
               with status = Status.Failure
               with tags = [ "meta", "run" ]
+            , start_success = Test.Success::{
+              , command = "echo \"Hello, World!\""
+              , description = Some "check a start expectation that succeeds"
+              , stdOut = Expectation::{ start = Some "Hello" }
+              , tags = [ "run", "partial", "start" ]
+              }
+            , start_fail =
+                runTestsJSON
+              with workingDir = Some "tests/replica/start_fail"
+              with description = Some "Check a start expectation that fails"
+              with status = Status.Failure
+              with tags = [ "run", "partial", "start" ]
+            , end_success = Test.Success::{
+              , command = "echo \"Hello, World!\""
+              , description = Some "Check an end expectation that succeeds"
+              , stdOut = Expectation::{
+                , end = Some
+                    ''
+                    World!
+                    ''
+                }
+              , tags = [ "run", "partial", "end" ]
+              }
+            , end_fail =
+                runTestsJSON
+              with workingDir = Some "tests/replica/end_fail"
+              with description = Some "Check an end expectation that fails"
+              with status = Status.Failure
+              with tags = [ "run", "partial", "end" ]
             , ordered_partial_expectation_match = Test.Success::{
               , command = "echo \"Hello, World!\""
               , description = Some "check a partial expectation that succeeds"
               , stdOut = Expectation.Consecutive [ "Hello", "World" ]
-              , tags = [ "expectation", "run", "partial" ]
+              , tags = [ "run", "partial" ]
               }
             , space_unsensitive_ordered_partial_expectation_match = Test.Success::{
               , command = "echo \"Hello, World!\""
@@ -196,7 +253,45 @@ let expectationsTests
               , description = Some
                   "check a space unsensitive partial expectation that succeeds"
               , stdOut = Expectation.Consecutive [ "Hello ", " World " ]
-              , tags = [ "expectation", "run", "partial", "space" ]
+              , tags = [ "run", "partial", "space" ]
+              }
+            , whatever_partial_expectation_match = Test.Success::{
+              , command = "echo \"Hello, World!\""
+              , description = Some
+                  "check a not ordered partial expectation that succeeds"
+              , stdOut = Expectation.Contains [ "World", "Hello" ]
+              , tags = [ "run", "partial" ]
+              }
+            , ordered_partial_expectation_mismatch =
+                runTestsJSON
+              with workingDir = Some "tests/replica/orderedPartialFail"
+              with description = Some
+                  "check an ordered partial expectation that fails"
+              with status = Status.Failure
+              with tags = [ "expectation", "run", "partial" ]
+            , file_expectation1 = Test.Success::{
+              , command = "echo \"test\" > tmp123456"
+              , description = Some "Check expectation on file"
+              , afterTest = [ "rm tmp123456" ]
+              , stdOut = Expectation.Ignored
+              , files = toMap { tmp123456 = Expectation.Golden }
+              , tags = [ "run", "file" ]
+              }
+            , file_expectation2 = Test.Success::{
+              , command = "echo \"test\" > tests/tmp123456"
+              , description = Some "Check expectation on file in a subdir"
+              , afterTest = [ "rm tests/tmp123456" ]
+              , stdOut = Expectation.Ignored
+              , files = toMap { tests/tmp123456 = Expectation.Golden }
+              , require = [ "file_expectation1" ]
+              , tags = [ "run", "file" ]
+              }
+            , error_expectation = Test.Success::{
+              , command = "echo \"test\" >&2"
+              , description = Some "Check expectation on error"
+              , stdOut = Expectation.Ignored
+              , stdErr = Expectation.Golden
+              , tags = [ "run", "error" ]
               }
             }
         )
@@ -208,6 +303,7 @@ let tests
       # filterTests
       # skipExecutionTests
       # expectationsTests
+      # configTests
 
 in    tests
     # ./tests/parsing_errors.dhall
@@ -262,30 +358,6 @@ in    tests
           , input = Some "hello, world"
           , description = Some "pass input to the command"
           }
-        , file_expectation1 = Test.Success::{
-          , command = "echo \"test\" > tmp123456"
-          , description = Some "Check expectation on file"
-          , afterTest = [ "rm tmp123456" ]
-          , stdOut = Expectation.Ignored
-          , files = toMap { tmp123456 = Expectation.Golden }
-          , tags = [ "expectation", "run", "file" ]
-          }
-        , file_expectation2 = Test.Success::{
-          , command = "echo \"test\" > tests/tmp123456"
-          , description = Some "Check expectation on file in a subdir"
-          , afterTest = [ "rm tests/tmp123456" ]
-          , stdOut = Expectation.Ignored
-          , files = toMap { tests/tmp123456 = Expectation.Golden }
-          , require = [ "file_expectation1" ]
-          , tags = [ "expectation", "run", "file" ]
-          }
-        , error_expectation = Test.Success::{
-          , command = "echo \"test\" >&2"
-          , description = Some "Check expectation on error"
-          , stdOut = Expectation.Ignored
-          , stdErr = Expectation.Golden
-          , tags = [ "expectation", "run", "error" ]
-          }
         , too_many_error =
             runTestsJSON
           with workingDir = Some "tests/replica/tooManyError"
@@ -293,40 +365,6 @@ in    tests
           with status = Status.Exactly 128
           with stdOut = Expectation.Ignored
           with tags = [ "run", "error", "meta" ]
-        , whatever_partial_expectation_match = Test.Success::{
-          , command = "echo \"Hello, World!\""
-          , description = Some
-              "check a not ordered partial expectation that succeeds"
-          , stdOut = Expectation.Contains [ "World", "Hello" ]
-          , tags = [ "expectation", "run", "partial" ]
-          }
-        , ordered_partial_expectation_mismatch =
-            runTestsJSON
-          with workingDir = Some "tests/replica/orderedPartialFail"
-          with description = Some
-              "check an ordered partial expectation that fails"
-          with status = Status.Failure
-          with tags = [ "expectation", "run", "partial" ]
-        , custom_golden_dir =
-            (Meta.Run [ "--golden-dir golden" ] [ "tests.json" ])
-          with workingDir = Some "tests/replica/goldenDir"
-          with description = Some "test --goldenDir"
-          with status = Status.Success
-          with tags = [ "config", "golden", "meta" ]
-        , custom_golden_dir_for_file =
-            (Meta.Run [ "--golden-dir golden" ] [ "tests.json" ])
-          with workingDir = Some "tests/replica/goldenDirFile"
-          with require = [ "file_expectation1" ]
-          with description = Some "test --goldenDir for files"
-          with status = Status.Success
-          with tags = [ "config", "golden", "meta" ]
-        , local_config =
-            runTestsJSON
-          with workingDir = Some "tests/replica/localConfig"
-          with require = [ "custom_golden_dir" ]
-          with description = Some "test localConfig"
-          with status = Status.Success
-          with tags = [ "config", "local", "meta" ]
         , multi_json =
             (Meta.Run ([] : List Text) [ "tests1.json", "tests2.json" ])
           with workingDir = Some "tests/replica/multi"
