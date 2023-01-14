@@ -28,6 +28,9 @@ export
 data CurrentTest : Type where
 
 export
+data ActiveFilter : Type where
+
+export
 data GlobalConfig : Type where
 
 public export

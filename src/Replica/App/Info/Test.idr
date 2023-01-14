@@ -12,6 +12,7 @@ import Language.JSON
 
 import Replica.App.Display
 import Replica.App.FileSystem
+import Replica.App.Filter
 import Replica.App.Format
 import Replica.App.Log
 import Replica.App.Replica
@@ -80,48 +81,6 @@ displayExpectations = do
       traverse_ displayExpectation xs
 
 
-filterTests : FileSystem (FSError :: e) =>
-  Has [ State TestInfoContext TestInfoCommand
-      , State GlobalConfig Global
-      , Exception ReplicaError
-      , Console
-      ] e => (s : List Test) -> App e (List Test)
-filterTests s = do
-  f <- filter <$> get TestInfoContext
-  debug $ "Filters: \{show f}"
-  pure $ filter (keepTest f) s
-
-getLastFailures : FileSystem (FSError :: e) =>
-  Has [ State GlobalConfig Global
-      , Exception ReplicaError
-      , Console
-      ] e => App e (List Test)
-getLastFailures = do
-  repl <- getReplica
-  logFile <- lastRunLog <$> getReplicaDir
-  lastLog <- catchNew (readFile logFile)
-    (\err : FSError => throw $ CantAccessTestFile logFile)
-  let Just json = parse lastLog
-    | Nothing => throw $ InvalidJSON []
-  let Valid report = parseReport json
-    | Error err => throw $ InvalidJSON err
-  let notWorking = fst <$> filter (not . isFullSuccess . snd) report
-  pure $ filter (flip elem notWorking . name) repl.tests
-
-defineActiveTests : FileSystem (FSError :: e) =>
-  Has [ State TestInfoContext TestInfoCommand
-      , State GlobalConfig Global
-      , Exception ReplicaError
-      , Console
-      ] e => App e (List Test)
-defineActiveTests = do
-  last <- if !((.filter.lastFailures) <$> get TestInfoContext)
-        then getLastFailures
-        else do
-          repl <- getReplica
-          pure repl.tests
-  filterTests last
-
 displayTest :
   FileSystem (FSError :: e) =>
   Has [ State TestInfoContext TestInfoCommand
@@ -164,8 +123,9 @@ testInfoReplica :
     , Console
     ] e => App e ()
 testInfoReplica = do
-  debug "Info: \{show !(get TestInfoContext)}"
+  ctx <- get TestInfoContext
+  debug "Info: \{show ctx}"
   debug $ show !(get GlobalConfig)
   putStrLn ""
-  tests <- defineActiveTests
+  tests <- fst <$> new ctx.filter defineActiveTests
   traverse_ displayTestBySuite $ bySuite tests
