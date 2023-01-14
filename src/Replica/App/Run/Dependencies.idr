@@ -5,6 +5,7 @@ import Data.List
 import Data.List1
 import Data.String
 
+import Replica.Core.Test
 import Replica.Core.Types
 import Replica.Other.String
 
@@ -49,17 +50,14 @@ displayPlan plan = unlines $ ("Ready:"
     go p = ["\{fromMaybe "No suite" p.name}:", displaySuitePlan p]
 
 
-public export
-isReady : Test -> Bool
-isReady = null . require
-
+-- Does any of the tests depends on a test that is not in the list?
 dependsOnOther : List Test -> Bool
 dependsOnOther xs = any (not . flip elem (name <$> xs))  $ xs >>= require
 
-buildSuitePlan : List1 Test -> SuitePlan
-buildSuitePlan (x:::xs) = let
-  (now, later) = partition (null . require) $ x::xs
-  in SPlan x.suite now later []
+buildSuitePlan : Maybe String -> List1 Test -> SuitePlan
+buildSuitePlan name xs = let
+  (now, later) = partition (null . require) $ forget xs
+  in SPlan name now later []
 
 removeRequirements : List String -> Test -> Test
 removeRequirements xs y
@@ -73,10 +71,10 @@ buildPlan available rejected = uncurry Plan $
     cleantAvailable : List Test
     cleantAvailable
       = removeRequirements (name <$> rejected) <$> available
-    suites : List (List1 Test)
-    suites = groupBy ((==) `on` suite) $ sortBy (compare `on` suite) cleantAvailable
+    suites : List (Maybe String, List1 Test)
+    suites = bySuite cleantAvailable
     namedSuitePlan : List SuitePlan
-    namedSuitePlan = map buildSuitePlan suites
+    namedSuitePlan = map (uncurry buildSuitePlan) suites
 
 export
 sortResults : List (Test, Either TestError TestResult) -> (List String, List String)
@@ -87,7 +85,7 @@ sortResults
 export
 updateSuite : (successes, other : List String) -> SuitePlan -> SuitePlan
 updateSuite successes other (SPlan n now later skipped) = let
-  (now', later') = partition (null . require) $ removeRequirements successes <$> later
+  (now', later') = partition isReady $ removeRequirements successes <$> later
   (later'', skipped') = partition (not . any (`elem` other) . require) later'
   in SPlan n (now ++ now') later'' (skipped ++ (map (\t => (fromMaybe "unknown_test" $ head' t.require , t)) skipped'))
 

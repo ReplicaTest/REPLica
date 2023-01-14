@@ -77,7 +77,7 @@ runRun ctx = run $ new ctx.global $ new ctx $ handle runReplica
 
 covering
 runInfo : InfoCommand -> IO ReplicaExit
-runInfo info = run $ new info.global $ new info $ handle infoReplica
+runInfo info = run $ new info $ handle infoReplica
     (const $ pure Success)
     (pure . HasReplicaError)
 

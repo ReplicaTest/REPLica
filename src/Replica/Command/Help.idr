@@ -25,10 +25,13 @@ help = MkHelp
 export
 parseHelp : List1 String -> ParseResult Help
 parseHelp ("help" ::: []) = Done help
-parseHelp ("help" ::: [command]) = maybe
-  (InvalidMix "Help unavailable, \{show command} is not a valid command")
-  Done $ do
+parseHelp ("help" ::: [command]) = let
+  parseChapter = do
     commands <- "Commands" `lookup` help.chapter
     lookup command $ map (\h => (h.name, h)) $ forget commands
+  in maybe
+      (InvalidMix "Help unavailable, \{show command} is not a valid command")
+      Done
+      parseChapter
 parseHelp ("help" ::: _) = InvalidMix $ "Too many arguments for help"
 parseHelp xs = InvalidOption xs
