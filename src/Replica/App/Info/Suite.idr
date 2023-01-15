@@ -9,6 +9,7 @@ import Data.List1
 import Replica.App.Display
 import Replica.App.FileSystem
 import Replica.App.Filter
+import Replica.App.Format
 import Replica.App.Log
 import Replica.App.Replica
 import Replica.Core.Test
@@ -28,8 +29,9 @@ displaySuite :
     , Console
     ] e =>
   (Maybe String, List1 Test) -> App e ()
-displaySuite (name, tests) = do
-  putStrLn $ "\{!(formattedSuiteName name)} (\{show $ length tests} tests)"
+displaySuite (name, tests) =
+  putStrLn
+    "\{!bold (maybe "- No suite" ("- " <+>) name)} (\{show $ length tests} tests)"
 
 export
 suiteInfoReplica :

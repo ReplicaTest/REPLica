@@ -200,4 +200,7 @@ helpRun = commandHelp {b = Builder RunCommand'}
 
 export
 helpTest : Help
-helpTest = {description := "Alias for 'replica run'"} helpRun
+helpTest = commandHelp {b = Builder RunCommand'}
+  (pure "replica") "test" "Alias for 'replica run'"
+  optParseRun
+  (Just "JSON_TEST_FILE(S)")

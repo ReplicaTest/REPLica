@@ -307,6 +307,7 @@ let tests
 
 in    tests
     # ./tests/parsing_errors.dhall
+    # ./tests/help.dhall
     # ./tests/suite.dhall
     # ./tests/idris.dhall
     # [ { mapKey = "test space"
