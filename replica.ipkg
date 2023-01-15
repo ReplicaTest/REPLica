@@ -10,7 +10,10 @@ langversion >= 0.6.0
 modules = Replica
 
         , Replica.App
+        , Replica.App.Display
         , Replica.App.Info
+        , Replica.App.Info.Suite
+        , Replica.App.Info.Test
         , Replica.App.FileSystem
         , Replica.App.Format
         , Replica.App.Log
@@ -25,11 +28,14 @@ modules = Replica
         , Replica.Command
         , Replica.Command.Help
         , Replica.Command.Info
+        , Replica.Command.Info.Suite
+        , Replica.Command.Info.Test
         , Replica.Command.Run
         , Replica.Command.Version
 
         , Replica.Core
         , Replica.Core.Parse
+        , Replica.Core.Test
         , Replica.Core.Types
 
         , Replica.Help

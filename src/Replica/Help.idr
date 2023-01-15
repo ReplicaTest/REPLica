@@ -27,7 +27,6 @@ entrySynopsis k x =
     | [] => []
   in "\{padRightTo k x.name}  \{y}" :: map (pack (replicate (2 + k) ' ') ++) ys
 
-
 chapterSynopsis : Nat -> String -> List1 Help -> String
 chapterSynopsis k x xs = removeTrailingNL $ unlines $
   "\{x}:" :: map (withOffset 2) (forget xs >>= entrySynopsis k)

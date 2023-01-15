@@ -7,6 +7,7 @@ import Data.List1
 import Data.String
 
 import Replica.App.Clock
+import public Replica.App.Display
 import Replica.App.Format
 import Replica.App.Replica
 import Replica.App.Run.Types
@@ -51,17 +52,6 @@ showDiff GitDiff n x y = catchNew
 showDiff (Custom z) n x y = catchNew
   (system $ "\{z} \{!getExpectedOutput} \{!getOutputFile}")
   (\err : SystemError => pure ())
-
--- display the name of a suite
-export
-displaySuite :
-  Has [ State RunContext RunCommand
-      , State GlobalConfig Global
-      , Console
-      ] e => Maybe String -> App e ()
-displaySuite suite = putStrLn $ !bold $ maybe "No suite given:" ("Suite: " <+>) suite
-
-
 
 -- display the final report of a run
 export

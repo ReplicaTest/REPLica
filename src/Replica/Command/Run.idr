@@ -176,18 +176,31 @@ defaultRun = MkRunCommand
 withGivenGlobal : Default RunCommand' -> Default Global' -> Default RunCommand'
 withGivenGlobal x g = {global := g <+> defaultGlobal} x
 
-export
-parseRun : Default Global' -> List1 String -> ParseResult RunCommand
-parseRun g ("run":::xs) = do
+
+parseRun' : Default Global' -> List String -> ParseResult RunCommand
+parseRun' g xs = do
     case parse (initBuilder $ defaultRun `withGivenGlobal` g) optParseRun xs of
          InvalidMix reason => InvalidMix reason
          InvalidOption ys  => InvalidOption $ singleton $ "Unknown option(s): \{show $ toList ys}"
          Done builder      => maybe (InvalidMix "No test file given") Done $ build builder
+
+export
+parseRun : Default Global' -> List1 String -> ParseResult RunCommand
+parseRun g ("run":::xs) = parseRun' g xs
+parseRun g ("test":::xs) = parseRun' g xs
 parseRun _ xs = InvalidOption xs
+
 
 export
 helpRun : Help
 helpRun = commandHelp {b = Builder RunCommand'}
-  "run" "Run tests from a Replica JSON file"
+  (pure "replica") "run" "Run tests from a Replica JSON file"
+  optParseRun
+  (Just "JSON_TEST_FILE(S)")
+
+export
+helpTest : Help
+helpTest = commandHelp {b = Builder RunCommand'}
+  (pure "replica") "test" "Alias for 'replica run'"
   optParseRun
   (Just "JSON_TEST_FILE(S)")

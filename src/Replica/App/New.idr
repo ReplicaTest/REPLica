@@ -36,13 +36,16 @@ jsonTestSample = JObject
 dhallTestSample : String
 dhallTestSample =
   #"""
-   let hello = Test.Success ::
-      { command = "echo \"Hello, World!\""
-      , description = Some "This test is a placeholder, you can edit it."
-      , spaceSensitive = False
-      , stdOut = Expectation ::
-          {consecutive = ["Hello", "World"], end = Some "!"}
-      }
+   let hello =
+         Test.Success::{
+         , command = "echo \"Hello, World!\""
+         , description = Some "This test is a placeholder, you can edit it."
+         , spaceSensitive = False
+         , stdOut = Expectation ::{
+           , consecutive = ["Hello", "World"]
+           , end = Some "!"
+           }
+         }
    """#
 
 jsonContent : (withSample : Bool) -> JSON
@@ -51,19 +54,23 @@ jsonContent withSample =
 
 dhallContent : (withSample : Bool) -> String
 dhallContent withSample = removeTrailingNL $ unlines
-  [ "let Replica"
-  , "  = env:REPLICA_DHALL"
-  , "  ? \{replicaURL}"
+  [ "let Replica ="
+  , "        env:REPLICA_DHALL"
+  , "      ? \{replicaURL}"
+  , ""
   , "let Prelude = Replica.Prelude"
+  , ""
   , "let Test = Replica.Test"
+  , ""
   , "let Status = Replica.Status"
+  , ""
   , "let Expectation = Replica.Expectation"
-  , ""
   , if withSample
-       then dhallTestSample
+       then "\n" <+> dhallTestSample <+> "\n"
        else ""
-  , ""
-  , "let tests : Replica.Type = \{sample}"
+  , "let tests"
+  , "    : Replica.Type"
+  , "    = \{sample}"
   , ""
   , "in tests"
   ]

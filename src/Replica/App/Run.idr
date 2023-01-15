@@ -15,6 +15,7 @@ import System.Path
 
 import Replica.App.Clock
 import Replica.App.FileSystem
+import Replica.App.Filter
 import Replica.App.Format
 import Replica.App.Log
 import Replica.App.Replica
@@ -173,51 +174,6 @@ runAllTests plan = do
                   let plan'' = {waitingOthers $= maybe id (::) stuckPlan} plan'
                   batchTests acc' $ assert_smaller plan $ updateOnBatchResults suiteResults plan''
 
-filterTests : FileSystem (FSError :: e) =>
-  Has [ State RunContext RunCommand
-      , State GlobalConfig Global
-      , Exception ReplicaError
-      , Console
-      ] e => (s, r : List Test) -> App e TestPlan
-filterTests s r = do
-  activeFilters <- filter <$> get RunContext
-  debug $ "Filters: \{show activeFilters}"
-  let (selected, rejected) = partition (keepTest activeFilters) s
-  pure $ buildPlan selected (rejected ++ r)
-
-getLastFailures : FileSystem (FSError :: e) =>
-  Has [ State GlobalConfig Global
-      , Exception ReplicaError
-      , Console
-      ] e => App e (List Test, List Test)
-getLastFailures = do
-  repl <- getReplica
-  logFile <- lastRunLog <$> getReplicaDir
-  lastLog <- catchNew (readFile logFile)
-    (\err : FSError => throw $ CantAccessTestFile logFile)
-  let Just json = parse lastLog
-    | Nothing => throw $ InvalidJSON ["Can't parse JSON (invalid syntax)"]
-  let Valid report = parseReport json
-    | Error err => throw $ InvalidJSON err
-  let notWorking = fst <$> filter (not . isFullSuccess . snd) report
-  let (selected, rejected) = partition (flip elem notWorking . name) repl.tests
-  debug $ "Previous invalid tests: \{show selected}"
-  pure (selected, rejected)
-
-defineActiveTests : FileSystem (FSError :: e) =>
-  Has [ State RunContext RunCommand
-      , State GlobalConfig Global
-      , Exception ReplicaError
-      , Console
-      ] e => App e TestPlan
-defineActiveTests = do
-  tests <- if !((.filter.lastFailures) <$> get RunContext)
-        then getLastFailures
-        else do
-          repl <- getReplica
-          pure (repl.tests, [])
-  uncurry filterTests tests
-
 extractReport : (Maybe String, List (Test, Either TestError TestResult)) ->
                 List (String, Either TestError TestResult)
 extractReport = map (mapFst name) . snd
@@ -246,9 +202,11 @@ runReplica : SystemIO (SystemError :: TestError :: e) =>
       , Console
       ] e => App e Stats
 runReplica = do
-  debug $ "Run: \{show !(get RunContext)}"
+  ctx <- get RunContext
+  debug $ "Run: \{show ctx}"
   rDir <- prepareReplicaDir
-  plan <- defineActiveTests
+  (kept, excluded) <- new ctx.filter defineActiveTests
+  let plan = buildPlan kept excluded
   log $ displayPlan plan
   result <- runAllTests plan
   let logFile = lastRunLog rDir

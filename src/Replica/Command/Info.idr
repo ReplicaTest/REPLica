@@ -8,14 +8,15 @@ import Replica.Option.Global
 import Replica.Option.Types
 import Replica.Other.Decorated
 
+import Replica.Command.Info.Suite
+import Replica.Command.Info.Test
+
 %default total
 
 public export
-record InfoCommand' (f : Type -> Type) where
-  constructor MkInfo
-  showExpectation : f Bool
-  filter : Filter' f
-  global : Global' f
+data InfoCommand' : (f : Type -> Type) -> Type where
+  SuiteInfo : SuiteInfoCommand' f -> InfoCommand' f
+  TestInfo : TestInfoCommand' f -> InfoCommand' f
 
 public export
 InfoCommand : Type
@@ -23,67 +24,34 @@ InfoCommand = Done InfoCommand'
 
 export
 TyMap InfoCommand' where
-  tyMap func x = MkInfo
-    (func x.showExpectation)
-    (tyMap func x.filter) (tyMap func x.global)
+  tyMap func (SuiteInfo x) = SuiteInfo (tyMap func x)
+  tyMap func (TestInfo x) = TestInfo (tyMap func x)
 
 export
 TyTraversable InfoCommand' where
-  tyTraverse func x = [| MkInfo
-      (func x.showExpectation)
-      (tyTraverse func x.filter) (tyTraverse func x.global)
-      |]
+  tyTraverse func (SuiteInfo x) = [| SuiteInfo (tyTraverse func x) |]
+  tyTraverse func (TestInfo x) = [| TestInfo (tyTraverse func x) |]
 
 export
 Show InfoCommand where
-  show i = unwords [ "MkInfo"
-                   , show i.showExpectation
-                   , show i.filter
-                   , show i.global]
-
-showExpectationPart : Part (Builder InfoCommand') Bool
-showExpectationPart = inj $ MkOption
-      ( singleton
-        $ MkMod (singleton "expectations") ['e'] (Left True)
-          "show expectation for each test")
-      False
-      go
-  where
-    go : Bool -> Builder InfoCommand' -> Either String (Builder InfoCommand')
-    go = ifSame showExpectation
-                (\x => {showExpectation := Right x})
-                (const $ const "Contradictory values for expectations")
-
-
-optParseInfo : OptParse (Builder InfoCommand') InfoCommand
-optParseInfo = [|MkInfo
-  (liftAp showExpectationPart)
-  (embed filter (\x => {filter := x}) optParseFilter)
-  (embed global (\x => {global := x}) optParseGlobal)
-  |]
-
-defaultInfo : Default InfoCommand'
-defaultInfo = MkInfo
-  (defaultPart showExpectationPart)
-  defaultFilter
-  defaultGlobal
-
-export
-withGivenGlobal : Default InfoCommand' -> Default Global' -> Default InfoCommand'
-withGivenGlobal x g = {global := g <+> defaultGlobal} x
+  show (SuiteInfo i) = unwords [ "SuiteInfo", "(", show i, ")" ]
+  show (TestInfo i) = unwords [ "TestInfo", "(", show i, ")" ]
 
 export
 parseInfo : Default Global' ->  List1 String -> ParseResult InfoCommand
-parseInfo g ("info":::xs) = case parse (initBuilder $ defaultInfo `withGivenGlobal` g) optParseInfo xs of
-  InvalidMix reason => InvalidMix reason
-  InvalidOption ys => InvalidOption $ singleton $ "Unknown option(s): \{show $ toList ys}"
-  Done x => maybe (InvalidMix "File is not set") Done $ build x
+parseInfo g ("info":::xs) = case xs of
+  "suite"::xs' => SuiteInfo <$> parseSuiteInfo g xs'
+  "test"::xs' => TestInfo <$> parseTestInfo g xs'
+  _ => TestInfo <$> parseTestInfo g xs
 parseInfo _ xs = InvalidOption xs
 
 export
 helpInfo : Help
 helpInfo =
-  commandHelp {b = Builder InfoCommand'}
-    "info" "Display information about test suites"
-    optParseInfo
-    (Just "JSON_TEST_FILE")
+  MkHelp
+    "info"
+    (Just "replica info [TOPIC] [TOPIC_OPTIONS] JSON_TEST_FILE")
+    "Get information about a given test file"
+    [ ("Topics", helpTestInfo ::: [helpSuiteInfo])
+    ]
+    (Just "Run 'replica help info TOPIC' for more information on a topic.")

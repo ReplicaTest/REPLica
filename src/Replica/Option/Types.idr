@@ -5,6 +5,7 @@ import Data.List
 import public Data.List1
 import public Data.List.AtIndex
 import Data.Maybe
+import Data.String
 import public Data.OpenUnion
 
 import Replica.Help
@@ -147,6 +148,11 @@ namespace Parser
     MixFailure : ParsingFailure (InvalidMix reason)
 
   export
+  Semigroup (ParseResult a) where
+    Done x <+> _ = Done x
+    _ <+> y = y
+
+  export
   Functor ParseResult where
     map func (InvalidOption xs) = InvalidOption xs
     map func (InvalidMix x) = InvalidMix x
@@ -205,12 +211,13 @@ namespace Help
 
   export
   commandHelp :
+    (parents : List1 String) ->
     (name : String) -> (description : String) ->
     (options : OptParse b c) ->
     (param : Maybe String) -> Help
-  commandHelp name description options param = MkHelp
+  commandHelp parents name description options param = MkHelp
     name
-    (Just "replica \{name} [OPTIONS]\{paramExt param}")
+    (Just "\{unwords $ forget parents} \{name} [OPTIONS]\{paramExt param}")
     description
     ( catMaybes
        [ map (MkPair "Options") $

@@ -3,4 +3,5 @@
 , toTest = ./toTest.dhall
 , Run = ./Run.dhall
 , Info = ./Info.dhall
+, Help = ./Help.dhall
 }

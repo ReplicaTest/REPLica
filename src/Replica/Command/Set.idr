@@ -125,7 +125,7 @@ helpSet = {lastWords := Just footer} baseCommand
   where
     baseCommand : Help
     baseCommand = commandHelp {b = Builder SetCommand'}
-      "set" "Set a global configuration for replica commands"
+      (pure "replica") "set" "Set a global configuration for replica commands"
       (optParseSet)
       (Just "KEY=VALUE")
     footer : String

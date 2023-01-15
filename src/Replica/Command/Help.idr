@@ -2,6 +2,7 @@ module Replica.Command.Help
 
 import Data.List
 import Data.List1
+import Data.String
 
 import Replica.Command.Info
 import Replica.Command.Run
@@ -15,20 +16,28 @@ import Replica.Other.Validation
 export
 help : Help
 help = MkHelp
-  "replica"
-  (Just "replica COMMAND [COMMAND_OPTIONS]")
-  "Integration testing for command line interfaces"
-  [ ("Commands", helpRun ::: [helpInfo, helpSet, helpNew, helpVersion])
-  ]
-  (Just "Run 'replica help COMMAND' for more information on a command.")
+  { name = "help"
+  , usage = Just "replica COMMAND [COMMAND_OPTIONS]"
+  , description = "Integration testing for command line interfaces"
+  , chapter = [ ("Commands", helpRun ::: [helpTest, helpInfo, helpSet, helpNew, helpVersion])
+    ]
+  , lastWords = Just "Run 'replica help COMMAND' for more information on a command."
+  }
+
+parseHelp' : Help -> List1 String -> ParseResult Help
+parseHelp' help xs@(name:::ys) = maybe
+  (InvalidOption $ pure "Help unavailable, '\{name}' is not a valid command")
+  ( const $ case ys of
+      [] => Done help
+      (next::ys') => let
+        subs = foldMap (forget . snd) help.chapter
+        in foldl
+             (\res, h => res <+> parseHelp' h (assert_smaller xs (next:::ys')))
+             (InvalidOption $ pure "Cannot find help for '\{unwords ys}'")
+             subs
+  )
+  $ guard $ name == help.name
 
 export
 parseHelp : List1 String -> ParseResult Help
-parseHelp ("help" ::: []) = Done help
-parseHelp ("help" ::: [command]) = maybe
-  (InvalidMix "Help unavailable, \{show command} is not a valid command")
-  Done $ do
-    commands <- "Commands" `lookup` help.chapter
-    lookup command $ map (\h => (h.name, h)) $ forget commands
-parseHelp ("help" ::: _) = InvalidMix $ "Too many arguments for help"
-parseHelp xs = InvalidOption xs
+parseHelp = parseHelp' help

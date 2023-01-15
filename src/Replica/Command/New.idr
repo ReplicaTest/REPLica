@@ -134,6 +134,6 @@ parseNew xs = InvalidOption xs
 export
 helpNew : Help
 helpNew = commandHelp {b = Builder NewCommand'}
-  "new" "Create test files"
+  (pure "replica") "new" "Create test files"
   optParseNew
   (Just "NEW_TEST_FILE")
