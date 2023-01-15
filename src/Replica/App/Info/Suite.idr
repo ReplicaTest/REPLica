@@ -6,16 +6,30 @@ import Control.App.Console
 import Data.List
 import Data.List1
 
+import Replica.App.Display
 import Replica.App.FileSystem
+import Replica.App.Filter
 import Replica.App.Log
 import Replica.App.Replica
 import Replica.Core.Test
 import Replica.Core.Types
 import Replica.Command.Info.Suite
+import Replica.Option.Filter
 import Replica.Option.Global
 import Replica.Other.Decorated
+import Replica.Other.String
 
+import Replica.Core.Types
 import Replica.App.Info.Types
+
+displaySuite :
+  Has
+    [ State GlobalConfig Global
+    , Console
+    ] e =>
+  (Maybe String, List1 Test) -> App e ()
+displaySuite (name, tests) = do
+  putStrLn $ "\{!(formattedSuiteName name)} (\{show $ length tests} tests)"
 
 export
 suiteInfoReplica :
@@ -27,8 +41,9 @@ suiteInfoReplica :
     , Console
     ] e => App e ()
 suiteInfoReplica = do
-  debug "Info: \{show !(get SuiteInfoContext)}"
+  ctx <- get SuiteInfoContext
+  debug "Info: \{show ctx}"
   debug $ show !(get GlobalConfig)
   putStrLn ""
-  tests <- ?defineActiveTests
-  traverse_ ?displayTestBySuite $ bySuite tests
+  tests <- fst <$> new ctx.filter defineActiveTests
+  traverse_ displaySuite $ bySuite tests

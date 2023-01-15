@@ -23,6 +23,7 @@ import Replica.Other.Decorated
 import Replica.Other.String
 import Replica.Other.Validation
 
+import Replica.App.Info.Suite
 import Replica.App.Info.Test
 import public Replica.App.Info.Types
 
@@ -37,5 +38,5 @@ infoReplica :
 infoReplica = do
   cmd <- get InfoContext
   case cmd of
-    SuiteInfo x => new x.global $ new x $ ?suiteInfoReplica
+    SuiteInfo x => new x.global $ new x $ suiteInfoReplica
     TestInfo x => new x.global $ new x $ testInfoReplica
