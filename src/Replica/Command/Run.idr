@@ -190,9 +190,14 @@ parseRun g ("run":::xs) = parseRun' g xs
 parseRun g ("test":::xs) = parseRun' g xs
 parseRun _ xs = InvalidOption xs
 
+
 export
 helpRun : Help
 helpRun = commandHelp {b = Builder RunCommand'}
-  "run (or test)" "Run tests from a Replica JSON file"
+  (pure "replica") "run" "Run tests from a Replica JSON file"
   optParseRun
   (Just "JSON_TEST_FILE(S)")
+
+export
+helpTest : Help
+helpTest = {description := "Alias for 'replica run'"} helpRun

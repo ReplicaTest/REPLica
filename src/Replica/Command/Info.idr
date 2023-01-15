@@ -49,9 +49,9 @@ export
 helpInfo : Help
 helpInfo =
   MkHelp
-    "replica info"
+    "info"
     (Just "replica info [TOPIC] [TOPIC_OPTIONS] JSON_TEST_FILE")
     "Get information about a given test file"
     [ ("Topics", helpTestInfo ::: [helpSuiteInfo])
     ]
-    Nothing
+    (Just "Run 'replica help info TOPIC' for more information on a topic.")

@@ -64,6 +64,6 @@ export
 helpSuiteInfo : Help
 helpSuiteInfo =
   commandHelp {b = Builder SuiteInfoCommand'}
-    "suite" "Display information about test suites"
+    ("replica":::["info"]) "suite" "Display information about test suites"
     optParseInfo
     (Just "JSON_TEST_FILE")

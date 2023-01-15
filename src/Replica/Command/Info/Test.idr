@@ -84,6 +84,6 @@ export
 helpTestInfo : Help
 helpTestInfo =
   commandHelp {b = Builder TestInfoCommand'}
-    "info test" "Display information about tests"
+    ("replica":::["info"]) "test" "Display information about tests"
     optParseInfo
     (Just "JSON_TEST_FILE")
