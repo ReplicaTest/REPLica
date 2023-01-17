@@ -26,7 +26,7 @@ help = MkHelp
 
 parseHelp' : Help -> List1 String -> ParseResult Help
 parseHelp' help xs@(name:::ys) = maybe
-  (InvalidOption $ pure "Help unavailable, '\{name}' is not a valid command")
+  (InvalidOption xs)
   ( const $ case ys of
       [] => Done help
       (next::ys') => let

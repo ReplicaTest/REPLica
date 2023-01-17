@@ -52,11 +52,9 @@ displayExit : ReplicaExit -> IO ()
 displayExit (HasReplicaError x) = ignore $ fPutStrLn stderr $ show x
 displayExit (HasTestErrors n notZ) = pure ()
 displayExit (HasArgParsingError (InvalidOption xs)) = do
-  ignore $ fPutStrLn stderr "Invalid command : \{xs.head}"
-  runHelp stderr help
+  ignore $ fPutStrLn stderr "Invalid command or option: \{joinBy ", " $ forget xs}"
 displayExit (HasArgParsingError (InvalidMix str)) = do
   ignore $ fPutStrLn stderr str
-  runHelp stderr help
 displayExit HasEnvInitialisationError =
   ignore $ fPutStrLn stderr "Can't init env"
 displayExit Success = pure ()

@@ -35,4 +35,7 @@ parseArgs g xs = foldl1 go $ toList1 $ map (flip apply xs)
     go (Done x) _ = Done x
     go _ (Done x) = Done x
     go (InvalidMix x) y = InvalidMix x
+    go (InvalidOption ys) (InvalidOption zs) = let
+      smallest = if length ys < length zs then ys else zs
+      in InvalidOption smallest
     go (InvalidOption ys) y = y

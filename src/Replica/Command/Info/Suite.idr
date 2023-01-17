@@ -57,7 +57,7 @@ parseSuiteInfo : Default Global' ->  List String -> ParseResult SuiteInfoCommand
 parseSuiteInfo g xs =
   case parse (initBuilder $ defaultInfo `withGivenGlobal` g) optParseInfo xs of
     InvalidMix reason => InvalidMix reason
-    InvalidOption ys => InvalidOption $ singleton $ "Unknown option(s): \{show $ toList ys}"
+    InvalidOption ys => InvalidOption ys
     Done x => maybe (InvalidMix "File is not set") Done $ build x
 
 export

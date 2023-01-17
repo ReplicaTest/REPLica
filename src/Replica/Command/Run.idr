@@ -181,7 +181,7 @@ parseRun' : Default Global' -> List String -> ParseResult RunCommand
 parseRun' g xs = do
     case parse (initBuilder $ defaultRun `withGivenGlobal` g) optParseRun xs of
          InvalidMix reason => InvalidMix reason
-         InvalidOption ys  => InvalidOption $ singleton $ "Unknown option(s): \{show $ toList ys}"
+         InvalidOption ys  => InvalidOption ys
          Done builder      => maybe (InvalidMix "No test file given") Done $ build builder
 
 export

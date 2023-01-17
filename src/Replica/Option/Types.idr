@@ -138,6 +138,7 @@ namespace Parser
 
   public export
   data ParseResult a
+    -- = InvalidCommand (List1 String)
     = InvalidOption (List1 String)
     | InvalidMix String -- reason
     | Done a
@@ -166,10 +167,12 @@ namespace Parser
   parse acc o [] = Done acc
   parse acc o (x::xs) = let
     Just (xs', f) = runApM (\p => partParser p (x::xs)) o
-      | Nothing => InvalidOption (x:::xs)
+      | Nothing => case parse acc o xs of
+          InvalidOption xs' => InvalidOption $ x:::forget xs'
+          _ => InvalidOption $ singleton x
     in either
          InvalidMix
-         (\y => parse y o $ assert_smaller (x::xs) xs')
+         (\acc' => parse acc' o $ assert_smaller (x::xs) xs')
          (f acc)
 
 namespace Default
