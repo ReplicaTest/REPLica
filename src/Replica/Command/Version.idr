@@ -12,7 +12,7 @@ data Version = MkVersion String
 export
 parseVersion : List1 String -> ParseResult Version
 parseVersion ("version" ::: xs) = Done $ MkVersion "replica version \{version}"
-parseVersion xs = InvalidOption xs
+parseVersion xs = InvalidOption Nothing xs
 
 export
 helpVersion : Help

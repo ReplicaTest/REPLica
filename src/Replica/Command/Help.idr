@@ -26,14 +26,14 @@ help = MkHelp
 
 parseHelp' : Help -> List1 String -> ParseResult Help
 parseHelp' help xs@(name:::ys) = maybe
-  (InvalidOption xs)
+  (InvalidOption (pure help) xs)
   ( const $ case ys of
       [] => Done help
       (next::ys') => let
         subs = foldMap (forget . snd) help.chapter
         in foldl
              (\res, h => res <+> parseHelp' h (assert_smaller xs (next:::ys')))
-             (InvalidOption $ pure "Cannot find help for '\{unwords ys}'")
+             (InvalidOption (pure help) $ pure "Cannot find help for '\{unwords ys}'")
              subs
   )
   $ guard $ name == help.name

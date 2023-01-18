@@ -52,13 +52,6 @@ export
 withGivenGlobal : Default SuiteInfoCommand' -> Default Global' -> Default SuiteInfoCommand'
 withGivenGlobal x g = {global := g <+> defaultGlobal} x
 
-export
-parseSuiteInfo : Default Global' ->  List String -> ParseResult SuiteInfoCommand
-parseSuiteInfo g xs =
-  case parse (initBuilder $ defaultInfo `withGivenGlobal` g) optParseInfo xs of
-    InvalidMix reason => InvalidMix reason
-    InvalidOption ys => InvalidOption ys
-    Done x => maybe (InvalidMix "File is not set") Done $ build x
 
 export
 helpSuiteInfo : Help
@@ -67,3 +60,13 @@ helpSuiteInfo =
     ("replica":::["info"]) "suite" "Display information about test suites"
     optParseInfo
     (Just "JSON_TEST_FILE")
+
+export
+parseSuiteInfo : Default Global' ->  List String -> ParseResult SuiteInfoCommand
+parseSuiteInfo g xs = do
+  builder <- parse
+    helpSuiteInfo
+    (initBuilder $ defaultInfo `withGivenGlobal` g)
+    optParseInfo
+    xs
+  maybe (InvalidMix "No test file given") Done $ build builder

@@ -71,7 +71,7 @@ onlyPart = inj $ MkOption
         compose : List String -> Builder Filter' -> Either String (Builder Filter')
         compose xs x = case either (const []) (intersect xs) x.exclude of
           [] => Right $ {only $= Right . (++ xs) . either (const []) id} x
-          xs => Left "Some tests were both included and excluded: \{show xs}"
+          xs => Left "Some tests were both included and excluded: \{joinBy ", " xs}"
 
 
 excludePart : Part (Builder Filter') (List String)
@@ -86,7 +86,7 @@ excludePart = inj $ MkOption
         compose : List String -> Builder Filter' -> Either String (Builder Filter')
         compose xs x = case either (const []) (intersect xs) x.only of
           [] => Right $ {exclude $= Right . (++ xs) . either (const []) id} x
-          xs => Left "Some tests were both included and excluded: \{show xs}"
+          xs => Left "Some tests were both included and excluded: \{joinBy ", " xs}"
 
 onlyTagsPart : Part (Builder Filter') (List String)
 onlyTagsPart = inj $ MkOption
@@ -100,7 +100,7 @@ onlyTagsPart = inj $ MkOption
         compose : List String -> Builder Filter' -> Either String (Builder Filter')
         compose xs x = case either (const []) (intersect xs) x.excludeTags of
           [] => Right $ {onlyTags $= Right . (++ xs) . either (const []) id} x
-          xs => Left "Some tags were both included and excluded: \{show xs}"
+          xs => Left "Some tags were both included and excluded: \{joinBy ", " xs}"
 
 excludeTagsPart : Part (Builder Filter') (List String)
 excludeTagsPart = inj $ MkOption
@@ -115,7 +115,7 @@ excludeTagsPart = inj $ MkOption
         compose : List String -> Builder Filter' -> Either String (Builder Filter')
         compose xs x = case either (const []) (intersect xs) x.onlyTags of
           [] => Right $ {excludeTags $= Right . (++ xs) . either (const []) id} x
-          xs => Left "Some tags were both included and excluded: \{show xs}"
+          xs => Left "Some tags were both included and excluded: \{joinBy ", " xs}"
 
 onlySuitesPart : Part (Builder Filter') (List String)
 onlySuitesPart = inj $ MkOption
@@ -129,7 +129,7 @@ onlySuitesPart = inj $ MkOption
         compose : List String -> Builder Filter' -> Either String (Builder Filter')
         compose xs x = case either (const []) (intersect xs) x.excludeTags of
           [] => Right $ {onlySuites $= Right . (++ xs) . either (const []) id} x
-          xs => Left "Some tags were both included and excluded: \{show xs}"
+          xs => Left "Some tags were both included and excluded: \{joinBy ", " xs}"
 
 excludeSuitesPart : Part (Builder Filter') (List String)
 excludeSuitesPart = inj $ MkOption
@@ -144,7 +144,7 @@ excludeSuitesPart = inj $ MkOption
         compose : List String -> Builder Filter' -> Either String (Builder Filter')
         compose xs x = case either (const []) (intersect xs) x.onlyTags of
           [] => Right $ {excludeSuites $= Right . (++ xs) . either (const []) id} x
-          xs => Left "Some tags were both included and excluded: \{show xs}"
+          xs => Left "Some tags were both included and excluded: \{joinBy ", " xs}"
 
 lastFailuresPart : Part (Builder Filter') Bool
 lastFailuresPart = inj $ MkOption

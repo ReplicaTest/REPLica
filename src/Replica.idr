@@ -38,8 +38,8 @@ exitCode (HasReplicaError (InvalidJSON strs)) = ExitFailure 254
 exitCode (HasTestErrors n notZ) = if n > 127
   then ExitFailure 128
   else ExitFailure n
-exitCode (HasArgParsingError (InvalidOption xs)) = ExitFailure 253
-exitCode (HasArgParsingError (InvalidMix str)) = ExitFailure 252
+exitCode (HasArgParsingError (InvalidOption _ _)) = ExitFailure 253
+exitCode (HasArgParsingError (InvalidMix _)) = ExitFailure 252
 exitCode HasEnvInitialisationError = ExitFailure 255
 exitCode Success = ExitSuccess
 
@@ -51,8 +51,9 @@ toStdErr = ignore . fPutStrLn stderr
 displayExit : ReplicaExit -> IO ()
 displayExit (HasReplicaError x) = ignore $ fPutStrLn stderr $ show x
 displayExit (HasTestErrors n notZ) = pure ()
-displayExit (HasArgParsingError (InvalidOption xs)) = do
+displayExit (HasArgParsingError (InvalidOption h xs)) = do
   ignore $ fPutStrLn stderr "Invalid command or option: \{joinBy ", " $ forget xs}"
+  maybe (pure ()) (runHelp stderr) h
 displayExit (HasArgParsingError (InvalidMix str)) = do
   ignore $ fPutStrLn stderr str
 displayExit HasEnvInitialisationError =
@@ -128,7 +129,7 @@ main = do
   case x of
        InvalidMix _ => do
          exitReplica $ HasArgParsingError x
-       InvalidOption _ => do
+       InvalidOption _ _ => do
          exitReplica $ HasArgParsingError x
        Done cmd => do
          result <- runCommand cmd

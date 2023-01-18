@@ -38,14 +38,6 @@ Show InfoCommand where
   show (TestInfo i) = unwords [ "TestInfo", "(", show i, ")" ]
 
 export
-parseInfo : Default Global' ->  List1 String -> ParseResult InfoCommand
-parseInfo g ("info":::xs) = case xs of
-  "suite"::xs' => SuiteInfo <$> parseSuiteInfo g xs'
-  "test"::xs' => TestInfo <$> parseTestInfo g xs'
-  _ => TestInfo <$> parseTestInfo g xs
-parseInfo _ xs = InvalidOption xs
-
-export
 helpInfo : Help
 helpInfo =
   MkHelp
@@ -55,3 +47,11 @@ helpInfo =
     [ ("Topics", helpTestInfo ::: [helpSuiteInfo])
     ]
     (Just "Run 'replica help info TOPIC' for more information on a topic.")
+
+export
+parseInfo : Default Global' ->  List1 String -> ParseResult InfoCommand
+parseInfo g ("info":::xs) = case xs of
+  "suite"::xs' => SuiteInfo <$> parseSuiteInfo g xs'
+  "test"::xs' => TestInfo <$> parseTestInfo g xs'
+  _ => TestInfo <$> parseTestInfo g xs
+parseInfo _ xs = InvalidOption Nothing xs
