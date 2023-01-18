@@ -123,17 +123,15 @@ defaultNew =
     (defaultPart fileParamPart)
 
 export
-parseNew : List1 String -> ParseResult NewCommand
-parseNew ("new":::xs) = do
-  case parse (initBuilder defaultNew) optParseNew xs of
-         InvalidMix reason => InvalidMix reason
-         InvalidOption ys  => InvalidOption $ singleton $ "Unknown option(s): \{show $ toList ys}"
-         Done builder      => maybe (InvalidMix "No test file given") Done $ build builder
-parseNew xs = InvalidOption xs
-
-export
 helpNew : Help
 helpNew = commandHelp {b = Builder NewCommand'}
   (pure "replica") "new" "Create test files"
   optParseNew
   (Just "NEW_TEST_FILE")
+
+export
+parseNew : List1 String -> ParseResult NewCommand
+parseNew ("new":::xs) = do
+  builder <- parse helpNew (initBuilder defaultNew) optParseNew xs
+  maybe (InvalidMix "No test file given") Done $ build builder
+parseNew xs = InvalidOption Nothing xs

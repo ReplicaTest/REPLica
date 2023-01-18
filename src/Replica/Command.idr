@@ -22,7 +22,7 @@ Commands = Union Prelude.id [RunCommand, InfoCommand, SetCommand, NewCommand, He
 
 export
 parseArgs : Default Global' -> List1 String -> ParseResult Commands
-parseArgs g xs = foldl1 go $ toList1 $ map (flip apply xs)
+parseArgs g xs = foldl1 go $ InvalidOption (pure help) xs ::: map (flip apply xs)
   [ map inj . parseRun g
   , map inj . parseInfo g
   , map inj . parseSet
@@ -34,5 +34,7 @@ parseArgs g xs = foldl1 go $ toList1 $ map (flip apply xs)
     go : ParseResult Commands -> ParseResult Commands -> ParseResult Commands
     go (Done x) _ = Done x
     go _ (Done x) = Done x
-    go (InvalidMix x) y = InvalidMix x
-    go (InvalidOption ys) y = y
+    go x@(InvalidMix _) y = x
+    go x y@(InvalidMix _) = y
+    go x@(InvalidOption _ xs) y@(InvalidOption _ ys) =
+      if length xs <= length ys then x else y

@@ -73,17 +73,19 @@ withGivenGlobal : Default TestInfoCommand' -> Default Global' -> Default TestInf
 withGivenGlobal x g = {global := g <+> defaultGlobal} x
 
 export
-parseTestInfo : Default Global' ->  List String -> ParseResult TestInfoCommand
-parseTestInfo g xs =
-  case parse (initBuilder $ defaultInfo `withGivenGlobal` g) optParseInfo xs of
-    InvalidMix reason => InvalidMix reason
-    InvalidOption ys => InvalidOption $ singleton $ "Unknown option(s): \{show $ toList ys}"
-    Done x => maybe (InvalidMix "File is not set") Done $ build x
-
-export
 helpTestInfo : Help
 helpTestInfo =
   commandHelp {b = Builder TestInfoCommand'}
     ("replica":::["info"]) "test" "Display information about tests"
     optParseInfo
     (Just "JSON_TEST_FILE")
+
+export
+parseTestInfo : Default Global' ->  List String -> ParseResult TestInfoCommand
+parseTestInfo g xs = do
+  builder <- parse
+    helpTestInfo
+    (initBuilder $ defaultInfo `withGivenGlobal` g)
+    optParseInfo
+    xs
+  maybe (InvalidMix "No test file given") Done $ build builder

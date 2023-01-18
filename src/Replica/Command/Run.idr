@@ -177,19 +177,14 @@ withGivenGlobal : Default RunCommand' -> Default Global' -> Default RunCommand'
 withGivenGlobal x g = {global := g <+> defaultGlobal} x
 
 
-parseRun' : Default Global' -> List String -> ParseResult RunCommand
-parseRun' g xs = do
-    case parse (initBuilder $ defaultRun `withGivenGlobal` g) optParseRun xs of
-         InvalidMix reason => InvalidMix reason
-         InvalidOption ys  => InvalidOption $ singleton $ "Unknown option(s): \{show $ toList ys}"
-         Done builder      => maybe (InvalidMix "No test file given") Done $ build builder
-
-export
-parseRun : Default Global' -> List1 String -> ParseResult RunCommand
-parseRun g ("run":::xs) = parseRun' g xs
-parseRun g ("test":::xs) = parseRun' g xs
-parseRun _ xs = InvalidOption xs
-
+parseRun' : Help -> Default Global' -> List String -> ParseResult RunCommand
+parseRun' help g xs = do
+  builder <- parse
+    help
+    (initBuilder $ defaultRun `withGivenGlobal` g)
+    optParseRun
+    xs
+  maybe (InvalidMix "No test file given") Done $ build builder
 
 export
 helpRun : Help
@@ -204,3 +199,9 @@ helpTest = commandHelp {b = Builder RunCommand'}
   (pure "replica") "test" "Alias for 'replica run'"
   optParseRun
   (Just "JSON_TEST_FILE(S)")
+
+export
+parseRun : Default Global' -> List1 String -> ParseResult RunCommand
+parseRun g ("run":::xs) = parseRun' helpRun g xs
+parseRun g ("test":::xs) = parseRun' helpTest g xs
+parseRun _ xs = InvalidOption Nothing xs

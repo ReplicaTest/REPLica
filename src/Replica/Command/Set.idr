@@ -111,15 +111,6 @@ defaultSet = MkSetCommand
        (defaultPart setterPart)
 
 export
-parseSet : List1 String -> ParseResult SetCommand
-parseSet ("set":::xs) = do
-    case parse (initBuilder $ defaultSet) optParseSet xs of
-         InvalidMix reason => InvalidMix reason
-         InvalidOption ys  => InvalidOption $ singleton $ "Unknown option(s): " ++ show ys.head
-         Done builder      => maybe (InvalidMix "No test file given") Done $ build builder
-parseSet xs = InvalidOption xs
-
-export
 helpSet : Help
 helpSet = {lastWords := Just footer} baseCommand
   where
@@ -144,4 +135,12 @@ helpSet = {lastWords := Just footer} baseCommand
          testFile   (or jsonFile, test) the path of the test file to use (prefer a relative path)
                     (no default)
        """#
+
+
+export
+parseSet : List1 String -> ParseResult SetCommand
+parseSet ("set":::xs) = do
+    builder <- parse helpSet (initBuilder $ defaultSet) optParseSet xs
+    maybe (InvalidMix "No test file given") Done $ build builder
+parseSet xs = InvalidOption Nothing xs
 

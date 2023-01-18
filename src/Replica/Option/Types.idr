@@ -138,13 +138,14 @@ namespace Parser
 
   public export
   data ParseResult a
-    = InvalidOption (List1 String)
+    -- = InvalidCommand (List1 String)
+    = InvalidOption (Maybe Help) (List1 String)
     | InvalidMix String -- reason
     | Done a
 
   public export
   data ParsingFailure : ParseResult a -> Type where
-    OptionFailure : ParsingFailure (InvalidOption xs)
+    OptionFailure : ParsingFailure (InvalidOption help xs)
     MixFailure : ParsingFailure (InvalidMix reason)
 
   export
@@ -154,22 +155,41 @@ namespace Parser
 
   export
   Functor ParseResult where
-    map func (InvalidOption xs) = InvalidOption xs
-    map func (InvalidMix x) = InvalidMix x
+    map func (InvalidOption help xs) = InvalidOption help xs
+    map func (InvalidMix reason) = InvalidMix reason
     map func (Done x) = Done (func x)
 
   export
-  parse : a ->
+  Applicative ParseResult where
+    pure = Done
+    InvalidOption h xs <*> _ = InvalidOption h xs
+    InvalidMix reason <*> _ = InvalidMix reason
+    Done f <*> InvalidOption h xs = InvalidOption h xs
+    Done f <*> InvalidMix reason = InvalidMix reason
+    Done f <*> Done x = Done $ f x
+
+  export
+  Monad ParseResult where
+    InvalidOption h xs >>= f = InvalidOption h xs
+    InvalidMix reason >>= f = InvalidMix reason
+    Done x >>= f = f x
+
+  export
+  parse :
+    Help ->
+    a ->
     OptParse a b ->
     List String ->
     ParseResult a
-  parse acc o [] = Done acc
-  parse acc o (x::xs) = let
+  parse help acc o [] = Done acc
+  parse help acc o (x::xs) = let
     Just (xs', f) = runApM (\p => partParser p (x::xs)) o
-      | Nothing => InvalidOption (x:::xs)
+      | Nothing => case parse help acc o xs of
+          InvalidOption h xs' => InvalidOption h $ x:::forget xs'
+          _ => InvalidOption (pure help) $ singleton x
     in either
          InvalidMix
-         (\y => parse y o $ assert_smaller (x::xs) xs')
+         (\acc' => parse help acc' o $ assert_smaller (x::xs) xs')
          (f acc)
 
 namespace Default
@@ -198,8 +218,12 @@ namespace Help
        map ("--" ++) long ++ map (\c => pack ['-',c]) short)
 
   modHelp : Mod a -> Help
-  modHelp x = MkHelp (optionName (forget x.longNames) x.shortNames x.param)
-                     Nothing x.description [] Nothing
+  modHelp x = MkHelp
+    (optionName (forget x.longNames) x.shortNames x.param)
+    Nothing
+    x.description
+    []
+    Nothing
 
   export
   partHelp : Part b a -> List Help

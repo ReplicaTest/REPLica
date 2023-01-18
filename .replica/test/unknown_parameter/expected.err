@@ -1,15 +1,33 @@
-Invalid command : run
+Invalid command or option: --oops
 
-Usage: replica COMMAND [COMMAND_OPTIONS]
+Usage: replica run [OPTIONS] JSON_TEST_FILE(S)
 
-Integration testing for command line interfaces
+Run tests from a Replica JSON file
 
-Commands:
-  run      Run tests from a Replica JSON file
-  test     Alias for 'replica run'
-  info     Get information about a given test file
-  set      Set a global configuration for replica commands
-  new      Create test files
-  version  Show replica version
-
-Run 'replica help COMMAND' for more information on a command.
+Options:
+  --working-dir, --wdir, -w DIR       set where is the test working directory
+  --interactive, -i                   (re)generate golden number if different/missing
+  --no-timing, --no-duration, -D      hide execution time of each tests
+  --timing, --duration, -d            display execution time of each tests
+  --threads, -x N                     max number of threads (default 1; 0 for no thread limit)
+  --hide-success, --fail-only         hide successful tests in the report
+  --punitive, --fail-fast, -p         fail fast mode: stops on the first test that fails
+  --only, -n testX,testY              a comma separated list of the tests to run
+  --exclude, -N testX,testY           a comma separated list of the tests to exclude
+  --tags, --only-tags, -t TAGS        a comma separated list of the tags to run
+  --exclude-tags, -T TAGS             a comma separated list of the tags to exclude
+  --suites, --only-suites, -s SUITES  a comma separated list of the suites to run
+  --exclude-suites, -S SUITES         a comma separated list of the suites to exclude
+  --last-fails, -l                    if a previous run fails, rerun only the tests that failed
+  --replica-dir DIR                   set the location of replica store (default: ".replica")
+  --golden-dir DIR                    set the location of golden values (default: "REPLICA_DIR/test")
+  --no-color, --no-colour             desactivate colour in output
+  --color, --colour, -c               activate colour in output (default)
+  --ascii                             use only ascii in reports (unless there are some in your test file)
+  --utf8                              allow emojis in reports (default)
+  --verbose, -v                       similar to --log info
+  --log logLevel                      define the log level of the application
+                                      available values: <none, debug, info, warning, critical> (default: none)
+  --no-diff                           remove all diff from the output, equivalent of `--diff none`
+  --diff, -d CMD                      diff command use to display difference between the given and the golden one
+                                      available values: <git|diff|native|custom_command> (default : native)
