@@ -9,7 +9,7 @@ REPLICA_TESTS_DHALL := $(wildcard ./tests/replica/*/*.dhall)
 REPLICA_TESTS := $(REPLICA_TESTS_DHALL:.dhall=.json)
 REPLICA_EXE := build/exec/replica
 
-META_DHALL := $(wildcard ./tests/META/*.dhall)
+META_DHALL := $(wildcard ./tests/Meta/*.dhall)
 TEST_INCLUDE_DHALL := $(wildcard ./tests/*.dhall)
 
 DEST = ${HOME}/.local/bin
@@ -17,6 +17,7 @@ DEST = ${HOME}/.local/bin
 build: src/Replica/Version.idr
 	idris2 --build replica.ipkg
 
+# Generate the version module in Idris from version.nix
 src/Replica/Version.idr: version.nix
 	echo "module Replica.Version" > src/Replica/Version.idr
 	echo "" >> src/Replica/Version.idr
@@ -35,13 +36,14 @@ clean-test:
 clean: clean-test
 	${RM} -r build
 
+# Generate JSON from Dhall
 .dhall.json:
 	dhall-to-json --file $? --output $@
 
 ${TEST}: ${TEST_DHALL} ${TEST_INCLUDE_DHALL}
 	dhall-to-json --file ${TEST_DHALL} --output $@
 
-freeze: ${TEST_DHALL} ${META_DHALL} ${TEST_INCLUDE_DHALL}
+freeze: ${TEST_DHALL} ${META_DHALL} ${TEST_INCLUDE_DHALL} ${REPLICA_TESTS_DHALL}
 	dhall freeze $?
 
 generate: ${REPLICA_TESTS} ${TEST} build
