@@ -1,7 +1,7 @@
 let Replica =
         env:REPLICA_DHALL
       ? https://raw.githubusercontent.com/ReplicaTest/replica-dhall/main/package.dhall
-          sha256:b11ac5d5195183145bbff03ba7b99e98b4e1bce32c725af5bedf01b4b328a741
+          sha256:3e357131062f498832c25112266bf1c22d3c4f990c867a5d36807cd89128e8f7
 
 let Test = Replica.Test
 

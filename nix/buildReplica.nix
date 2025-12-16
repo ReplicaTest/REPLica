@@ -1,6 +1,6 @@
 { buildIdris, papersLib }:
 buildIdris {
-  projectName = "replica";
+  ipkgName = "replica";
   src = ../.;
   idrisLibraries = [ papersLib ];
 }

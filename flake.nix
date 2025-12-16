@@ -18,17 +18,17 @@
   outputs = { self, nixpkgs, idris, papers, flake-utils, pre-commit-hooks, replicadhall }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = import nixpkgs { inherit system; };
-        inherit (pkgs)
+        npkgs = import nixpkgs { inherit system; };
+        inherit (npkgs)
           dhall
           lib;
-        inherit (pkgs.haskellPackages)
+        inherit (npkgs.haskellPackages)
           dhall-json;
 
         version = import ./version.nix;
-        idrisPkgs = idris.packages.${system};
+        idrisPkgs = idris.packages.${system} // papers;
 
-        callPackage = lib.callPackageWith (pkgs // packages);
+        callPackage = lib.callPackageWith (npkgs // packages);
 
         packages = {
           inherit version;
@@ -46,7 +46,7 @@
           replica_dhall
           papersLib;
 
-        dockerImage = pkgs.dockerTools.buildImage {
+        dockerImage = npkgs.dockerTools.buildImage {
           name = "replica";
           config = {
             Cmd = [ "${replica}/bin/replica" ];
@@ -75,8 +75,8 @@
           };
         };
 
-        devShells.default = pkgs.mkShell {
-          packages = [ idrisPkgs.idris2 papersLib pkgs.rlwrap dhall dhall-json ];
+        devShells.default = npkgs.mkShell {
+          packages = [ idrisPkgs.idris2 papersLib npkgs.rlwrap dhall dhall-json ];
           shellHook = ''
             alias idris2="rlwrap -s 1000 idris2 --no-banner"
             ${self.checks.${system}.pre-commit-check.shellHook}

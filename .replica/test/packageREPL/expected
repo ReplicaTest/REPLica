@@ -1,4 +1,4 @@
 1/1: Building Test (Test.idr)
 Test> Imported module Test
-Test> [38;5;9m"Hello, World!"[0m
+Test> "Hello, World!"
 Test> Bye for now!

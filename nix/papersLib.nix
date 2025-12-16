@@ -2,10 +2,9 @@
 let
   version = import ../version.nix;
   papersPkg = buildIdris {
-    projectName = "papers";
+    ipkgName = "papers";
     src = papers;
     idrisLibraries = [ ];
-    preBuild = "cd libs/papers";
   };
 in
-papersPkg.installLibrary
+papersPkg.library { }
