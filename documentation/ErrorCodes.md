@@ -3,7 +3,8 @@
 A list of `replica` error codes:
 
 | Error Code | Meaning |
-| 0 | Success
+|:----------:|:--------|
+| 0 | Success |
 | 1 to 127 | Number of failing tests (wrong expectation or test error) |
 | 128 | More than 127 failing tests |
 | 252 | Incompatible options (eg. including and excluding the same tag) |
