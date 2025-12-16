@@ -24,4 +24,7 @@ In the end though, the tests must pass with the current version.
 
 If you want to update the golden values of the tests, you can use `make generate`.
 
+You can also run the tests and other checks from the flake directly using
+`nix flake check`.
+
 All contributions are welcome.
