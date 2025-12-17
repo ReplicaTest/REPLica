@@ -1,10 +1,6 @@
 #compdef replica
 typeset -A opt_args
 
-# local -a sub
-# sub=('info:get information about test suites' 'run:run test suite' 'new:create a test suite' 'help:get some help' 'version:show replica version' 'config:set replica default config')
-# _describe 'command' sub
-
 _arguments -C \
   '1:command:->cmds' \
   '*:: :->args' \
@@ -21,65 +17,111 @@ commands=(
   'version:show replica version'
 )
 
-common=(
-  '(-N --exclude)'{-n,--only}'[tests to run]:comma separated list' \
-  '(-n --only)'{-N,--exclude}'[tests to exclude]:comma separated list' \
-  {-t,-tags,--only-tags}'[tags to run]:comma separated list' \
-  {-T,--exclude-tags}'[tags to include]:comma separated list' \
-  {--last-fails,-l}'[select only failing tests]' \
-  '(-v --verbose)--log[log level]:log:(none critical warning info debug)' \
-  {-v,--verbose}'[verbose output (log info)]'
-  '--replica-dir[replica store directory]:replica dir:_files -/' \
-  '--golden-dir[golden values directory]:golden dir:_files -/' \
-  '(--no-color --no-colour)'{--color,--colour,-c}'[use coloured ouput]' \
-  '(--color --colour -c)'{--no-color,--no-colour}'[desactivate coloured ouput]' \
-  '(--ascii)--utf8[use emojis in reports]' \
-  "(--utf8)--ascii[reports don't use emojis]" \
-  '(--diff)--no-diff[dont show diff on errors]' \
-  '(--no-diff)--diff[define a diff command]:either a known or a custom command:(git diff native)'
+tests=(
+  {-n,--only}'[list tests to run]:tests:_testnames'
+  {-N,--exclude}'[tests to ignore]:tests:_testnames'
 )
 
+suites=(
+    + '(suites)'
+      {-s,--suites,--only-suites}'[suites to run]:suites:_suitenames'
+      {-S,--exclude-suites}'[suites to exclude]:suites:_suitesnames'
+)
+
+tags=(
+    + '(tags)'
+      {-t,--tags}'[tags to run]:tags:_tagnames'
+      {-T,--exclude-tags}'[tags to exclude]:tags:_tagnames'
+)
+
+common=(
+    $tests
+    {-l,--last-fails}'[select only failing tests]'
+    '--replica-dir[replica store directory]:replica_dir:_path_files -/'
+    '--golden-dir[golden values directory]:golden_dir:_path_files -/'
+    $suites
+    $tags
+    + '(show_diff)'
+      '--no-diff[dont show diff on errors]'
+      {-d,--diff}'[define a diff command]'
+    + '(symbols)'
+      '--ascii[disable emojis in reports]'
+      '--utf8[enable emojis in reports]'
+    + '(termcolor)'
+      {--no-color,--no-colour}'[disable coloured ouput]'
+      {-color,--colour}'[enable coloured ouput]'
+    + '(verbosity)'
+      {-v,--verbose}'[similar to log info]'
+      '--log[log level]:log_level:(none debug info warning critical)'
+  )
+
+  _testnames() {
+    if command -v jq
+    then
+      _values -s , 'flags' `jq -Scrs ".[] | keys | .[]" *.json`
+    fi
+  }
+
+  _tagnames() {
+    if (command -v jq > /dev/null)
+    then
+      _values -s , 'flags' `jq -crs ".[] | .[] | .tags | .[]" *.json | sort -u`
+    fi
+  }
+
+  _suitenames() {
+    if (command -v jq > /dev/null)
+    then
+      _values -s , 'flags' `jq -crs ".[] | .[] | .suite" *.json | sort -u`
+    fi
+  }
+
 case "$state" in
-  (cmds)
-    _describe -V -t commands 'command' commands && ret=0
+  cmds)
+    _describe -V -t commands 'command' commands \
+      && ret=0
   ;;
-  (args)
+  args)
     case $line[1] in
-      (info)
+      info)
         _arguments \
           {-e,--expectations}'[show expectations for each test]' \
           $common \
-          '(-)*:tests files:_files' \
+          '(-)*:tests files:_path_files -g "*.json' \
         && ret=0
       ;;
-    (run)
+      run)
         _arguments \
           {--threads,-x}'[Number of threads to run the tests]' \
           {--punitive,-p}'[Stop on first error]' \
+          {--interactive,-i}'[Generate golden value if different/missing]' \
+          {--hide-success,--fail-only}'[Only show failing tests]' \
           $common \
-          '(-)*:tests files:_files -g *.json' \
+          + '(timing)' \
+            {--timing,--duration,-d}'[display execution time of each tests]' \
+            {--no-timing,--no-duration,-D}'[hide execution time of each tests]' \
+          '(-)*:tests files:_path_files -g "*.json" -/' \
         && ret=0
       ;;
-      (new)
+      new)
         _arguments \
           '--format[type of the file to be created]:file format:(json dhall)' \
-          + sample \
-            '(noSample)'{-s,--includeSample}'[sample test included]:sample' \
-          + noSample \
-            '(sample)'{-S,--noSample}'[no sample test included]:no sample' \
-          '(-):created file:_files' \
+          + '(use_sample)' \
+            {-s,--includeSample}'[sample test included]:sample' \
+            {-S,--noSample}'[no sample test included]:no sample' \
         && ret=0
       ;;
-      (set)
+      set)
         _arguments \
+          + '(scope)'
           '*'{-l,--local}'[Set local config value]:key=value pair:->kv' \
           '*'{-g,--global}'[Set global config value]:key=value pair:->kv' \
         && ret=0
         case "$state" in
-          (kv)
+          kv)
             _values 'replica configuration' \
-              'replicaDir:replica file location:_files' \
-              'goldenDir:golden values location:_files' \
+              'replicaDir:replica file location:_path_files -/' \
+              'goldenDir:golden values location:_path_files -/' \
               'colour:coloured output:(true false)' \
               'ascii:use only ascii in reports:(false true)' \
               'diff:tool used to print diff' \
@@ -88,15 +130,12 @@ case "$state" in
             && ret=0
         esac
       ;;
-      (help)
+      help)
         _arguments -C ':topic:->topic'
         case "$state" in
           (topic)
             _describe -V -t topic 'topic' commands && ret=0
         esac
-      ;;
-      (version)
-        ret=0
       ;;
     esac
   ;;
