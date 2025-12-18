@@ -67,6 +67,7 @@ Show RunCommand where
     , show x.global
     ]
 
+||| `Run` option that handle if we run in interactive mode
 interactivePart : Part (Builder RunCommand') Bool
 interactivePart = inj $ MkOption
       (singleton $ MkMod (singleton "interactive") ['i'] (Left True)
@@ -79,6 +80,7 @@ interactivePart = inj $ MkOption
                 (\x => {interactive := Right x})
                 (const $ const "Contradictory values for interactive")
 
+||| `Run` option that handle if we display execution time
 timingPart : Part (Builder RunCommand') Bool
 timingPart = inj $ MkOption
   (toList1
@@ -96,6 +98,7 @@ timingPart = inj $ MkOption
                 (\x => {timing := Right x})
                 (const $ const "Contradictory values for timing")
 
+||| `Run` option that define the working directory for the tests
 workingDirPart : Part (Builder RunCommand') String
 workingDirPart = inj $ MkOption
       (singleton $ MkMod ("working-dir" ::: ["wdir"]) ['w']
@@ -110,6 +113,7 @@ workingDirPart = inj $ MkOption
              (\x, y => "More than one working directony were given: \{y}, \{x}")
 
 
+||| `Run` option for the parralelism level
 threadsPart : Part (Builder RunCommand') Nat
 threadsPart = inj $ MkOption
       (singleton $ MkMod (singleton "threads") ['x']
@@ -123,6 +127,7 @@ threadsPart = inj $ MkOption
              (\x => {threads := Right x})
              (\x, y => "More than one threads values were given: \{show y}, \{show x}")
 
+||| `Run` option to decide if we stop execution on the first failure
 punitivePart : Part (Builder RunCommand') Bool
 punitivePart = inj $ MkOption
       (singleton $ MkMod ("punitive" ::: ["fail-fast"]) ['p']
@@ -136,6 +141,7 @@ punitivePart = inj $ MkOption
                     (\x => {punitive := Right x})
                     (const $ const "Contradictory values for punitive mode")
 
+||| `Run` option to decide if we hide successful tests in the report
 hideSuccessPart : Part (Builder RunCommand') Bool
 hideSuccessPart = inj $ MkOption
       (singleton $ MkMod (toList1 ["hide-success", "fail-only"]) []
@@ -149,6 +155,7 @@ hideSuccessPart = inj $ MkOption
                     (\x => {hideSuccess := Right x})
                     (const $ const "Contradictory values for hide success mode")
 
+||| `RunCommand` option parser
 optParseRun : OptParse (Builder RunCommand') RunCommand
 optParseRun =
     [| MkRunCommand
@@ -162,6 +169,7 @@ optParseRun =
        (embed global (\x => {global := x}) optParseGlobal)
     |]
 
+||| Default option for the `RunCommand`
 defaultRun : Default RunCommand'
 defaultRun = MkRunCommand
        (defaultPart workingDirPart)
@@ -173,10 +181,12 @@ defaultRun = MkRunCommand
        defaultFilter
        defaultGlobal
 
+||| Add Global config to a RunCommand config
 withGivenGlobal : Default RunCommand' -> Default Global' -> Default RunCommand'
 withGivenGlobal x g = {global := g <+> defaultGlobal} x
 
 
+||| Parser for `replica run` command
 parseRun' : Help -> Default Global' -> List String -> ParseResult RunCommand
 parseRun' help g xs = do
   builder <- parse
@@ -186,6 +196,7 @@ parseRun' help g xs = do
     xs
   maybe (InvalidMix "No test file given") Done $ build builder
 
+||| Help for `replica run` command
 export
 helpRun : Help
 helpRun = commandHelp {b = Builder RunCommand'}
@@ -193,6 +204,7 @@ helpRun = commandHelp {b = Builder RunCommand'}
   optParseRun
   (Just "JSON_TEST_FILE(S)")
 
+||| Help for `replica test` command
 export
 helpTest : Help
 helpTest = commandHelp {b = Builder RunCommand'}
