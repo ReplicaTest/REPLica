@@ -14,14 +14,17 @@ import public Replica.Other.Free
 %default total
 
 
+||| Transform a string into a CLI long option
 export
-prefixLongOption : String -> String
+prefixLongOption : (optionName : String) -> String
 prefixLongOption = ("--" <+>)
 
+||| Transform a char into a CLI short option
 export
-prefixShortOption : Char -> String
+prefixShortOption : (optionChar : Char) -> String
 prefixShortOption x = pack ['-',x]
 
+||| Name and parsing of a CLI option
 public export
 record Value a where
   constructor MkValue
@@ -32,6 +35,7 @@ export
 Functor Value where
   map func x = MkValue x.name (map func . x.parser)
 
+||| Describe a modifiers of an option
 public export
 record Mod a where
   constructor MkMod
@@ -46,6 +50,7 @@ Functor Mod where
     (bimap func (map func) x.param)
     x.description
 
+||| An option has a list of modifiers, a default value and a setter
 public export
 record Option b a where
   constructor MkOption
@@ -53,6 +58,7 @@ record Option b a where
   defaultValue : a
   setter : a -> b -> Either String b
 
+||| Reuse an existing option in a different context
 export
 embedOption : (c -> b) -> (b -> c -> c) -> Option b a -> Option c a
 embedOption f g x = MkOption x.mods x.defaultValue (embed f g x.setter)
@@ -62,6 +68,7 @@ embedOption f g x = MkOption x.mods x.defaultValue (embed f g x.setter)
 
 namespace Param
 
+  ||| A `Param` is the description of a parameter
   public export
   record Param b a where
     constructor MkParam
@@ -88,10 +95,13 @@ namespace Param
 
 namespace Parts
 
+  ||| A `Part` can be a Param or an option
+  ||| It's used to list indifferently options and parameters as a part of a command.
   public export
   Part : Type -> Type -> Type
   Part b a = Union (\p => p b a) [Param, Option]
 
+  ||| Reuse a generic `Part` in a specific setting
   export
   embedPart : (c -> b) -> (b -> c -> c) -> Part b a -> Part c a
   embedPart get set x = let
@@ -100,10 +110,12 @@ namespace Parts
     v = decomp0 x1
     in inj $ embedOption get set v
 
+||| A Free applicative of Parts
 public export
 OptParse : Type -> Type -> Type
 OptParse = Ap . Part
 
+||| Reuse a generic `OptParse` in a specific setting
 export
 embed : (c -> b) -> (b -> c -> c) -> OptParse b a -> OptParse c a
 embed get set (Pure x) = Pure x
@@ -111,9 +123,11 @@ embed get set (MkAp x y) = MkAp (embedPart get set x) $ embed get set y
 
 namespace Parser
 
+  ||| Generic parser type
   Parser : (a : Type) -> Type
   Parser a = List String -> Maybe (List String, a)
 
+  ||| Parse a` `Mod`
   modParser : Mod a -> Parser a
   modParser m [] = Nothing
   modParser m (x::xs) = let
@@ -127,22 +141,25 @@ namespace Parser
            [] => Nothing
            (y::ys) => MkPair ys <$> v.parser y
 
+  ||| Parse a whole `Option`
   optionParser : Option b a -> Parser (b -> Either String b)
   optionParser x xs = map x.setter <$> choiceMap (flip modParser xs) x.mods
 
+  ||| Parse a `Part`
   partParser : Part b a -> Parser (b -> Either String b)
   partParser x xs = let
     Left x1 = decomp x
       | Right v => MkPair [] . v.setter <$> v.parser xs
     in optionParser (decomp0 x1) xs
 
+  ||| Explain why a CLI call is invalid
   public export
   data ParseResult a
-    -- = InvalidCommand (List1 String)
     = InvalidOption (Maybe Help) (List1 String)
     | InvalidMix String -- reason
     | Done a
 
+  ||| Explain why a specific option is invalid
   public export
   data ParsingFailure : ParseResult a -> Type where
     OptionFailure : ParsingFailure (InvalidOption help xs)
@@ -174,6 +191,7 @@ namespace Parser
     InvalidMix reason >>= f = InvalidMix reason
     Done x >>= f = f x
 
+  ||| Parse a CLI call
   export
   parse :
     Help ->
@@ -204,9 +222,9 @@ namespace Default
   defaultPart : Part b a -> Maybe a
   defaultPart x = let
    Left x1 = decomp x
-     | Right v => defaultParam v
-   v = decomp0 x1
-   in defaultOption v
+     | Right param => defaultParam param
+   option = decomp0 x1
+   in defaultOption option
 
 namespace Help
 
@@ -215,7 +233,7 @@ namespace Help
   optionName long short param =
     either (flip const) (\v => (++ " \{v.name}")) param $
     (concat $ intersperse ", " $
-       map ("--" ++) long ++ map (\c => pack ['-',c]) short)
+       map prefixLongOption long ++ map prefixShortOption short)
 
   modHelp : Mod a -> Help
   modHelp x = MkHelp
