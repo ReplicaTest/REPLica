@@ -21,12 +21,13 @@
         npkgs = import nixpkgs { inherit system; };
         inherit (npkgs)
           dhall
+          idris2
           lib;
         inherit (npkgs.haskellPackages)
           dhall-json;
 
         version = import ./version.nix;
-        idrisPkgs = idris.packages.${system} // papers;
+        idrisPkgs = papers;
 
         callPackage = lib.callPackageWith (npkgs // packages);
 
@@ -76,7 +77,7 @@
         };
 
         devShells.default = npkgs.mkShell {
-          packages = [ idrisPkgs.idris2 papersLib npkgs.rlwrap dhall dhall-json ];
+          packages = [ idris2 papersLib npkgs.rlwrap dhall dhall-json ];
           shellHook = ''
             alias idris2="rlwrap -s 1000 idris2 --no-banner"
             ${self.checks.${system}.pre-commit-check.shellHook}
