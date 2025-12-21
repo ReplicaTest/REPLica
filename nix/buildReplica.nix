@@ -1,6 +1,6 @@
-{ buildIdris, papersLib }:
+{ buildIdris }:
 buildIdris {
   ipkgName = "replica";
   src = ../.;
-  idrisLibraries = [ papersLib ];
+  idrisLibraries = [ ];
 }

@@ -62,7 +62,7 @@ Show SetCommand where
   show x = "MkSetCommand \{show x.target} (\{show x.setter})"
 
 targetPart : Part (Builder SetCommand') TargetConfig
-targetPart = inj $ MkOption
+targetPart = optionPart $ MkOption
   (toList1
     [ MkMod (singleton "local") ['l'] (Left Local)
       "Set a local config value (in `./.replica.json`) (default)"
@@ -77,7 +77,7 @@ targetPart = inj $ MkOption
                        (const $ const "Contradictory target")
 
 setterPart : Part (Builder SetCommand') Setter
-setterPart = inj $ MkParam1
+setterPart = paramPart $ MkParam1
   "KEY=VALUE"
   parseKV
   go

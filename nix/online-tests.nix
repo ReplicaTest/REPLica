@@ -11,5 +11,5 @@
       make test RUN="-t online"
     '';
   pass_filenames = false;
-  stages = [ "push" ];
+  stages = [ "pre-push" ];
 }

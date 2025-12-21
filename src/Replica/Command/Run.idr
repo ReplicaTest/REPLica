@@ -69,7 +69,7 @@ Show RunCommand where
 
 ||| `Run` option that handle if we run in interactive mode
 interactivePart : Part (Builder RunCommand') Bool
-interactivePart = inj $ MkOption
+interactivePart = optionPart $ MkOption
       (singleton $ MkMod (singleton "interactive") ['i'] (Left True)
             "(re)generate golden number if different/missing")
       False
@@ -82,7 +82,7 @@ interactivePart = inj $ MkOption
 
 ||| `Run` option that handle if we display execution time
 timingPart : Part (Builder RunCommand') Bool
-timingPart = inj $ MkOption
+timingPart = optionPart $ MkOption
   (toList1
      [ MkMod ("timing" ::: ["duration"]) ['d'] (Left True)
             "display execution time of each tests"
@@ -100,7 +100,7 @@ timingPart = inj $ MkOption
 
 ||| `Run` option that define the working directory for the tests
 workingDirPart : Part (Builder RunCommand') String
-workingDirPart = inj $ MkOption
+workingDirPart = optionPart $ MkOption
       (singleton $ MkMod ("working-dir" ::: ["wdir"]) ['w']
           (Right $ MkValue "DIR" Just)
           "set where is the test working directory")
@@ -115,7 +115,7 @@ workingDirPart = inj $ MkOption
 
 ||| `Run` option for the parralelism level
 threadsPart : Part (Builder RunCommand') Nat
-threadsPart = inj $ MkOption
+threadsPart = optionPart $ MkOption
       (singleton $ MkMod (singleton "threads") ['x']
           (Right $ MkValue "N" parsePositive)
           "max number of threads (default 1; 0 for no thread limit)")
@@ -129,7 +129,7 @@ threadsPart = inj $ MkOption
 
 ||| `Run` option to decide if we stop execution on the first failure
 punitivePart : Part (Builder RunCommand') Bool
-punitivePart = inj $ MkOption
+punitivePart = optionPart $ MkOption
       (singleton $ MkMod ("punitive" ::: ["fail-fast"]) ['p']
           (Left True)
           "fail fast mode: stops on the first test that fails")
@@ -143,7 +143,7 @@ punitivePart = inj $ MkOption
 
 ||| `Run` option to decide if we hide successful tests in the report
 hideSuccessPart : Part (Builder RunCommand') Bool
-hideSuccessPart = inj $ MkOption
+hideSuccessPart = optionPart $ MkOption
       (singleton $ MkMod (toList1 ["hide-success", "fail-only"]) []
           (Left True)
           "hide successful tests in the report")

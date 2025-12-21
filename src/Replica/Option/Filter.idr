@@ -60,7 +60,7 @@ Show Filter where
     ]
 
 onlyPart : Part (Builder Filter') (List String)
-onlyPart = inj $ MkOption
+onlyPart = optionPart $ MkOption
       (singleton $ MkMod (singleton "only") ['n']
           (Right $ MkValue "testX,testY" $ Just . go)
           "a comma separated list of the tests to run")
@@ -75,7 +75,7 @@ onlyPart = inj $ MkOption
 
 
 excludePart : Part (Builder Filter') (List String)
-excludePart = inj $ MkOption
+excludePart = optionPart $ MkOption
       (singleton $ MkMod (singleton "exclude") ['N']
           (Right $ MkValue "testX,testY" $ Just . go)
           "a comma separated list of the tests to exclude")
@@ -89,7 +89,7 @@ excludePart = inj $ MkOption
           xs => Left "Some tests were both included and excluded: \{joinBy ", " xs}"
 
 onlyTagsPart : Part (Builder Filter') (List String)
-onlyTagsPart = inj $ MkOption
+onlyTagsPart = optionPart $ MkOption
       (singleton $ MkMod ("tags" ::: ["only-tags"]) ['t']
           (Right $ MkValue "TAGS" $ Just . go)
           "a comma separated list of the tags to run")
@@ -103,7 +103,7 @@ onlyTagsPart = inj $ MkOption
           xs => Left "Some tags were both included and excluded: \{joinBy ", " xs}"
 
 excludeTagsPart : Part (Builder Filter') (List String)
-excludeTagsPart = inj $ MkOption
+excludeTagsPart = optionPart $ MkOption
       (singleton $ MkMod (singleton "exclude-tags") ['T']
           (Right $ MkValue "TAGS" $ Just . go)
           "a comma separated list of the tags to exclude")
@@ -118,7 +118,7 @@ excludeTagsPart = inj $ MkOption
           xs => Left "Some tags were both included and excluded: \{joinBy ", " xs}"
 
 onlySuitesPart : Part (Builder Filter') (List String)
-onlySuitesPart = inj $ MkOption
+onlySuitesPart = optionPart $ MkOption
       (singleton $ MkMod ("suites" ::: ["only-suites"]) ['s']
           (Right $ MkValue "SUITES" $ Just . go)
           "a comma separated list of the suites to run")
@@ -132,7 +132,7 @@ onlySuitesPart = inj $ MkOption
           xs => Left "Some tags were both included and excluded: \{joinBy ", " xs}"
 
 excludeSuitesPart : Part (Builder Filter') (List String)
-excludeSuitesPart = inj $ MkOption
+excludeSuitesPart = optionPart $ MkOption
       (singleton $ MkMod (singleton "exclude-suites") ['S']
           (Right $ MkValue "SUITES" $ Just . go)
           "a comma separated list of the suites to exclude")
@@ -147,7 +147,7 @@ excludeSuitesPart = inj $ MkOption
           xs => Left "Some tags were both included and excluded: \{joinBy ", " xs}"
 
 lastFailuresPart : Part (Builder Filter') Bool
-lastFailuresPart = inj $ MkOption
+lastFailuresPart = optionPart $ MkOption
       (singleton $ MkMod (singleton "last-fails") ['l']
           (Left True)
           "if a previous run fails, rerun only the tests that failed")

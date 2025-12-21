@@ -99,16 +99,27 @@ namespace Parts
   ||| It's used to list indifferently options and parameters as a part of a command.
   public export
   Part : Type -> Type -> Type
-  Part b a = Union (\p => p b a) [Param, Option]
+  Part b a = UnionT (\p => p b a) [Param, Option]
+
+
+  ||| embed a `Param`
+  export
+  paramPart : Param b a -> Part b a
+  paramPart = inj 0 Z
+
+  ||| embed an `Option`
+  export
+  optionPart : Option b a -> Part b a
+  optionPart = inj 1 (S Z)
 
   ||| Reuse a generic `Part` in a specific setting
   export
   embedPart : (c -> b) -> (b -> c -> c) -> Part b a -> Part c a
   embedPart get set x = let
     Left x1 = decomp x
-      | Right v => inj $ embedParam get set v
+      | Right v => paramPart $ embedParam get set v
     v = decomp0 x1
-    in inj $ embedOption get set v
+    in optionPart $ embedOption get set v
 
 ||| A Free applicative of Parts
 public export
