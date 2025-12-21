@@ -73,6 +73,46 @@
         "type": "github"
       }
     },
+    "idris": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "idris-emacs-src": "idris-emacs-src",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1765964722,
+        "narHash": "sha256-NBXSDN9oNXP7Q3SWocvMXdwQP+pAEOBnHLA0dBqnjVY=",
+        "owner": "idris-lang",
+        "repo": "Idris2",
+        "rev": "0e9b01d0400593fa99b320c56f6e77406a4eb968",
+        "type": "github"
+      },
+      "original": {
+        "owner": "idris-lang",
+        "repo": "Idris2",
+        "type": "github"
+      }
+    },
+    "idris-emacs-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1734683778,
+        "narHash": "sha256-8SIseFPHpdDO0uG3u65xJ0CHNfVu5O36meONZI7oorw=",
+        "owner": "idris-community",
+        "repo": "idris2-mode",
+        "rev": "5b4513692124de34aac13985bf48f756d9a8248f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "idris-community",
+        "repo": "idris2-mode",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1766125104,
@@ -159,6 +199,7 @@
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
+        "idris": "idris",
         "nixpkgs": "nixpkgs",
         "pre-commit-hooks": "pre-commit-hooks",
         "replicadhall": "replicadhall"

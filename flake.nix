@@ -3,10 +3,15 @@
 
   inputs = {
     flake-utils.url = "github:numtide/flake-utils";
+    idris = {
+      url = "github:idris-lang/Idris2";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
+    };
     pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
     replicadhall.url = "github:ReplicaTest/replica-dhall";
   };
-  outputs = { self, nixpkgs, flake-utils, pre-commit-hooks, replicadhall }:
+  outputs = { self, nixpkgs, idris, flake-utils, pre-commit-hooks, replicadhall }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         npkgs = import nixpkgs { inherit system; };
@@ -23,6 +28,7 @@
 
         packages = {
           inherit version;
+          buildIdris = idris.buildIdris.${system};
           replica_dhall = replicadhall.packages.${system}.default;
           buildReplica = callPackage ./nix/buildReplica.nix { };
           replica = callPackage ./nix/replica.nix { };
