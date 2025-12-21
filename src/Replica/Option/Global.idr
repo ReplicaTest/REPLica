@@ -7,7 +7,7 @@ import Data.String
 
 import Replica.Help
 import Replica.Option.Types
-import Replica.Other.Decorated
+import public Replica.Other.Decorated
 
 public export
 data LogLevel = Debug | Info | Warning | Critical
@@ -100,7 +100,7 @@ replicaDefaultDir : String
 replicaDefaultDir = ".replica"
 
 replicaDirPart : Part (Builder Global') String
-replicaDirPart = inj $ MkOption
+replicaDirPart = optionPart $ MkOption
   (singleton $ MkMod (singleton "replica-dir") []
       (Right $ MkValue "DIR" Just)
       "set the location of replica store (default: \".replica\")")
@@ -112,7 +112,7 @@ replicaDirPart = inj $ MkOption
                  (\x, y => "More than one replica dir were given: \{y}, \{x}")
 
 goldenDirPart : Part (Builder Global') (Maybe String)
-goldenDirPart = inj $ MkOption
+goldenDirPart = optionPart $ MkOption
   (singleton $ MkMod (singleton "golden-dir") []
       (Right $ MkValue "DIR" (Just . Just))
       "set the location of golden values (default: \"REPLICA_DIR/test\")")
@@ -136,7 +136,7 @@ readLogLevel = readLogLevel' . toLower
     readLogLevel' _ = Nothing
 
 logLevelPart : Part (Builder Global') (Maybe LogLevel)
-logLevelPart = inj $ MkOption
+logLevelPart = optionPart $ MkOption
   (toList1
     [ MkMod (singleton "log") [] (Right logLevelValue)
         #"""
@@ -156,7 +156,7 @@ logLevelPart = inj $ MkOption
                          (const $ const "Contradictory log level")
 
 colourPart : Part (Builder Global') Bool
-colourPart = inj $ MkOption
+colourPart = optionPart $ MkOption
       (toList1
         [ MkMod (toList1 ["color", "colour"]) ['c'] (Left True)
             "activate colour in output (default)"
@@ -171,7 +171,7 @@ colourPart = inj $ MkOption
                        (const $ const "Contradictory colour settings")
 
 asciiPart : Part (Builder Global') Bool
-asciiPart = inj $ MkOption
+asciiPart = optionPart $ MkOption
       (toList1
         [ MkMod (singleton "utf8") [] (Left False)
             "allow emojis in reports (default)"
@@ -197,7 +197,7 @@ readDiffCommand x = fromMaybe (Custom x) $ go $ toLower x
     go x = Nothing
 
 diffPart : Part (Builder Global') DiffCommand
-diffPart = inj $ MkOption
+diffPart = optionPart $ MkOption
   (toList1
     [ MkMod (singleton "diff") ['d'] (Right parseDiff)
       #"""
@@ -218,7 +218,7 @@ diffPart = inj $ MkOption
 
 export
 filesParamPart : Part (Builder Global') (List String)
-filesParamPart = inj $ MkParam "JSON_FILE(S)" (traverse checkNotOption) go
+filesParamPart = paramPart $ MkParam "JSON_FILE(S)" (traverse checkNotOption) go
   where
     checkNotOption : String -> Maybe String
     checkNotOption x = guard (not $ "-" `isPrefixOf` x) $> x

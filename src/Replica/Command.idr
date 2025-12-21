@@ -18,17 +18,17 @@ import public Replica.Command.Version
 
 public export
 Commands : Type
-Commands = Union Prelude.id [RunCommand, InfoCommand, SetCommand, NewCommand, Help, Version]
+Commands = Union [RunCommand, InfoCommand, SetCommand, NewCommand, Help, Version]
 
 export
 parseArgs : Default Global' -> List1 String -> ParseResult Commands
 parseArgs g xs = foldl1 go $ InvalidOption (pure help) xs ::: map (flip apply xs)
-  [ map inj . parseRun g
-  , map inj . parseInfo g
-  , map inj . parseSet
-  , map inj . parseNew
-  , map inj . parseHelp
-  , map inj . parseVersion
+  [ map (inj 0 Z) . parseRun g
+  , map (inj 1 (S Z)) . parseInfo g
+  , map (inj 2 (S $ S Z)) . parseSet
+  , map (inj 3 (S $ S $ S Z)) . parseNew
+  , map (inj 4 (S $ S $ S $ S Z)) . parseHelp
+  , map (inj 5 (S $ S $ S $ S $ S Z)) . parseVersion
   ]
   where
     go : ParseResult Commands -> ParseResult Commands -> ParseResult Commands

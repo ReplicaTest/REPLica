@@ -42,7 +42,7 @@ Show TestInfoCommand where
                    , show i.global]
 
 showExpectationPart : Part (Builder TestInfoCommand') Bool
-showExpectationPart = inj $ MkOption
+showExpectationPart = optionPart $ MkOption
       ( singleton
         $ MkMod (singleton "expectations") ['e'] (Left True)
           "show expectation for each test")

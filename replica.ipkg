@@ -1,11 +1,11 @@
 package replica
 
-version = 0.6.0
+version = 0.6.1
 
 sourcedir = "src"
 
-depends = papers, contrib
-langversion >= 0.6.0
+depends = contrib
+langversion >= 0.8.0
 
 modules = Replica
 

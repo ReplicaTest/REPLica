@@ -52,7 +52,7 @@ Show NewCommand where
     ]
 
 formatPart : Part (Builder NewCommand') FileFormat
-formatPart = inj $ MkOption
+formatPart = optionPart $ MkOption
   (singleton $ MkMod (singleton "format") ['f']
     (Right $ MkValue "FORMAT" (parseFormat . toLower))
     "format of the file to create (json|dhall)")
@@ -69,7 +69,7 @@ formatPart = inj $ MkOption
              (\x, y => "More than one format given: \{show y}, \{show x}")
 
 includeSamplePart : Part (Builder NewCommand') Bool
-includeSamplePart = inj $ MkOption (toList1
+includeSamplePart = optionPart $ MkOption (toList1
       [ MkMod (singleton "includeSample") ['s'] (Left True)
             "include a sample test"
       , MkMod (singleton "noSample") ['S'] (Left False)
@@ -84,7 +84,7 @@ includeSamplePart = inj $ MkOption (toList1
                 (const $ const "Contradictory values for includeSample")
 
 fileParamPart : Part (Builder NewCommand') String
-fileParamPart = inj $ MkParam1 "NEW_TEST_FILE" Just go
+fileParamPart = paramPart $ MkParam1 "NEW_TEST_FILE" Just go
   where
     checkFileType : String -> Maybe FileFormat
     checkFileType "json" = Just JSON
