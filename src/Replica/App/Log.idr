@@ -5,7 +5,6 @@ import Control.App.Console
 
 import Replica.App.Replica
 import Replica.Option.Global
-import Replica.Other.Decorated
 
 %default total
 

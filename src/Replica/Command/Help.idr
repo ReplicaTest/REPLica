@@ -13,6 +13,8 @@ import public Replica.Help
 import Replica.Option.Types
 import Replica.Other.Validation
 
+%default total
+
 export
 help : Help
 help = MkHelp
