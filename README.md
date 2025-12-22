@@ -101,14 +101,11 @@ with `nix run github:replicatest/replica`.
 
 #### Requirements
 
-- [idris2](https://idris-lang.org) (v0.6.0);
+- [idris2](https://idris-lang.org) (v0.8.0);
 - [git](https://git-scm.com);
 - [dhall][] and [dhall-to-json][].
 
-Idris2 dependencies:
-
-- the [`papers`](https://github.com/idris-lang/Idris2/tree/main/libs/papers)
-  package.
+Idris2 dependencies: None
 
 #### Steps
 

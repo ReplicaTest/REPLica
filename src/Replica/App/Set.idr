@@ -40,7 +40,6 @@ updateConfig = updateConfig' []
       else updateConfig' (x :: xs) ys s
 
 
-
 export
 setReplica :
   FileSystem (FSError :: e) =>

@@ -35,7 +35,7 @@ import Replica.Other.Validation
 
 %default total
 
--- Create the folders needed by Replica (usually ./.replica/test and ./.replica/log)
+-- Create the folders needed by Replica (with default settings ./.replica/test and ./.replica/log)
 prepareReplicaDir : SystemIO (SystemError :: e) =>
   FileSystem (FSError :: e) =>
   Has [ State RunContext RunCommand
@@ -64,6 +64,7 @@ prepareReplicaDir = do
 
 data RunType = Partial | Total
 
+-- Specifies the tests to run
 data RunningPlan =
     None
   | Running RunType SuitePlan TestPlan
@@ -110,7 +111,6 @@ runAllTests plan = do
   putStrLn $ !bold "Running tests...\n"
   batchTests [] plan
   where
-
 
     handleInaccessibleTests :
       List (Test, Either TestError TestResult) -> SuitePlan ->
