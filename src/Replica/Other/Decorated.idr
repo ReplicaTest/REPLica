@@ -1,4 +1,41 @@
-||| Decorate a data structure with a higher-kinded type to represent defaulted, built, or in-progress states.
+||| Decorated: utilities for decorating higher-kinded containers to represent defaulted,
+||| built, or in-progress states and helpers to map and traverse them.
+|||
+||| This module provides `Builder`, `Default`, and `Done` specializations of a
+||| higher-kinded container `ty`, plus `TyMap` and `TyTraversable` interfaces to
+||| transform and traverse those containers. It's useful when constructing values
+||| incrementally (builder pattern) while keeping track of defaults or missing
+||| fields.
+|||
+||| Toy example
+||| -----------
+|||
+||| ```idris
+||| -- A simple pair-like container parameterized by a functor `f`:
+||| Pair : (Type -> Type) -> Type
+||| Pair f = (f Int, f String)
+|||
+||| -- A Default Pair where fields may be absent using Maybe:
+||| defaults : Default Pair
+||| defaults = (Nothing, Nothing)
+|||
+||| -- Convert defaults into a Builder that wraps each field into Either (Maybe a) a
+||| b : Builder Pair
+||| b = initBuilder defaults
+|||
+||| -- A naive setter for the first field (toy sketch; real code needs TyMap instances):
+||| setFirst : Int -> Builder Pair -> Builder Pair
+||| setFirst x (Left _, s) = (Right x, s)
+||| setFirst _ p = p
+|||
+||| -- Attempt to build: `build` will return `Nothing` if any field is missing,
+||| -- or `Just` the completed `Done Pair` if all fields are present.
+||| exampleResult = build (setFirst 3 b)
+||| ````
+|||
+||| Note: The example above is illustrative; real use requires implementing `TyMap`
+||| and `TyTraversable` for the concrete container (`Pair`) so `initBuilder` and
+||| `build` behave as expected.
 module Replica.Other.Decorated
 
 import Replica.Option.Types

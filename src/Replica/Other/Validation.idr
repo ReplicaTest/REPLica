@@ -1,6 +1,29 @@
-||| `Validation` an either applicative that accumulates error
+||| Validation: an Either-like Applicative that accumulates errors
+|||
+||| This module provides `Validation err a` which behaves like `Either` but with an
+||| `Applicative` instance that accumulates errors using `Semigroup (<+>)` (or `Monoid`/`neutral`
+||| for `Alternative`). Use it for validating multiple fields and collecting all
+||| errors instead of failing fast.
+|||
+||| Example
+||| -------
+|||
+|||   import Data.List
+|||
+|||   -- A small validator that reports an error when a value is non-positive.
+|||   isPositive : Int -> Validation (List String) Int
+|||   isPositive x = if x > 0 then Valid x else Error ["must be > 0"]
+|||
+|||   -- Combine two validations; errors from both sides will be accumulated.
+|||   validateBoth : Int -> Int -> Validation (List String) (Int, Int)
+|||   validateBoth a b = (,) <$> isPositive a <*> isPositive b
+|||
+|||   -- Example result:
+|||   --   validateBoth (-1) 0 == Error ["must be > 0", "must be > 0"]
+|||
+||| Note: Ensure the error type has a Semigroup (or Monoid for Alternative) instance,
+||| e.g., List String, so errors can be combined with <+>.
 module Replica.Other.Validation
-
 %default total
 
 -- | `Validation` behaves like an `Either` that can accumulate errors.
