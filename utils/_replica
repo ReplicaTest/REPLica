@@ -113,22 +113,21 @@ case "$state" in
       ;;
       set)
         _arguments \
-          + '(scope)'
-          '*'{-l,--local}'[Set local config value]:key=value pair:->kv' \
-          '*'{-g,--global}'[Set global config value]:key=value pair:->kv' \
+          + '(scope)' \
+          {-l,--local}'[Set local config value]:key=value pair:->kv' \
+          {-g,--global}'[Set global config value]:key=value pair:->kv' \
         && ret=0
-        case "$state" in
-          kv)
-            _values 'replica configuration' \
-              'replicaDir:replica file location:_path_files -/' \
-              'goldenDir:golden values location:_path_files -/' \
-              'colour:coloured output:(true false)' \
-              'ascii:use only ascii in reports:(false true)' \
-              'diff:tool used to print diff' \
-              'log:specify a log level:(none critical warning info debug)' \
-              'testFile:name of the file to test:_files' \
-            && ret=0
-        esac
+      ;;
+      kv)
+        _values 'replica configuration' \
+          'replicaDir:replica file location:_path_files -/' \
+          'goldenDir:golden values location:_path_files -/' \
+          'colour:coloured output:(true false)' \
+          'ascii:use only ascii in reports:(false true)' \
+          'diff:tool used to print diff' \
+          'log:specify a log level:(none critical warning info debug)' \
+          'testFile:name of the file to test:_files' \
+        && ret=0
       ;;
       help)
         _arguments -C ':topic:->topic'
