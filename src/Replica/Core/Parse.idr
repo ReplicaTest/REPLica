@@ -188,6 +188,9 @@ jsonToTest str (JObject xs) =
 jsonToTest str json =
   Error ["Expecting a JSON object for test '\{str}' and got: \{show json}"]
 
+||| Parse a JSON object into a Replica value used by the test runner.
+||| Expects a JSON object mapping test names to test definitions. Returns Valid Replica on success
+||| or Error with a list of messages describing parse/validation failures.
 export
 jsonToReplica : JSON -> Validation (List String) Replica
 jsonToReplica (JObject xs) = [| MkReplica $ traverse (uncurry jsonToTest) xs |]
@@ -321,6 +324,9 @@ parseResult (JObject [("Success", JString time)])
   = maybe (Error ["Can't parse test duration"]) (Valid . Right . Success) $ parseTime time
 parseResult x = Error ["\{show x} can't be a valid result"]
 
+||| Parse a JSON report into a list of test results keyed by test name.
+||| The input must be a JSON object mapping test names to result objects; returns Valid list of
+||| (testName, Either TestError TestResult) or Error with messages describing parse failures.
 export
 parseReport : JSON -> Validation (List String) (List (String, Either TestError TestResult))
 parseReport (JObject xs) = traverse (\(str, res) => map (MkPair str) (parseResult res)) xs

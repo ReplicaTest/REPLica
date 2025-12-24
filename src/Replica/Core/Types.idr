@@ -8,6 +8,7 @@ import System.Clock
 
 %default total
 
+||| Whether the order of expectations matters. Ordered enforces sequence; Whatever ignores order.
 public export
 data OrderSensitive = Ordered | Whatever
 
@@ -16,6 +17,7 @@ Show OrderSensitive where
   show Ordered = "Ordered"
   show Whatever = "Whatever"
 
+||| A source for expectations or failures: standard output, standard error, or a filename.
 public export
 data Part = StdOut | StdErr | FileName String
 
@@ -25,6 +27,8 @@ Show Part where
   show StdErr = "StdErr"
   show (FileName x) = "(File \{x})"
 
+||| Represents an expected output pattern for a part (stdout/stderr/file).
+||| Exact: full equality; StartsWith/EndsWith: prefix/suffix match; Partial: multiple strings with optional ordering; Generated: golden file generation.
 public export
 data Expectation
    = Exact String
@@ -33,6 +37,10 @@ data Expectation
    | Partial OrderSensitive (List String)
    | Generated
 
+||| Type-level index of the error associated to an Expectation.
+||| For Generated expectations the error may include an optional golden filename; for Partial
+||| Ordered a single not-found string is returned; for Partial Whatever a non-empty list of
+||| missing fragments is returned; other expectations produce Unit.
 public export
 ExpectationError : Expectation -> Type
 ExpectationError Generated = Maybe String
@@ -49,6 +57,9 @@ Show Expectation where
   show (Partial x xs) = "Partial \{show x} \{show xs}"
   show Generated = "Generated"
 
+||| Definition of a single test case with all metadata used by the runner.
+||| Fields include name, optional description, requirements, working directory, tags, suite,
+||| lifecycle commands, expected status/input/output and listed files to check.
 public export
 record Test where
   constructor MkTest
@@ -124,11 +135,15 @@ defaultStatus = "status"
 
 
 
+||| A collection of tests bundled in a Replica value for the test runner.
 public export
 record Replica where
   constructor MkReplica
   tests: List Test
 
+||| Reasons why a test can fail.
+||| WrongStatus: exit code mismatch; WrongOutput: unexpected content for a part with detailed expectation errors;
+||| ExpectedFileNotFound: a required expected file was missing.
 public export
 data FailReason : Type where
   WrongStatus : (status : Nat) -> (expected : Either Bool Nat) -> FailReason
@@ -207,6 +222,7 @@ namespace FailReason
     encodePart src :: ("type", JString "output") :: ("given", JString given) ::
     [("errors", JArray $ map (JObject . encodeFailure) $ forget err)]
 
+||| Result of running a test: Success with duration, Fail with reasons, or Skipped.
 public export
 data TestResult
   = Success (Clock Duration)
@@ -226,6 +242,8 @@ namespace TestResult
   isSuccess (Success _) = True
   isSuccess _ = False
 
+||| Errors that can occur outside normal test failures (environment or orchestration errors).
+||| These are reported separately from TestResult Fail reasons.
 public export
 data TestError
   = FileSystemError String
@@ -262,6 +280,7 @@ isFullSuccess : Either TestError TestResult -> Bool
 isFullSuccess (Right (Success _)) = True
 isFullSuccess _ = False
 
+||| Aggregated statistics about a test run.
 public export
 record Stats where
   constructor MkStats
