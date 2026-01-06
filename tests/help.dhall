@@ -49,13 +49,18 @@ let helpInfo =
       (Meta.Help ([ "info" ] : List Text))
       with description = Some "Display a help of all available info topics"
       with stdOut = Expectation::{
-        , contains = [ "replica info", "  test", "  suite" ]
+        , contains = [ "replica info", "  test", "  suite", "  tag" ]
         }
 
 let helpInfoSuite =
       (Meta.Help ([ "info", "suite" ] : List Text))
       with description = Some "Display a help dedicated to the 'suite' topic"
       with stdOut = Expectation::{ contains = [ "replica info suite" ] }
+
+let helpInfoTag =
+      (Meta.Help ([ "info", "tag" ] : List Text))
+      with description = Some "Display a help dedicated to the 'tag' topic"
+      with stdOut = Expectation::{ contains = [ "replica info tag" ] }
 
 let helpInfoTest =
       (Meta.Help ([ "info", "test" ] : List Text))
@@ -73,6 +78,7 @@ let tests
             , helpNew
             , helpInfo
             , helpInfoSuite
+            , helpInfoTag
             , helpInfoTest
             }
         )

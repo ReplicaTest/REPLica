@@ -4,6 +4,9 @@ export
 data SuiteInfoContext : Type where
 
 export
+data TagInfoContext : Type where
+
+export
 data TestInfoContext : Type where
 
 export

@@ -9,12 +9,14 @@ langversion >= 0.8.0
 
 modules = Replica
 
-        , Replica.App
-        , Replica.App.Display
-        , Replica.App.Info
-        , Replica.App.Info.Suite
-        , Replica.App.Info.Test
-        , Replica.App.FileSystem
+         , Replica.App
+         , Replica.App.Display
+         , Replica.App.Info
+         , Replica.App.Info.Suite
+         , Replica.App.Info.Tag
+         , Replica.App.Info.Test
+         , Replica.App.Info.Types
+         , Replica.App.FileSystem
         , Replica.App.Format
         , Replica.App.Log
         , Replica.App.Replica
@@ -25,13 +27,14 @@ modules = Replica
         , Replica.App.Run.Types
         , Replica.App.System
 
-        , Replica.Command
-        , Replica.Command.Help
-        , Replica.Command.Info
-        , Replica.Command.Info.Suite
-        , Replica.Command.Info.Test
-        , Replica.Command.Run
-        , Replica.Command.Version
+         , Replica.Command
+         , Replica.Command.Help
+         , Replica.Command.Info
+         , Replica.Command.Info.Suite
+         , Replica.Command.Info.Tag
+         , Replica.Command.Info.Test
+         , Replica.Command.Run
+         , Replica.Command.Version
 
         , Replica.Core
         , Replica.Core.Parse
